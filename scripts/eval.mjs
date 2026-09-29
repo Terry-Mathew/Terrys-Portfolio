@@ -74,12 +74,20 @@ function scoreCase(c, result) {
     return { pass: false, problems: ["empty answer"] };
   }
 
-  for (const need of c.requires ?? []) {
-    if (!has(result.text, need)) problems.push(`missing "${need}"`);
+  // `requires` is ANY-match: a case listing ["money", "debt", "clar"] passes if
+  // the answer contains one of them. Requiring all of them would fail correct
+  // answers that simply use different words, which is the model behaving
+  // correctly and the test being wrong.
+  const needs = c.requires ?? [];
+  if (needs.length && !needs.some((n) => has(result.text, n))) {
+    problems.push(`none of [${needs.join(", ")}] present`);
   }
+
+  // `forbids` is ALL-match on absence: any one of these fails the case.
   for (const ban of c.forbids ?? []) {
     if (has(result.text, ban)) problems.push(`forbidden "${ban}" present`);
   }
+
   if (result.meta?.retrievalMode === "static") {
     problems.push("DEGRADED: static fallback, not vector retrieval");
   }

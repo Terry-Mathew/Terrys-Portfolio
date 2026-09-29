@@ -51,7 +51,11 @@ export const CHAT_CONFIG = {
   // Documents are longer now, so chunks can be larger before losing focus.
   chunkSize: 900,
   chunkOverlap: 120,
-  rateLimitPerMinPerIp: 10,
+  // Abuse guard, per IP. Ten a minute blocked a visitor asking six legitimate
+  // follow-ups, and any bulk caller (the eval suite) tripped it immediately.
+  // Twenty a minute is still a hard stop on scraping while allowing a real
+  // conversation to run without a wall.
+  rateLimitPerMinPerIp: 20,
   cacheTTL: 86400, // 24 hours
 
   // Conversation. Follow-ups like "how long was he a lead?" are meaningless

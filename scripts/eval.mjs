@@ -22,6 +22,14 @@ const ENDPOINT = `${BASE.replace(/\/$/, "")}/api/chat`;
 
 const spec = JSON.parse(readFileSync(join(root, "evals", "golden.json"), "utf8"));
 
+// The chatbot rate-limits per IP. This suite fires ~20 requests from one
+// address, so it has to behave like a well-mannered client: one request every
+// PACE_MS, comfortably under the server's ceiling. Without this the run trips
+// the limiter and every case after the tenth returns "empty answer" — which
+// looks exactly like a total system failure and is not one.
+const PACE_MS = Number(process.env.EVAL_PACE_MS ?? 4000);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 /** POSTs one turn and returns the assembled answer, sources, and metadata. */
 async function ask(q, history = []) {
   const started = Date.now();
@@ -78,6 +86,10 @@ function scoreCase(c, result) {
   // the answer contains one of them. Requiring all of them would fail correct
   // answers that simply use different words, which is the model behaving
   // correctly and the test being wrong.
+  if (result.meta?.rateLimited) {
+    return { pass: false, problems: ["RATE LIMITED — raise EVAL_PACE_MS or the server limit"] };
+  }
+
   const needs = c.requires ?? [];
   if (needs.length && !needs.some((n) => has(result.text, n))) {
     problems.push(`none of [${needs.join(", ")}] present`);
@@ -98,6 +110,7 @@ function scoreCase(c, result) {
 const results = [];
 
 for (const c of spec.cases) {
+  await sleep(PACE_MS);
   let result;
   try {
     result = await ask(c.question);
@@ -110,9 +123,11 @@ for (const c of spec.cases) {
 }
 
 for (const c of spec.multiTurn ?? []) {
+  await sleep(PACE_MS);
   let result;
   try {
     const first = await ask(c.seed);
+    await sleep(PACE_MS);
     result = await ask(c.followup, [
       { role: "user", text: c.seed },
       { role: "bot", text: first.text },
@@ -162,6 +177,13 @@ const degraded = results.filter((r) => r.problems.some((p) => p.startsWith("DEGR
 if (degraded.length) {
   console.log(
     `\n${C.r}${degraded.length} case(s) fell back to static retrieval. The vector index is probably empty.${C.x}`,
+  );
+}
+
+const throttled = results.filter((r) => r.problems.some((p) => p.startsWith("RATE LIMITED")));
+if (throttled.length) {
+  console.log(
+    `\n${C.r}${throttled.length} case(s) were rate limited. Raise EVAL_PACE_MS (currently ${PACE_MS}ms).${C.x}`,
   );
 }
 

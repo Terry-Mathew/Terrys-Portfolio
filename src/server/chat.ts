@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { CHAT_CONFIG } from "@/server/chat.config";
 import { getCloudflareEnv, type CloudflareEnvShape } from "@/server/env";
-import { retrieveStatic, retrieveHybrid } from "@/server/knowledge";
+import { retrieveStatic, retrieveHybrid, type RetrievalResult } from "@/server/knowledge";
 
 export type ChatTurn = { role: "user" | "bot"; text: string };
 
@@ -13,6 +13,10 @@ export type ChatReply = {
     chunksUsed: number;
     cached: boolean;
     turn: number;
+    rateLimited?: boolean;
+    /** "llm" when a model wrote the reply, "extractive" when the retrieved
+     *  source text was returned because generation was unavailable. */
+    generation?: "llm" | "extractive";
     /** The standalone question retrieval actually ran on, when it was rewritten. */
     resolvedQuery?: string | undefined;
   };
@@ -207,9 +211,9 @@ async function generateAnswer(
     }
   }
 
-  // Fallback: Workers AI (Llama)
+  // Fallback: Workers AI
   if (!env?.AI) {
-    return "I'm running without AI access right now. Email terry.perangat@gmail.com and Terry will reply directly.";
+    return GENERATION_FAILED;
   }
 
   const messages = [
@@ -283,10 +287,12 @@ async function generateAnswer(
       response: string;
     };
 
-    return response.response || "I couldn't generate a response.";
+    return response.response || GENERATION_FAILED;
   } catch (e) {
+    // The common cause is the daily free neuron allowance running out. Nothing
+    // is wrong with the deployment; runChat falls back to extractive answers.
     console.error("Workers AI generation failed:", e);
-    return "Something went wrong generating that. Email terry.perangat@gmail.com instead.";
+    return GENERATION_FAILED;
   }
 }
 
@@ -357,6 +363,36 @@ function stripInlineCitations(answer: string, docIds: string[]): string {
     .trim();
 }
 
+/** Sentinel returned by generateAnswer when no model could be reached. */
+const GENERATION_FAILED = "__GENERATION_FAILED__";
+
+/**
+ * Answer using only the retrieved text. Used when the AI binding is
+ * unavailable — the daily free neuron allowance runs out, a model id is
+ * retired, or the API is down. Returns the best passage, trimmed to whole
+ * sentences, with an honest lead-in.
+ */
+function extractiveAnswer(results: RetrievalResult[], question: string): string {
+  const best = results[0];
+  if (!best) {
+    return `Email ${CHAT_CONFIG.fallbackEmail} and Terry will reply directly.`;
+  }
+
+  const body = best.content
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/(?<=[.!?])\s+/)
+    .slice(0, 4)
+    .join(" ")
+    .trim();
+
+  return (
+    `From the knowledge base, on "${question.trim()}":\n\n${body}\n\n` +
+    `(The assistant is briefly unavailable to phrase this properly — this is the ` +
+    `source text itself. Email ${CHAT_CONFIG.fallbackEmail} for anything more.)`
+  );
+}
+
 export type ChatPhase = { phase: "searching" } | { phase: "retrieved"; count: number };
 
 /**
@@ -395,7 +431,13 @@ export async function runChat(
     return {
       answer: `Too many questions at once — email ${CHAT_CONFIG.fallbackEmail} and Terry will reply directly.`,
       sources: [],
-      metadata: { retrievalMode: "static", chunksUsed: 0, cached: false, turn: history.length },
+      metadata: {
+        retrievalMode: "static" as const,
+        chunksUsed: 0,
+        cached: false,
+        turn: history.length,
+        rateLimited: true,
+      },
     };
   }
 
@@ -452,15 +494,24 @@ export async function runChat(
   );
 
   const answer = await generateAnswer(qTrimmed, contextText, env, history, onDelta);
+  const degraded = answer === GENERATION_FAILED;
+
+  // When generation is unavailable — daily quota exhausted, model retired, API
+  // down — answer with the retrieved text itself instead of an error. Retrieval
+  // does not depend on the AI binding, so the visitor still gets a real answer
+  // rather than a dead chatbot. Extractive rather than generated, and labelled,
+  // so it is never mistaken for something the model wrote.
+  const finalAnswer = degraded ? extractiveAnswer(results, searchQuery) : answer;
 
   return {
-    answer,
+    answer: finalAnswer,
     sources,
     metadata: {
       retrievalMode,
       chunksUsed: results.length,
       cached,
       turn: history.length,
+      generation: degraded ? ("extractive" as const) : ("llm" as const),
       resolvedQuery: searchQuery !== qTrimmed ? searchQuery : undefined,
     },
   };

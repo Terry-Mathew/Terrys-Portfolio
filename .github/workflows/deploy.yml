@@ -35,9 +35,26 @@ jobs:
 
       - name: Evaluate chatbot
         # Scored against the live site, so it reports on what visitors get.
-        # Skipped rather than failed when the site is unreachable, since a
-        # network blip should not block a code push.
-        run: npm run eval || echo "::warning::RAG evaluation did not pass"
+        #
+        # A 0/N score means the chatbot is completely unavailable — quota
+        # exhausted, generation failing, endpoint down. That must fail the build:
+        # an earlier version of this file warned instead, and a run scoring 0/20
+        # went green. A partial score still warns, because content may simply
+        # not be indexed yet.
+        run: |
+          set +e
+          npm run eval
+          code=$?
+          if [ $code -ne 0 ]; then
+            total=$(npm run eval 2>&1 | grep -oE "Total +[0-9]+/[0-9]+" | grep -oE "[0-9]+/[0-9]+" | head -1)
+            passed=$(echo "$total" | cut -d/ -f1)
+            count=$(echo "$total" | cut -d/ -f2)
+            if [ -n "$total" ] && [ "$passed" = "0" ]; then
+              echo "::error::Chatbot scored 0/${count} — every case failed. Blocking deploy."
+              exit 1
+            fi
+            echo "::warning::Evaluation scored ${total} — not all cases passed. Deploying anyway."
+          fi
 
   deploy:
     needs: verify

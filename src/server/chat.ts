@@ -14,9 +14,9 @@ export type ChatReply = {
     cached: boolean;
     turn: number;
     rateLimited?: boolean;
-    /** "llm" when a model wrote the reply, "extractive" when the retrieved
-     *  source text was returned because generation was unavailable. */
-    generation?: "llm" | "extractive";
+    /** Which provider actually produced the reply: "workers-ai", "groq",
+     *  "anthropic", or "none" when generation was unavailable. */
+    generation?: "workers-ai" | "groq" | "anthropic" | "none";
     /** The standalone question retrieval actually ran on, when it was rewritten. */
     resolvedQuery?: string | undefined;
   };
@@ -168,7 +168,7 @@ async function generateAnswer(
   env: RagEnv | undefined,
   history: Turn[],
   onDelta?: (text: string) => void,
-): Promise<string> {
+): Promise<{ text: string; provider: "workers-ai" | "groq" | "anthropic" | "none" }> {
   const systemPrompt = buildSystemPrompt();
 
   // Anthropic is opt-in. Off by default: the whole chatbot runs on the free
@@ -204,7 +204,7 @@ async function generateAnswer(
 
       if (response.ok) {
         const data = (await response.json()) as { content: { text: string }[] };
-        return data.content[0]?.text || "I couldn't generate a response.";
+        return { text: data.content[0]?.text || GENERATION_FAILED, provider: "anthropic" };
       }
       console.warn("Anthropic returned", response.status, "- trying Workers AI.");
     } catch (e) {
@@ -214,7 +214,7 @@ async function generateAnswer(
 
   // Fallback: Workers AI
   if (!env?.AI) {
-    return GENERATION_FAILED;
+    return { text: GENERATION_FAILED, provider: "none" };
   }
 
   const messages = [
@@ -247,12 +247,12 @@ async function generateAnswer(
   // every visitor between 05:30 and midnight IST got raw Markdown. Groq turns
   // that cliff into a soft degradation.
   const workersAi = await callWorkersAi(messages, params, env, onDelta);
-  if (workersAi) return workersAi;
+  if (workersAi) return { text: workersAi, provider: "workers-ai" };
 
   const groq = await callGroq(messages, env, onDelta);
-  if (groq) return groq;
+  if (groq) return { text: groq, provider: "groq" };
 
-  return GENERATION_FAILED;
+  return { text: GENERATION_FAILED, provider: "none" };
 }
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -627,15 +627,15 @@ export async function runChat(
     results.map((r) => r.id),
   );
 
-  const answer = await generateAnswer(qTrimmed, contextText, env, history, onDelta);
-  const degraded = answer === GENERATION_FAILED;
+  const generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta);
+  const degraded = generated.provider === "none";
 
   // When generation is unavailable — daily quota exhausted, model retired, API
   // down — answer with the retrieved text itself instead of an error. Retrieval
   // does not depend on the AI binding, so the visitor still gets a real answer
   // rather than a dead chatbot. Extractive rather than generated, and labelled,
   // so it is never mistaken for something the model wrote.
-  const finalAnswer = degraded ? extractiveAnswer(results, searchQuery) : answer;
+  const finalAnswer = degraded ? extractiveAnswer(results, searchQuery) : generated.text;
 
   return {
     answer: finalAnswer,
@@ -645,7 +645,7 @@ export async function runChat(
       chunksUsed: results.length,
       cached,
       turn: history.length,
-      generation: degraded ? ("extractive" as const) : ("llm" as const),
+      generation: generated.provider,
       resolvedQuery: searchQuery !== qTrimmed ? searchQuery : undefined,
     },
   };

@@ -66,7 +66,13 @@ async function ask(q, history = []) {
       }
       if (d.type === "delta") text += d.text;
       else if (d.type === "sources") sources = d.sources ?? [];
-      else if (d.type === "done") meta = d;
+      else if (d.type === "done") {
+        meta = d;
+        // Rate-limited and extractive responses emit no deltas — the answer
+        // only exists on the done event. Without this fallback every such case
+        // scored "empty answer", which looks identical to a total outage.
+        if (!text) text = d.answer ?? "";
+      }
     }
   }
 
@@ -89,6 +95,9 @@ function scoreCase(c, result) {
   if (result.meta?.rateLimited) {
     return { pass: false, problems: ["RATE LIMITED — raise EVAL_PACE_MS or the server limit"] };
   }
+  if (result.meta?.generation === "none") {
+    problems.push("NO MODEL ANSWERED — every provider tier was unavailable for this case");
+  }
 
   const needs = c.requires ?? [];
   if (needs.length && !needs.some((n) => has(result.text, n))) {
@@ -108,6 +117,10 @@ function scoreCase(c, result) {
 }
 
 const results = [];
+
+// Let the rate-limit window drain before starting, so a run launched right
+// after manual testing is not judged on requests it did not make.
+await sleep(5000);
 
 for (const c of spec.cases) {
   await sleep(PACE_MS);
@@ -184,6 +197,15 @@ const throttled = results.filter((r) => r.problems.some((p) => p.startsWith("RAT
 if (throttled.length) {
   console.log(
     `\n${C.r}${throttled.length} case(s) were rate limited. Raise EVAL_PACE_MS (currently ${PACE_MS}ms).${C.x}`,
+  );
+}
+
+const extractive = results.filter((r) => r.problems.some((p) => p.startsWith("NO MODEL")));
+if (extractive.length) {
+  console.log(
+    `\n${C.y}${extractive.length} case(s) were served extractively — no model answered.${C.x}\n` +
+      `  ${C.d}Scores on those cases measure retrieval, not generation. Re-run after the${C.x}\n` +
+      `  ${C.d}Workers AI allowance resets at 00:00 UTC for a true reading.${C.x}`,
   );
 }
 

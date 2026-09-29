@@ -85,7 +85,11 @@ export const Route = createFileRoute("/api/chat")({
                 `[rag] ${reply.metadata?.retrievalMode} | ${reply.metadata?.chunksUsed} chunks | ` +
                   `${Date.now() - startedAt}ms | cached=${reply.metadata?.cached}`,
               );
-              send({ type: "done", metadata: reply.answer, ...reply.metadata });
+              // `answer` is repeated here because streamed deltas are the normal
+              // path, but a rate-limited or extractive response has none. The
+              // client and the eval suite read the answer from this field when
+              // no delta ever arrived.
+              send({ type: "done", answer: reply.answer, ...reply.metadata });
             } catch (error) {
               headers.set("x-rag-mode", "error");
               console.error("Chat stream failed:", error);

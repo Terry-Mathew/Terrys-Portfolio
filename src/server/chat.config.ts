@@ -27,7 +27,7 @@ export const CHAT_CONFIG = {
   // Verify the model id still exists at console.groq.com/docs/models before
   // relying on it — free tiers rotate without notice.
   useGroq: true,
-  groqModel: "llama-3.3-70b-versatile",
+  groqModel: "qwen/qwen3.8-27b",
 
   // Llama 3.3 70B Instruct: strongest model on the Workers AI free tier.
   // Costs roughly 2x the 17B in neurons and adds latency, but the corpus is now

@@ -276,7 +276,15 @@ async function readSse(
     if (done) break;
     buf += decoder.decode(value, { stream: true });
 
-    for (const frame of buf.split("\n\n")) {
+    // Split on the frame separator and keep the LAST element as the new buffer.
+    // It is the only one that may be truncated mid-frame. Processing every
+    // element and then slicing off the tail discards that partial frame on
+    // every read, so whenever a chunk boundary falls inside a frame, that
+    // frame's content is lost — which is how a full answer came back as "aysh".
+    const frames = buf.split("\n\n");
+    buf = frames.pop() ?? "";
+
+    for (const frame of frames) {
       const line = frame.split("\n").find((l) => l.startsWith("data:"));
       if (!line) continue;
       try {
@@ -286,10 +294,25 @@ async function readSse(
           onDelta?.(text);
         }
       } catch {
-        // Partial frame — stays in buf and is retried on the next read.
+        // Malformed frame — ignore it rather than failing the whole answer.
       }
     }
-    buf = buf.slice(buf.lastIndexOf("\n\n") + 2);
+  }
+
+  // Anything still buffered had no trailing separator. Parse it directly.
+  if (buf.trim()) {
+    const line = buf.split("\n").find((l) => l.startsWith("data:"));
+    if (line) {
+      try {
+        const text = parse(line.slice(5).trim());
+        if (text) {
+          full += text;
+          onDelta?.(text);
+        }
+      } catch {
+        // Ignore.
+      }
+    }
   }
 
   return full;
@@ -358,13 +381,16 @@ async function callGroq(
   };
 
   // OpenAI-shaped frame: data: {"choices":[{"delta":{"content":"..."}}]}
-  // and a terminating data: [DONE].
+  // and a terminating data: [DONE]. Some Groq models stream under `message`
+  // rather than `delta`, so both are accepted.
   const parse = (line: string): string | null => {
     if (line === "[DONE]") return null;
     const chunk = JSON.parse(line) as {
-      choices?: { delta?: { content?: string } }[];
+      choices?: { delta?: { content?: string }; message?: { content?: string } }[];
+      error?: { message?: string };
     };
-    return chunk.choices?.[0]?.delta?.content ?? null;
+    if (chunk.error) throw new Error(chunk.error.message ?? "stream error");
+    return chunk.choices?.[0]?.delta?.content ?? chunk.choices?.[0]?.message?.content ?? null;
   };
 
   try {
@@ -376,16 +402,27 @@ async function callGroq(
     });
 
     if (!res.ok) {
-      console.warn(`[gen] Groq returned ${res.status}: ${(await res.text()).slice(0, 160)}`);
+      console.warn(`[gen] Groq returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
       return null;
     }
 
+    // The body is consumed exactly once. Reading it in streaming mode and then
+    // falling through to res.json() throws "Body has already been used", which
+    // is what silently swallowed the whole tier until it was logged.
     if (onDelta && res.body) {
       const full = await readSse(res.body, parse, onDelta);
-      if (full) return full;
+      if (!full) console.warn("[gen] Groq stream produced no content");
+      return full || null;
     }
 
-    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+      error?: { message?: string };
+    };
+    if (data.error) {
+      console.warn(`[gen] Groq error: ${data.error.message}`);
+      return null;
+    }
     return data.choices?.[0]?.message?.content ?? null;
   } catch (e) {
     console.warn("[gen] Groq failed:", e);

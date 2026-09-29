@@ -50,7 +50,7 @@ function Index() {
             email: "mailto:terry.perangat@gmail.com",
             sameAs: [
               "https://www.linkedin.com/in/terry-mathew",
-              "https://www.instagram.com/teddsy/",
+              "https://www.instagram.com/tedssy/",
               "https://www.youtube.com/@terrymathew-p",
             ],
           }),

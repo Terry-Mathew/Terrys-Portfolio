@@ -26,7 +26,11 @@ export function OffTheClock() {
                 src={bikeSunset}
                 alt="Terry looking back over his shoulder while seated on a motorcycle at sunset on a highway"
                 loading="lazy"
-                className="block h-64 w-full object-cover sm:h-80 md:h-[30rem]"
+                // The subject's head sits in the top ~15% of a 3:4 portrait. A
+                // centred landscape crop takes the band from 35-75% and cuts
+                // him off entirely, so the window is anchored near the top and
+                // nudged right to where he actually is.
+                className="block h-64 w-full object-cover object-[55%_12%] sm:h-80 md:h-[25rem]"
               />
               <figcaption className="hand mt-3 text-2xl text-graphite-dim">Long roads.</figcaption>
             </figure>
@@ -39,7 +43,7 @@ export function OffTheClock() {
                   src={birds}
                   alt="Terry feeding colourful birds in a garden"
                   loading="lazy"
-                  className="block h-64 w-full object-cover sm:h-80 md:h-[27rem]"
+                  className="block h-64 w-full object-cover sm:h-80 md:h-[23.5rem]"
                 />
                 <figcaption className="hand mt-3 text-xl text-graphite-dim md:text-2xl">
                   Small moments. Big joy.
@@ -53,7 +57,7 @@ export function OffTheClock() {
                   src={enfield}
                   alt="Terry seated on a Royal Enfield motorcycle on a city street"
                   loading="lazy"
-                  className="block h-64 w-full object-cover sm:h-80 md:h-[27rem]"
+                  className="block h-64 w-full object-cover sm:h-80 md:h-[23.5rem]"
                 />
                 <figcaption className="hand mt-3 text-xl text-graphite-dim md:text-2xl">
                   People. Places. Perspectives.

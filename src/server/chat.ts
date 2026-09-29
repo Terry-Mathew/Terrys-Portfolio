@@ -17,7 +17,7 @@ export type ChatReply = {
     rateLimited?: boolean;
     /** Which provider actually produced the reply: "workers-ai", "groq",
      *  "anthropic", or "none" when generation was unavailable. */
-    generation?: "workers-ai" | "groq" | "anthropic" | "none";
+    generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
     /** The standalone question retrieval actually ran on, when it was rewritten. */
     resolvedQuery?: string | undefined;
   };
@@ -45,6 +45,7 @@ const sanitiseHistory = (history: unknown): Turn[] =>
 type RagEnv = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">> & {
   ANTHROPIC_API_KEY?: string;
   GROQ_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
 };
 
 // In-memory rate limit (per worker isolate; KV upgrade comes with vector mode).
@@ -195,7 +196,10 @@ async function generateAnswer(
   env: RagEnv | undefined,
   history: Turn[],
   onDelta?: (text: string) => void,
-): Promise<{ text: string; provider: "workers-ai" | "groq" | "anthropic" | "none" }> {
+): Promise<{
+  text: string;
+  provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
+}> {
   const systemPrompt = buildSystemPrompt();
 
   // Anthropic is opt-in. Off by default: the whole chatbot runs on the free
@@ -265,19 +269,25 @@ async function generateAnswer(
   };
 
   // Provider chain. Each tier is strictly better than the one after it:
-  //   1. Workers AI  — best latency, no key, but the daily free neuron
-  //                   allowance runs out at 00:00 UTC
-  //   2. Groq        — free tier, no daily allowance, keeps the persona
-  //   3. (return GENERATION_FAILED) — runChat answers extractively
+  //   1. OpenRouter — paid tier with balance, so it is the one that is
+  //                   available when both free tiers are spent
+  //   2. Groq       — free, no daily neuron cap, keeps the persona
+  //   3. Workers AI — free and fastest while its daily allowance lasts
+  //   4. (return GENERATION_FAILED) — runChat answers extractively
   //
-  // Tier 3 used to be the end of the line for tier 1 failures, which meant
-  // every visitor between 05:30 and midnight IST got raw Markdown. Groq turns
-  // that cliff into a soft degradation.
-  const workersAi = await callWorkersAi(messages, params, env, onDelta);
-  if (workersAi) return { text: workersAi, provider: "workers-ai" };
+  // Order changed from Workers-AI-first after both free tiers were observed
+  // exhausted on the same evening, which put most visitors on the extractive
+  // fallback from late afternoon to midnight.
+  const openRouter = await callOpenRouter(messages, env, onDelta);
+  if (openRouter) return { text: openRouter, provider: "openrouter" };
 
   const groq = await callGroq(messages, env, onDelta);
   if (groq) return { text: groq, provider: "groq" };
+
+  if (CHAT_CONFIG.useWorkersAiGeneration) {
+    const workersAi = await callWorkersAi(messages, params, env, onDelta);
+    if (workersAi) return { text: workersAi, provider: "workers-ai" };
+  }
 
   return { text: GENERATION_FAILED, provider: "none" };
 }
@@ -287,9 +297,11 @@ async function generateAnswer(
  *
  * Workers AI's llama-3.3-70b is recorded in this project's history as
  * unreliable for structured tool calls, and Anthropic is the opt-in premium
- * text path. Groq is OpenAI-compatible and handles tools properly, so lead
- * capture lives here. If Groq is missing the caller falls back to the plain
- * chain above and the chat still answers — it just does not capture leads.
+ * text path. Groq and OpenRouter both handle tools properly, so lead capture
+ * lives here — OpenRouter first because it stays available when the free tiers
+ * are spent, Groq as the free backup. If neither is reachable the caller falls
+ * back to the plain chain above and the chat still answers — it just does not
+ * capture leads.
  *
  * The loop is bounded at CHAT_CONFIG-level maxToolIterations because a model
  * can otherwise alternate call -> reject -> call forever.
@@ -301,9 +313,27 @@ async function generateWithTools(
   history: Turn[],
   ip: string,
   onDelta?: (text: string) => void,
-): Promise<{ text: string; provider: "groq" | "none" } | null> {
+): Promise<{ text: string; provider: "openrouter" | "groq" | "none" } | null> {
   if (!CHAT_CONFIG.useTools || !CHAT_CONFIG.notifications.enabled) return null;
-  if (!CHAT_CONFIG.useGroq || !env?.GROQ_API_KEY) return null;
+
+  const tier = CHAT_CONFIG.useOpenRouter
+    ? {
+        label: "OpenRouter",
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        key: env?.OPENROUTER_API_KEY,
+        model: CHAT_CONFIG.openRouterModel,
+        provider: "openrouter" as const,
+      }
+    : CHAT_CONFIG.useGroq
+      ? {
+          label: "Groq",
+          url: "https://api.groq.com/openai/v1/chat/completions",
+          key: env?.GROQ_API_KEY,
+          model: CHAT_CONFIG.groqModel,
+          provider: "groq" as const,
+        }
+      : null;
+  if (!tier?.key) return null;
 
   const messages: OpenAIMessage[] = [
     { role: "system", content: buildSystemPrompt() },
@@ -315,16 +345,13 @@ async function generateWithTools(
   ];
 
   for (let iteration = 0; iteration < CHAT_CONFIG.maxToolIterations; iteration++) {
-    let reply: GroqResponse;
+    let reply: OpenAiToolResponse;
     try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const res = await fetch(tier.url, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${env.GROQ_API_KEY}`,
-        },
+        headers: { "content-type": "application/json", authorization: `Bearer ${tier.key}` },
         body: JSON.stringify({
-          model: CHAT_CONFIG.groqModel,
+          model: tier.model,
           messages,
           tools: TOOLS,
           tool_choice: "auto",
@@ -334,12 +361,14 @@ async function generateWithTools(
         signal: AbortSignal.timeout(30000),
       });
       if (!res.ok) {
-        console.warn(`[tools] Groq returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
+        console.warn(
+          `[tools] ${tier.label} returned ${res.status}: ${(await res.text()).slice(0, 200)}`,
+        );
         return null;
       }
-      reply = (await res.json()) as GroqResponse;
+      reply = (await res.json()) as OpenAiToolResponse;
     } catch (e) {
-      console.warn("[tools] Groq call failed, falling back to plain generation:", e);
+      console.warn(`[tools] ${tier.label} call failed, falling back to plain generation:`, e);
       return null;
     }
 
@@ -364,7 +393,7 @@ async function generateWithTools(
       // Tools are off this path, so any deltas were already flushed by the
       // streaming path; emit the whole answer for consistency.
       onDelta?.(content);
-      return { text: content, provider: "groq" };
+      return { text: content, provider: tier.provider };
     }
 
     messages.push({
@@ -384,7 +413,10 @@ async function generateWithTools(
   }
 
   console.warn("[tools] iteration cap reached — returning a neutral reply");
-  return { text: "I'm having trouble finishing that. Could you say a bit more?", provider: "groq" };
+  return {
+    text: "I'm having trouble finishing that. Could you say a bit more?",
+    provider: tier.provider,
+  };
 }
 
 function safeJson(raw: string | undefined): Record<string, unknown> {
@@ -406,7 +438,7 @@ type OpenAIMessage = {
   tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[];
 };
 
-type GroqResponse = {
+type OpenAiToolResponse = {
   choices?: {
     message?: {
       content?: string | null;
@@ -522,16 +554,24 @@ async function callWorkersAi(
  * Tier 2: Groq. OpenAI-compatible chat completions over plain fetch, so no SDK
  * and no Node-compat concerns. Used only when Workers AI is unavailable.
  */
-async function callGroq(
+/**
+ * Call any OpenAI-compatible chat completions endpoint.
+ *
+ * Groq and OpenRouter speak the same wire format, so the streaming, timeout,
+ * single-consume and error handling live here once rather than being copied
+ * per provider. `label` only affects log lines.
+ */
+async function callOpenAiCompatible(
   messages: ChatMessage[],
   env: RagEnv | undefined,
-  onDelta?: (text: string) => void,
+  onDelta: ((text: string) => void) | undefined,
+  opts: { label: string; url: string; key: string | undefined; model: string; timeoutMs: number },
 ): Promise<string | null> {
-  const key = env?.GROQ_API_KEY;
-  if (!CHAT_CONFIG.useGroq || !key) return null;
+  const { label, url, key, model } = opts;
+  if (!key) return null;
 
   const body = {
-    model: CHAT_CONFIG.groqModel,
+    model,
     messages,
     max_tokens: 1024,
     temperature: CHAT_CONFIG.temperature,
@@ -552,15 +592,15 @@ async function callGroq(
   };
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(opts.timeoutMs),
     });
 
     if (!res.ok) {
-      console.warn(`[gen] Groq returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      console.warn(`[gen] ${label} returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
       return null;
     }
 
@@ -569,7 +609,7 @@ async function callGroq(
     // is what silently swallowed the whole tier until it was logged.
     if (onDelta && res.body) {
       const full = await readSse(res.body, parse, onDelta);
-      if (!full) console.warn("[gen] Groq stream produced no content");
+      if (!full) console.warn(`[gen] ${label} stream produced no content`);
       return full || null;
     }
 
@@ -578,14 +618,51 @@ async function callGroq(
       error?: { message?: string };
     };
     if (data.error) {
-      console.warn(`[gen] Groq error: ${data.error.message}`);
+      console.warn(`[gen] ${label} error: ${data.error.message}`);
       return null;
     }
     return data.choices?.[0]?.message?.content ?? null;
   } catch (e) {
-    console.warn("[gen] Groq failed:", e);
+    console.warn(`[gen] ${label} failed:`, e);
     return null;
   }
+}
+
+/**
+ * Tier 1. OpenRouter, reached over plain fetch.
+ *
+ * The `HTTP-Referer`/`X-Title` headers are optional attribution that OpenRouter
+ * asks for; they identify the app on their dashboard and affect model routing
+ * for free-tier requests.
+ */
+async function callOpenRouter(
+  messages: ChatMessage[],
+  env: RagEnv | undefined,
+  onDelta?: (text: string) => void,
+): Promise<string | null> {
+  if (!CHAT_CONFIG.useOpenRouter || !env?.OPENROUTER_API_KEY) return null;
+  return callOpenAiCompatible(messages, env, onDelta, {
+    label: "OpenRouter",
+    url: "https://openrouter.ai/api/v1/chat/completions",
+    key: env.OPENROUTER_API_KEY,
+    model: CHAT_CONFIG.openRouterModel,
+    timeoutMs: 30000,
+  });
+}
+
+async function callGroq(
+  messages: ChatMessage[],
+  env: RagEnv | undefined,
+  onDelta?: (text: string) => void,
+): Promise<string | null> {
+  if (!CHAT_CONFIG.useGroq) return null;
+  return callOpenAiCompatible(messages, env, onDelta, {
+    label: "Groq",
+    url: "https://api.groq.com/openai/v1/chat/completions",
+    key: env?.GROQ_API_KEY,
+    model: CHAT_CONFIG.groqModel,
+    timeoutMs: 20000,
+  });
 }
 
 /**
@@ -810,8 +887,10 @@ export async function runChat(
   // Lead capture runs first when the tool-capable tier is available. Falls
   // through silently to the plain chain otherwise, so a missing Groq key
   // costs lead capture and nothing else.
-  let generated: { text: string; provider: "workers-ai" | "groq" | "anthropic" | "none" } | null =
-    await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta);
+  let generated: {
+    text: string;
+    provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
+  } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta);
   if (!generated) {
     generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta);
   }

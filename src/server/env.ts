@@ -16,6 +16,7 @@ export type CloudflareEnvShape = Record<string, unknown> & {
   AI?: Ai;
   ANTHROPIC_API_KEY?: string;
   GROQ_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
   INGEST_KEY?: string;
   /** Worker secret, never `vars` — anyone holding it can spam the phone. */
   PUSHOVER_TOKEN?: string;

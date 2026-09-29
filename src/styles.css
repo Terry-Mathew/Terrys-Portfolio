@@ -264,7 +264,11 @@
 
 @utility experience-print {
   @media (min-width: 64rem) {
-    --print-h: min(21rem, calc(100svh - 39rem));
+    /* The subtraction keeps the whole sticky column on one screen. It was set
+       so tightly that a 900px-tall laptop got 17rem, which read as a
+       thumbnail rather than a print. Cap raised and the reserved header space
+       trimmed, so the usual case lands near 19-20rem. */
+    --print-h: min(23rem, calc(100svh - 37rem));
     width: calc(var(--print-h) * 0.8 + 1.5rem);
 
     & img {
@@ -274,7 +278,7 @@
     }
 
     @media (height < 60rem) {
-      --print-h: min(20rem, calc(100svh - 34.5rem));
+      --print-h: min(22rem, calc(100svh - 33rem));
     }
   }
 }

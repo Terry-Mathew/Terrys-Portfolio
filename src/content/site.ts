@@ -14,7 +14,7 @@ export const profile = {
   pillars: ["Product Strategy", "Data Products", "AI Prototyping", "Analytics", "Business Systems"],
   email: "terry.perangat@gmail.com",
   linkedin: "https://www.linkedin.com/in/terry-mathew",
-  instagram: "https://www.instagram.com/teddsy/",
+  instagram: "https://www.instagram.com/tedssy/",
   youtube: "https://www.youtube.com/@terrymathew-p",
   // Served from public/Terry-Mathew-CV.pdf — linked from Nav, Hero, Experience and Contact.
   resume: "/Terry-Mathew-CV.pdf",

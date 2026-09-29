@@ -10,24 +10,38 @@ export const CHAT_CONFIG = {
 
   // Generation.
   //
-  // Workers AI is the default and the only path needed. The free tier
-  // (100k neurons/day) covers ~4k answers/day here, which is far more than a
-  // portfolio site needs.
+  // Provider order is OpenRouter -> Groq -> Workers AI. Both free tiers were
+  // observed exhausted on the same evening (Workers AI 10k neurons/day, Groq
+  // 200k tokens/day), which pushed visitors onto the extractive fallback for
+  // most of the day. OpenRouter is OpenAI-compatible like Groq, so the call
+  // path is identical and the credit balance turns the tail of the day back
+  // into real answers.
   //
-  // Set useAnthropic to true only if you want stronger prose and accept a
-  // paid key plus the risk of a retired model id breaking it silently.
-  useAnthropic: false,
-  anthropicModel: "claude-sonnet-4-5",
+  // Workers AI is kept last rather than dropped: it is free and instant when
+  // it is available, so there is no reason to discard a working tier. Set
+  // useWorkersAiGeneration to false to remove it.
+  useWorkersAiGeneration: true,
 
-  // Tier 2 fallback. Groq is reached over plain fetch (OpenAI-compatible), so
-  // no SDK. It matters because Workers AI's daily free allowance empties at
-  // 00:00 UTC; without this, visitors get raw extracted text until then.
-  // The key is a Worker secret (GROQ_API_KEY). Absent key = tier skipped.
+  // Tier 1. OpenRouter. Secret is OPENROUTER_API_KEY.
   //
-  // Verify the model id still exists at console.groq.com/docs/models before
-  // relying on it — free tiers rotate without notice.
+  // "openrouter/free" is a routing alias: OpenRouter decides which free models
+  // back it, and that choice can change without notice. That is a feature here
+  // (it self-heals to whatever is currently good) but it does mean the model
+  // behind the id is not pinned. For deterministic behaviour, replace it with
+  // a specific id and verify tool support at openrouter.ai before relying on it.
+  useOpenRouter: true,
+  openRouterModel: "openrouter/free",
+
+  // Tier 2. Groq, also OpenAI-compatible, free, no daily neuron cap. Stays the
+  // tool-calling backup behind OpenRouter. Free tiers rotate without notice —
+  // verify the id at console.groq.com/docs/models.
   useGroq: true,
   groqModel: "qwen/qwen3.8-27b",
+
+  // Opt-in premium prose. Off by default: it is a paid key, and a retired
+  // model id would break it silently.
+  useAnthropic: false,
+  anthropicModel: "claude-sonnet-4-5",
 
   // Llama 3.3 70B Instruct: strongest model on the Workers AI free tier.
   // Costs roughly 2x the 17B in neurons and adds latency, but the corpus is now

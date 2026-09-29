@@ -186,12 +186,12 @@ export function ChatWidget() {
             {messages.length === 0 ? (
               <div className="pt-2">
                 <p className="font-editorial text-lg leading-relaxed text-bone">
-                  Hi traveller. I&rsquo;m Terry&rsquo;s digital twin — his work, his projects, his
-                  opinions, minus the parts he&rsquo;ll only tell you in person.
+                  Hi traveller. I&rsquo;m Terry&rsquo;s digital twin, you can ask me about his work,
+                  his projects, his opinions minus the parts he can tell you in person.
                 </p>
                 <p className="mt-4 font-editorial text-lg leading-relaxed text-bone-dim">
-                  Want Terry to get in touch? Leave your name and an email or number and I&rsquo;ll
-                  pass it straight to him — he reads these himself.
+                  Want him to get back to you? Leave your name and an email or number and I&rsquo;ll
+                  pass it on.
                 </p>
               </div>
             ) : (

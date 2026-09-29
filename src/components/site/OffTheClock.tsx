@@ -1,5 +1,5 @@
 import bikeSunset from "@/assets/bike-sunset.webp";
-import enfield from "@/assets/enfield.webp";
+import mahad from "@/assets/mahad-trip.webp";
 import birds from "@/assets/birds.webp";
 import { profile } from "@/content/site";
 import { Reveal, SectionLabel } from "./Reveal";
@@ -54,13 +54,13 @@ export function OffTheClock() {
             <Reveal delay={160} className="md:min-h-0">
               <figure className="photo-zoom -rotate-1 bg-white p-3 shadow-[0_24px_50px_-28px_oklch(0_0_0/0.35)]">
                 <img
-                  src={enfield}
-                  alt="Terry seated on a Royal Enfield motorcycle on a city street"
+                  src={mahad}
+                  alt="Terry sitting alone in a stone doorway at a basalt fort in Mahad, Maharashtra"
                   loading="lazy"
                   className="block h-64 w-full object-cover sm:h-80 md:h-[23.5rem]"
                 />
                 <figcaption className="hand mt-3 text-xl text-graphite-dim md:text-2xl">
-                  People. Places. Perspectives.
+                  Small figure. Big stone.
                 </figcaption>
               </figure>
             </Reveal>

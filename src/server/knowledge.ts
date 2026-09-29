@@ -1,0 +1,346 @@
+// Knowledge retrieval layer supporting both static and vector modes.
+// Static mode: keyword search over bundled KNOWLEDGE array (zero backend).
+// Vector mode: semantic search via Cloudflare Vectorize + D1 metadata + KV cache.
+
+import type { CloudflareEnvShape } from "@/server/env";
+
+type KnowledgeChunk = {
+  id: string;
+  anchor: string;
+  triggers: string[];
+  answer: string;
+};
+
+export type RetrievalResult = {
+  id: string;
+  anchor: string;
+  title: string;
+  content: string;
+  score: number;
+  source: "static" | "vector" | "cache" | "bm25";
+};
+
+type Env = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">>;
+
+// Static knowledge base (fallback / zero-setup mode)
+export const KNOWLEDGE: KnowledgeChunk[] = [
+  {
+    id: "bio",
+    anchor: "#about",
+    triggers: ["who", "about", "bio", "background", "terry", "yourself", "pillars", "role"],
+    answer:
+      "Terry Mathew is a Product, Data & AI builder with 8+ years across analytics, enterprise platforms and product management. He turns complex business problems into products, data systems and decision tools people can actually use. Pillars: Product Strategy, Data Products, AI Prototyping, Analytics, Business Systems.",
+  },
+  {
+    id: "oracle",
+    anchor: "#experience",
+    triggers: [
+      "oracle",
+      "experience",
+      "work history",
+      "career",
+      "job",
+      "timeline",
+      "team lead",
+      "analyst",
+    ],
+    answer:
+      "Terry spent 8.5 years at Oracle: Senior Data Product Manager for Partner Analytics (2024–2026), Insights Analyst II for Partner Insights & Revenue Operations (2023–2024), Business Operations Team Lead for EMEA Operations leading 20 people on 20k+ transactions/quarter and cutting turnaround from 20 days to 3–4 (2022–2023), Business Operations Specialist (2021–2022), and Business Operations Analyst (2018–2021). Before Oracle: HR, IT Support, Retail, Hospitality.",
+  },
+  {
+    id: "work",
+    anchor: "#selected-work",
+    triggers: [
+      "work",
+      "case stud",
+      "project",
+      "partner systems",
+      "analytics",
+      "reports",
+      "decisions",
+      "portfolio",
+    ],
+    answer:
+      "Selected professional work: (1) Global Partner Systems — turning fragmented partner operations into usable systems; (2) Trusted Partner Analytics — one shared metrics model and vocabulary for reviews and planning; (3) From Reports to Decisions — self-serve answers for recurring questions. Enterprise details are intentionally limited — ask over email.",
+  },
+  {
+    id: "settle",
+    anchor: "#experiments",
+    triggers: ["settle", "finance", "money", "experiment", "building", "app"],
+    answer:
+      "Settle (status: Building) — financial clarity before you commit. A decision simulator for money, debt, EMIs, savings and future purchases.",
+  },
+  {
+    id: "jannanayak",
+    anchor: "#experiments",
+    triggers: ["jannanayak", "civic", "experiment"],
+    answer:
+      "Jannanayak (status: Experiment) — making civic information easier to understand. Technology that helps people understand representation, public information and civic systems.",
+  },
+  {
+    id: "iconsherald",
+    anchor: "#experiments",
+    triggers: ["iconsherald", "exploring", "archive", "people"],
+    answer:
+      "Iconsherald (status: Exploring) — people, ideas and the work they leave behind. A richer way to document people, institutions and meaningful contributions.",
+  },
+  {
+    id: "contact",
+    anchor: "#contact",
+    triggers: [
+      "contact",
+      "email",
+      "hire",
+      "linkedin",
+      "instagram",
+      "youtube",
+      "resume",
+      "cv",
+      "reach",
+      "talk",
+    ],
+    answer:
+      "You can reach Terry at terry.perangat@gmail.com, on LinkedIn (linkedin.com/in/terry-mathew), Instagram (@teddsy), or YouTube (@terrymathew-p). Resume download is in the Experience section.",
+  },
+];
+
+// Static retrieval (keyword-based)
+export function retrieveStatic(question: string, topK = 3): RetrievalResult[] {
+  const q = question.toLowerCase();
+  const words = q.split(/[^a-z0-9]+/).filter((w) => w.length > 2);
+  const scored = KNOWLEDGE.map((chunk) => {
+    let score = 0;
+    for (const t of chunk.triggers) {
+      if (q.includes(t)) score += t.length > 5 ? 3 : 2;
+    }
+    for (const w of words) {
+      if (chunk.answer.toLowerCase().includes(w)) score += 1;
+    }
+    return { chunk, score };
+  }).filter((s) => s.score > 0);
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, topK).map((s) => ({
+    id: s.chunk.id,
+    anchor: s.chunk.anchor,
+    title: s.chunk.id,
+    content: s.chunk.answer,
+    score: s.score,
+    source: "static" as const,
+  }));
+}
+
+// Vector retrieval using Cloudflare Vectorize + D1 + KV cache
+export async function retrieveVector(
+  question: string,
+  env: Env,
+  config: typeof import("./chat.config").CHAT_CONFIG,
+  topK = config.topK,
+): Promise<RetrievalResult[]> {
+  // corpusVersion is part of the key: bumping CHAT_CONFIG.corpusVersion retires
+  // every previously cached result without needing a KV scan or delete.
+  const cacheKey = `rag:v${config.corpusVersion}:${hashString(question.toLowerCase().trim())}`;
+
+  // 1. Check semantic cache (KV)
+  const cached = (await env.CACHE.get(cacheKey, "json")) as RetrievalResult[] | null;
+  if (cached) {
+    return cached.map((r) => ({ ...r, source: "cache" }));
+  }
+
+  // 2. Generate query embedding via Workers AI
+  const embeddingResponse = (await env.AI.run(config.embeddingModel, {
+    text: [question],
+  })) as { data: number[][] };
+  const queryVector = embeddingResponse.data[0];
+  if (!queryVector || queryVector.length !== config.dimensions) {
+    console.warn(
+      `Embedding model returned ${queryVector?.length ?? 0} dimensions, expected ${config.dimensions}.`,
+    );
+    return [];
+  }
+
+  // 3. Vectorize similarity search
+  const vectorizeResults = await env.VECTORIZE.query(queryVector, {
+    topK: topK * 2, // fetch more for reranking
+    returnMetadata: true,
+  });
+
+  if (!vectorizeResults.matches || vectorizeResults.matches.length === 0) {
+    return [];
+  }
+
+  // 4. Fetch parent documents from D1. Vectorize returns chunk ids shaped
+  //    "<parentId>#<index>", while the documents table is keyed by parentId.
+  const parentId = (chunkId: string) => chunkId.split("#")[0] ?? chunkId;
+  const ids = [...new Set(vectorizeResults.matches.map((m) => parentId(m.id)))];
+  const placeholders = ids.map(() => "?").join(",");
+
+  const { results: docs } = await env.DB.prepare(
+    `SELECT id, source, category, title, content FROM documents WHERE id IN (${placeholders})`,
+  )
+    .bind(...ids)
+    .all<{ id: string; source: string; category: string | null; title: string; content: string }>();
+
+  const byId = new Map(docs.map((d) => [d.id, d]));
+
+  // 5. Attach the best-scoring chunk's score to its parent document.
+  const best = new Map<string, number>();
+  for (const match of vectorizeResults.matches) {
+    const pid = parentId(match.id);
+    if (match.score > (best.get(pid) ?? -1)) best.set(pid, match.score);
+  }
+
+  const results: RetrievalResult[] = [...best.entries()]
+    .map(([pid, score]): RetrievalResult | null => {
+      const doc = byId.get(pid);
+      if (!doc) return null;
+      return {
+        id: pid,
+        anchor: `#${doc.category || "knowledge"}`,
+        title: doc.title,
+        content: doc.content,
+        score,
+        source: "vector",
+      };
+    })
+    .filter((r): r is RetrievalResult => r !== null);
+
+  results.sort((a, b) => b.score - a.score);
+  const finalResults = results.slice(0, config.rerankTopK);
+
+  // 7. Cache results
+  await env.CACHE.put(cacheKey, JSON.stringify(finalResults), {
+    expirationTtl: config.cacheTTL,
+  });
+
+  return finalResults;
+}
+
+// Hybrid retrieval: combines static + vector + BM25 (D1 FTS5)
+/**
+ * Turn a natural-language question into a valid FTS5 MATCH expression.
+ *
+ * FTS5 parses its argument as a query grammar, not as text: a trailing "?" is
+ * a syntax error, and unquoted tokens are combined with implicit AND, which is
+ * far too strict for a question like "what did he do at Oracle". Quoting each
+ * term and joining with OR gives a query that behaves the way a reader expects.
+ *
+ * Returns null when the question has no usable terms, so the caller can skip
+ * keyword retrieval instead of issuing a query that will throw.
+ */
+function toFtsQuery(question: string): string | null {
+  const terms = question
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 2)
+    .slice(0, 12);
+
+  if (terms.length === 0) return null;
+  return terms.map((t) => `"${t}"`).join(" OR ");
+}
+
+/** Reciprocal Rank Fusion over the static, vector and keyword rankings. */
+export async function retrieveHybrid(
+  question: string,
+  env: Env,
+  config: typeof import("./chat.config").CHAT_CONFIG,
+): Promise<RetrievalResult[]> {
+  // Static results (fast, deterministic)
+  const staticResults = retrieveStatic(question, config.topK);
+
+  // Vector results (semantic)
+  let vectorResults: RetrievalResult[] = [];
+  try {
+    vectorResults = await retrieveVector(question, env, config);
+  } catch (e) {
+    console.warn("Vector retrieval failed, using static only:", e);
+  }
+
+  // BM25 results from D1 FTS5.
+  //
+  // Two things matter here and both were wrong originally:
+  //  1. FTS5 MATCH takes a *query*, not a sentence. Passing the raw question
+  //     makes it a syntax error (the "?" especially), the promise rejects, and
+  //     the catch below quietly returns zero results — so keyword search never
+  //     ran at all. Build a proper OR-of-terms query instead.
+  //  2. SQLite's bm25() returns NEGATIVE numbers, lower = better match. The
+  //     old 1/(1+score) transform divided by ~zero and produced Infinity and
+  //     negative similarities. Negate it so higher is better, then normalise.
+  let bm25Results: RetrievalResult[] = [];
+  try {
+    const ftsQuery = toFtsQuery(question);
+    if (ftsQuery) {
+      const { results } = await env.DB.prepare(
+        `SELECT d.id, d.source, d.category, d.title, d.content,
+                -bm25(documents_fts) AS score
+         FROM documents_fts
+         JOIN documents d ON d.id = documents_fts.id
+         WHERE documents_fts MATCH ?
+         ORDER BY score DESC LIMIT ?`,
+      )
+        .bind(ftsQuery, config.topK)
+        .all();
+
+      type Bm25Row = {
+        id: string;
+        source: string;
+        category: string | null;
+        title: string;
+        content: string;
+        score: number;
+      };
+
+      const rows = (results as unknown as Bm25Row[]) || [];
+      const best = rows[0]?.score ?? 0;
+
+      bm25Results = rows.map((r) => ({
+        id: r.id,
+        anchor: `#${r.category || "knowledge"}`,
+        title: r.title,
+        content: r.content,
+        // Relative to the top hit, so RRF fusion sees a comparable scale.
+        score: best > 0 ? r.score / best : 0,
+        source: "bm25" as const,
+      }));
+    }
+  } catch (e) {
+    console.warn("BM25 retrieval failed:", e);
+  }
+
+  // Reciprocal Rank Fusion (RRF) to merge all three rankings.
+  // Each source contributes 1/(K + rank); weights tilt toward semantic recall.
+  const sources: [RetrievalResult[], number][] = [
+    [staticResults, 1.0],
+    [vectorResults, 1.5],
+    [bm25Results, 1.0],
+  ];
+  const K = 60;
+  const rrfScores = new Map<string, { result: RetrievalResult; score: number }>();
+
+  for (const [sourceResults, weight] of sources) {
+    sourceResults.forEach((r, rank) => {
+      const rrfScore = weight / (K + rank + 1);
+      const existing = rrfScores.get(r.id);
+      if (!existing || rrfScore > existing.score) {
+        rrfScores.set(r.id, { result: r, score: rrfScore });
+      }
+    });
+  }
+
+  const fused = Array.from(rrfScores.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, config.rerankTopK)
+    .map((v) => v.result);
+
+  return fused.length > 0 ? fused : staticResults;
+}
+
+function hashString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}

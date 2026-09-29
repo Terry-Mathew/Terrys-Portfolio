@@ -1,0 +1,136 @@
+{
+  "$comment": "Golden set for the RAG evaluation. Each case is scored on whether a required fact appears in the answer. Sources are recorded but not scored, because a correct answer reached by the wrong document is still a retrieval bug worth seeing in the report. Run with: npm run eval",
+  "cases": [
+    {
+      "id": "pre-oracle",
+      "question": "what did he do before joining Oracle",
+      "category": "retrieval",
+      "requires": ["retail", "hospit"],
+      "note": "Shares no vocabulary with the source. Proves semantic retrieval rather than keyword matching."
+    },
+    {
+      "id": "oracle-scale",
+      "question": "how many partners does the credit policy cover",
+      "category": "retrieval",
+      "requires": ["300"],
+      "note": "Exact-number lookup. Requires keyword search to succeed."
+    },
+    {
+      "id": "bookings",
+      "question": "how much qualified booking value has he tracked",
+      "category": "retrieval",
+      "requires": ["1.5"],
+      "note": "Exact figure from the resume."
+    },
+    {
+      "id": "digital-twin",
+      "question": "What is his Digital Twin project?",
+      "category": "retrieval",
+      "requires": ["vectorize", "persona"]
+    },
+    {
+      "id": "team-lead-scale",
+      "question": "how big was the team he led in EMEA",
+      "category": "retrieval",
+      "requires": ["20"]
+    },
+    {
+      "id": "ticket-volume",
+      "question": "how many tickets per quarter did his team handle",
+      "category": "retrieval",
+      "requires": ["20,000"]
+    },
+    {
+      "id": "skills-sql",
+      "question": "what database and BI tools does he use",
+      "category": "retrieval",
+      "requires": ["sql"]
+    },
+    {
+      "id": "hobbies",
+      "question": "what are his hobbies outside work",
+      "category": "retrieval",
+      "requires": ["motorcycle", "bird"],
+      "note": "Off-topic but answerable. A similarity gate would wrongly deflect this."
+    },
+    {
+      "id": "job-search",
+      "question": "what kind of role is he looking for",
+      "category": "retrieval",
+      "requires": ["product"]
+    },
+    {
+      "id": "certs",
+      "question": "what certifications does he hold",
+      "category": "retrieval",
+      "requires": ["certif", "apex"]
+    },
+    {
+      "id": "architecture",
+      "question": "how does this chatbot work?",
+      "category": "retrieval",
+      "requires": ["vectorize", "bm25", "worker"],
+      "note": "Tests the how-this-works document."
+    },
+    {
+      "id": "bug-story",
+      "question": "tell me about the bugs you hit building this",
+      "category": "retrieval",
+      "requires": ["dimension", "hash"]
+    },
+    {
+      "id": "contact",
+      "question": "how do I get in touch",
+      "category": "retrieval",
+      "requires": ["@"]
+    },
+    {
+      "id": "experiments",
+      "question": "what is Settle",
+      "category": "retrieval",
+      "requires": ["financ"]
+    },
+    {
+      "id": "cost",
+      "question": "how much does this chatbot cost to run",
+      "category": "retrieval",
+      "requires": ["free", "zero", "nothing", "$0"]
+    },
+    {
+      "id": "deflect-personal",
+      "question": "Are you single",
+      "category": "behaviour",
+      "forbids": ["girlfriend", "married", "yes i am", "i am single"],
+      "note": "Must deflect. Must not invent a private fact."
+    },
+    {
+      "id": "deflect-unrelated",
+      "question": "what is the capital of Peru",
+      "category": "behaviour",
+      "forbids": ["lima"],
+      "note": "Must not answer a question outside the knowledge base."
+    },
+    {
+      "id": "no-invent-company",
+      "question": "which companies has he worked at besides Oracle",
+      "category": "retrieval",
+      "requires": ["amazon", "ibm", "bose"],
+      "note": "Pre-Oracle history lives only in the resume."
+    }
+  ],
+  "multiTurn": [
+    {
+      "id": "followup-pronoun",
+      "seed": "What did he do as a team lead at Oracle?",
+      "followup": "How long was he leading that team?",
+      "requires": ["2022", "2023", "year"],
+      "note": "Tests query condensing. The pronoun 'that team' resolves to nothing without it."
+    },
+    {
+      "id": "followup-detail",
+      "seed": "What is Settle?",
+      "followup": "What problem does it solve?",
+      "requires": ["financ", "clar", "decision", "money", "debt"]
+    }
+  ]
+}

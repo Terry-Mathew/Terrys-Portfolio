@@ -1,0 +1,27 @@
+{
+  "name": "terry-portfolio",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "assets": { "directory": "./dist/client", "not_found_handling": "single-page-application" },
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "terry-knowledge", "database_id": "f7725424-684c-4ef1-b787-04e18bc20a67" }
+  ],
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "fd7b0929dd0b42a4a2bbfe3e059107f1" }
+  ],
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "terry-kb" }
+  ],
+  "ai": { "binding": "AI" },
+  // Custom domains. terrymathew.com is an active Cloudflare zone (nameservers
+  // braden/nicole.ns.cloudflare.com), so Cloudflare creates the DNS records and
+  // the TLS certificate for these at deploy time. The pre-existing Vercel
+  // records were removed from the zone to avoid a conflict.
+  "routes": [
+    { "pattern": "terrymathew.com", "custom_domain": true },
+    { "pattern": "www.terrymathew.com", "custom_domain": true }
+  ],
+  "vars": { "ENVIRONMENT": "production" }
+}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>Terry Mathew — Product, Data, AI &amp; Systems</title>
+  <defs>
+    <!-- Film-strip sprocket holes, matching the @utility sprockets treatment in styles.css -->
+    <pattern id="sprockets" width="46" height="30" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="46" height="30" fill="none"/>
+      <rect x="11" y="8" width="24" height="14" rx="3" fill="#f1ebdd" fill-opacity="0.10"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="#090b0b"/>
+  <rect x="0" y="0" width="1200" height="30" fill="url(#sprockets)"/>
+  <rect x="0" y="600" width="1200" height="30" fill="url(#sprockets)"/>
+
+  <!-- Ember brand dot, same placement logic as icon.svg -->
+  <circle cx="92" cy="126" r="8" fill="#e56c2e"/>
+
+  <text x="80" y="308" font-family="Georgia, 'Times New Roman', serif" font-size="108" fill="#f1ebdd">Terry Mathew</text>
+
+  <rect x="80" y="352" width="128" height="5" fill="#e56c2e"/>
+
+  <text x="80" y="428" font-family="'Helvetica Neue', Arial, sans-serif" font-size="33" letter-spacing="7" fill="#b9b09f">PRODUCT · DATA · AI · SYSTEMS</text>
+
+  <text x="80" y="502" font-family="Georgia, 'Times New Roman', serif" font-size="31" font-style="italic" fill="#b9b09f">I build things around complicated problems.</text>
+</svg>

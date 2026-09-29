@@ -1,0 +1,23 @@
+# Cloudflare response headers.
+# These filenames are not fingerprinted, so every design change busts the URL.
+# Keep TTLs modest on the icons; the resume is stable enough for an hour.
+
+/og-image.png
+  Cache-Control: public, max-age=86400
+  Access-Control-Allow-Origin: *
+
+/icon-192.png
+  Cache-Control: public, max-age=604800
+  Access-Control-Allow-Origin: *
+
+/icon-512.png
+  Cache-Control: public, max-age=604800
+  Access-Control-Allow-Origin: *
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=604800
+  Access-Control-Allow-Origin: *
+
+/Terry-Mathew-CV.pdf
+  Cache-Control: public, max-age=3600
+  Content-Type: application/pdf

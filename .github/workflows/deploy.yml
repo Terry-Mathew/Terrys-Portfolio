@@ -85,7 +85,42 @@ jobs:
         run: node scripts/render-assets.mjs
 
       - name: Deploy to Cloudflare
-        run: npx nitro deploy --prebuilt
+        # Two steps, deliberately. `nitro deploy` has intermittently uploaded a
+        # version without promoting it, leaving the previous code serving live
+        # while the run reported success — twice locally, and the same command
+        # is what CI uses. Promoting the exact version it just uploaded, then
+        # asserting the running code answers, removes the ambiguity.
+        run: |
+          set -euo pipefail
+          VERSION=$(npx nitro deploy --prebuilt 2>&1 | tee /tmp/deploy.log | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' | tail -1)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read the uploaded version id from the deploy log."
+            cat /tmp/deploy.log
+            exit 1
+          fi
+          echo "Uploaded version $VERSION — promoting explicitly."
+          npx wrangler versions deploy "$VERSION" --name terry-portfolio --yes
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Verify the deployed version is live
+        # Proves the code that was just pushed is the code serving traffic.
+        # Without this, an unpromoted upload is indistinguishable from success.
+        run: |
+          set -euo pipefail
+          sleep 10
+          for i in 1 2 3 4 5; do
+            body=$(curl -sS -X POST https://terrymathew.com/api/chat \
+              -H 'content-type: application/json' \
+              -d '{"q":"ping","history":[]}' --max-time 30 || true)
+            if echo "$body" | grep -q '"type"'; then
+              echo "Live endpoint responding."
+              echo "$body" | head -c 200
+              exit 0
+            fi
+            echo "Attempt $i: no response, retrying in 10s…"
+            sleep 10
+          done
+          echo "::error::Deployed site is not responding to /api/chat."
+          exit 1

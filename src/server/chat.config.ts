@@ -89,8 +89,11 @@ export const CHAT_CONFIG = {
   // Conversation. Follow-ups like "how long was he a lead?" are meaningless
   // without the previous turns, so recent history is sent with the question and
   // the follow-up is rewritten into a standalone question before retrieval.
-  historyTurns: 6, // messages (not turns) kept — 3 exchanges
-  condenseModel: "@cf/meta/llama-3.2-3b-instruct", // cheap; rewriting is a small task
+  //
+  // The history limits live in `security` below, not here. They are a security
+  // control, not a conversation preference, and having them in two places is how
+  // the SSE route ended up shipping without them.
+  condenseModel: "@cf/meta/llama-3.2-3b-instruct", // last-resort fallback; the rewrite runs on OpenRouter
 
   // Sampling. These target verbatim echo: the model copying a phrase from the
   // system prompt or from its own previous turn. All three are supported on the
@@ -135,6 +138,12 @@ export const CHAT_CONFIG = {
   // word to type, so notifying on them is a spam button.
   security: {
     maxInputLength: 500,
+    /**
+     * The client sends the whole conversation, so it is attacker-controlled
+     * input. Without these caps a single request can put megabytes into the
+     * condensing and generation prompts — and input tokens are billed, which
+     * makes this a cost attack as much as a robustness one.
+     */
     maxHistoryMessages: 12,
     maxHistoryItemLength: 800,
     blockedKeywords: [
@@ -144,5 +153,21 @@ export const CHAT_CONFIG = {
       "jailbreak",
       "disregard your",
     ],
+  },
+
+  /**
+   * Answer cache. Retrieval results are already cached in KV; without this the
+   * same question re-pays for generation every time it is asked, which is the
+   * common case on a portfolio where visitors ask the same handful of things.
+   *
+   * Keyed on the raw question, not the condensed one, so a hit costs nothing —
+   * checking a condensed key would mean paying for the rewrite first.
+   *
+   * Only successful generations are stored. Caching a degraded extractive reply
+   * would turn one bad minute into a 24-hour one.
+   */
+  answerCache: {
+    enabled: true,
+    ttlSeconds: 86400,
   },
 } as const;

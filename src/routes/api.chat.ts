@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { runChat, type ChatTurn } from "@/server/chat";
+import { runChat } from "@/server/chat";
+import { sanitiseHistory } from "@/server/history";
 import { getCloudflareEnv } from "@/server/env";
 
 // POST /api/chat  —  server-sent events
@@ -37,7 +38,10 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const env = getCloudflareEnv(undefined, request);
-        const history = Array.isArray(body.history) ? (body.history as ChatTurn[]) : [];
+        // The history array comes straight from the browser. Casting it to
+        // ChatTurn[] without clamping it let a client push megabytes into the
+        // condensing and generation prompts — and input tokens are billed.
+        const history = sanitiseHistory(body.history);
 
         // Degraded retrieval is reported two ways, both honest:
         //  - server-side: console.warn on every static fallback, which shows up

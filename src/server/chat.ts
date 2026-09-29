@@ -1,8 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { CHAT_CONFIG } from "@/server/chat.config";
 import { getCloudflareEnv, type CloudflareEnvShape } from "@/server/env";
-import { retrieveStatic, retrieveHybrid, type RetrievalResult } from "@/server/knowledge";
+import {
+  hashString,
+  retrieveStatic,
+  retrieveHybrid,
+  type RetrievalResult,
+} from "@/server/knowledge";
 import { TOOLS, parseToolCallFromText, runToolCall, type ToolCall } from "@/server/chat-tools";
+import { sanitiseHistory, type Turn } from "@/server/history";
 
 export type ChatTurn = { role: "user" | "bot"; text: string };
 
@@ -23,37 +29,41 @@ export type ChatReply = {
   };
 };
 
-type Turn = ChatTurn;
-
-const sanitiseHistory = (history: unknown): Turn[] =>
-  Array.isArray(history)
-    ? history
-        .filter(
-          (m): m is { role: string; text: string } =>
-            typeof m === "object" &&
-            m !== null &&
-            typeof (m as { role?: unknown }).role === "string" &&
-            typeof (m as { text?: unknown }).text === "string",
-        )
-        .map((m) => ({
-          role: m.role === "user" ? ("user" as const) : ("bot" as const),
-          text: m.text.slice(0, 2000),
-        }))
-        .slice(-CHAT_CONFIG.historyTurns)
-    : [];
-
 type RagEnv = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">> & {
   ANTHROPIC_API_KEY?: string;
   GROQ_API_KEY?: string;
   OPENROUTER_API_KEY?: string;
 };
 
-// In-memory rate limit (per worker isolate; KV upgrade comes with vector mode).
+/**
+ * In-memory rate limit, per Worker isolate.
+ *
+ * Two known limits, both accepted deliberately rather than overlooked:
+ *
+ *  - It is per-isolate, so a visitor spread across edge locations gets a fresh
+ *    budget in each. Fixing it properly means a KV counter, which costs a read
+ *    and a write on every message. For a portfolio chatbot that is not worth
+ *    the latency, and the expensive paths (generation, push) carry their own
+ *    limits anyway.
+ *  - The map below is bounded. Without the sweep it grew one entry per
+ *    distinct IP until Cloudflare recycled the isolate.
+ */
 const hits = new Map<string, number[]>();
+const MAX_TRACKED_IPS = 2048;
+
+function sweepRateLimit(now: number): void {
+  if (hits.size <= MAX_TRACKED_IPS) return;
+  const windowStart = now - 60_000;
+  for (const [ip, times] of hits) {
+    const last = times[times.length - 1];
+    if (last !== undefined && last <= windowStart) hits.delete(ip);
+  }
+}
 
 function rateLimited(ip: string): boolean {
   const now = Date.now();
   const windowStart = now - 60_000;
+  sweepRateLimit(now);
   const times = (hits.get(ip) ?? []).filter((t) => t > windowStart);
   times.push(now);
   hits.set(ip, times);
@@ -896,6 +906,33 @@ export async function runChat(
   );
   const env = resolved as RagEnv | undefined;
 
+  // Answer cache, checked on the raw question so a hit costs nothing. It has to
+  // sit before condensing: resolving the rewrite is itself a model call, so
+  // keying on the condensed question would spend money to look for a way to
+  // avoid spending money.
+  const answerKey = `chat:v${CHAT_CONFIG.corpusVersion}:${hashString(qTrimmed.toLowerCase())}`;
+  if (CHAT_CONFIG.answerCache.enabled && env?.CACHE) {
+    try {
+      const hit = await env.CACHE.get(answerKey, "json");
+      if (hit && typeof (hit as { answer?: unknown }).answer === "string") {
+        const cachedAnswer = hit as { answer: string; sources?: string[] };
+        return {
+          answer: cachedAnswer.answer,
+          sources: cachedAnswer.sources ?? [],
+          metadata: {
+            retrievalMode: "static" as const,
+            chunksUsed: 0,
+            cached: true,
+            turn: history.length,
+            generation: "none" as const,
+          },
+        };
+      }
+    } catch (e) {
+      console.warn("[cache] answer read failed, continuing:", e);
+    }
+  }
+
   onPhase?.({ phase: "searching" });
 
   // Retrieval runs on the resolved question, not the raw one.
@@ -961,6 +998,19 @@ export async function runChat(
   // rather than a dead chatbot. Extractive rather than generated, and labelled,
   // so it is never mistaken for something the model wrote.
   const finalAnswer = degraded ? extractiveAnswer(results, searchQuery) : generated.text;
+
+  // Only a real generation is worth remembering. Storing the extractive
+  // fallback would pin one bad minute — every tier rate-limited, say — into
+  // every repeat of that question for the next 24 hours.
+  if (!degraded && CHAT_CONFIG.answerCache.enabled && env?.CACHE) {
+    try {
+      await env.CACHE.put(answerKey, JSON.stringify({ answer: finalAnswer, sources }), {
+        expirationTtl: CHAT_CONFIG.answerCache.ttlSeconds,
+      });
+    } catch (e) {
+      console.warn("[cache] answer write failed, continuing:", e);
+    }
+  }
 
   return {
     answer: finalAnswer,

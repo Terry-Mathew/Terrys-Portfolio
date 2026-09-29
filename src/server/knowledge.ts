@@ -348,7 +348,7 @@ export async function retrieveHybrid(
   return fused.length > 0 ? fused : staticResults;
 }
 
-function hashString(str: string): string {
+export function hashString(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);

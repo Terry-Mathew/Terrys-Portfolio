@@ -33,11 +33,11 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Test notification guards
-        # The lead-capture guards are the only thing standing between a
-        # hallucinated email and a phone call. They are cheap to test and
-        # impossible to check in production.
-        run: npm run test:notify
+      - name: Test server guards
+        # The lead-capture guards and the conversation clamp are the only things
+        # standing between a browser and a bogus notification or an uncapped
+        # prompt. Neither is checkable in production, so both are tested here.
+        run: npm test
 
       - name: Evaluate chatbot
         # Scored against the live site, so it reports on what visitors get.

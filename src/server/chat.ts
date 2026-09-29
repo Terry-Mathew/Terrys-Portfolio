@@ -43,6 +43,7 @@ const sanitiseHistory = (history: unknown): Turn[] =>
 
 type RagEnv = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">> & {
   ANTHROPIC_API_KEY?: string;
+  GROQ_API_KEY?: string;
 };
 
 // In-memory rate limit (per worker isolate; KV upgrade comes with vector mode).
@@ -236,9 +237,74 @@ async function generateAnswer(
     repetition_penalty: CHAT_CONFIG.repetitionPenalty,
   };
 
-  // Workers AI supports `stream: true` on text-generation models, which returns
-  // the whole response as an SSE ReadableStream of partial `response` chunks.
-  // Only used when the caller can accept incremental deltas.
+  // Provider chain. Each tier is strictly better than the one after it:
+  //   1. Workers AI  — best latency, no key, but the daily free neuron
+  //                   allowance runs out at 00:00 UTC
+  //   2. Groq        — free tier, no daily allowance, keeps the persona
+  //   3. (return GENERATION_FAILED) — runChat answers extractively
+  //
+  // Tier 3 used to be the end of the line for tier 1 failures, which meant
+  // every visitor between 05:30 and midnight IST got raw Markdown. Groq turns
+  // that cliff into a soft degradation.
+  const workersAi = await callWorkersAi(messages, params, env, onDelta);
+  if (workersAi) return workersAi;
+
+  const groq = await callGroq(messages, env, onDelta);
+  if (groq) return groq;
+
+  return GENERATION_FAILED;
+}
+
+type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+
+/**
+ * Reads an SSE byte stream, calling `parse` on each complete frame.
+ * Providers disagree on framing, so the frame shape is supplied by the caller.
+ */
+async function readSse(
+  stream: ReadableStream<Uint8Array>,
+  parse: (line: string) => string | null,
+  onDelta?: (text: string) => void,
+): Promise<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let full = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    for (const frame of buf.split("\n\n")) {
+      const line = frame.split("\n").find((l) => l.startsWith("data:"));
+      if (!line) continue;
+      try {
+        const text = parse(line.slice(5).trim());
+        if (text) {
+          full += text;
+          onDelta?.(text);
+        }
+      } catch {
+        // Partial frame — stays in buf and is retried on the next read.
+      }
+    }
+    buf = buf.slice(buf.lastIndexOf("\n\n") + 2);
+  }
+
+  return full;
+}
+
+/** Tier 1: Cloudflare Workers AI. Returns null if unavailable, quota-spent, or broken. */
+async function callWorkersAi(
+  messages: ChatMessage[],
+  params: Record<string, unknown>,
+  env: RagEnv | undefined,
+  onDelta?: (text: string) => void,
+): Promise<string | null> {
+  if (!env?.AI) return null;
+
+  // `stream: true` returns an SSE stream of partial `response` chunks.
   if (onDelta) {
     try {
       const res = (await env.AI.run(CHAT_CONFIG.generationModel, {
@@ -247,38 +313,16 @@ async function generateAnswer(
       })) as unknown as ReadableStream<Uint8Array>;
 
       if (res instanceof ReadableStream) {
-        const reader = res.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-        let full = "";
-
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-
-          // Workers AI frames each chunk as `data: {"response":"..."}`.
-          for (const frame of buf.split("\n\n")) {
-            const line = frame.split("\n").find((l) => l.startsWith("data:"));
-            if (!line) continue;
-            try {
-              const parsed = JSON.parse(line.slice(5).trim()) as { response?: string };
-              if (parsed.response) {
-                full += parsed.response;
-                onDelta(parsed.response);
-              }
-            } catch {
-              // Partial frame — it stays in buf and is retried on the next read.
-            }
-          }
-          buf = buf.slice(buf.lastIndexOf("\n\n") + 2);
-        }
-
+        const full = await readSse(
+          res,
+          (line) => (JSON.parse(line) as { response?: string }).response ?? null,
+          onDelta,
+        );
         if (full) return full;
-        // Streamed but produced nothing: fall through to the buffered path.
       }
     } catch (e) {
-      console.warn("Streaming generation failed, retrying buffered:", e);
+      // Almost always AiError 4006: the daily free neuron allowance is spent.
+      console.warn("[gen] Workers AI streaming failed:", e);
     }
   }
 
@@ -286,13 +330,66 @@ async function generateAnswer(
     const response = (await env.AI.run(CHAT_CONFIG.generationModel, params)) as {
       response: string;
     };
-
-    return response.response || GENERATION_FAILED;
+    return response.response || null;
   } catch (e) {
-    // The common cause is the daily free neuron allowance running out. Nothing
-    // is wrong with the deployment; runChat falls back to extractive answers.
-    console.error("Workers AI generation failed:", e);
-    return GENERATION_FAILED;
+    console.warn("[gen] Workers AI failed:", e);
+    return null;
+  }
+}
+
+/**
+ * Tier 2: Groq. OpenAI-compatible chat completions over plain fetch, so no SDK
+ * and no Node-compat concerns. Used only when Workers AI is unavailable.
+ */
+async function callGroq(
+  messages: ChatMessage[],
+  env: RagEnv | undefined,
+  onDelta?: (text: string) => void,
+): Promise<string | null> {
+  const key = env?.GROQ_API_KEY;
+  if (!CHAT_CONFIG.useGroq || !key) return null;
+
+  const body = {
+    model: CHAT_CONFIG.groqModel,
+    messages,
+    max_tokens: 1024,
+    temperature: CHAT_CONFIG.temperature,
+    ...(onDelta ? { stream: true } : {}),
+  };
+
+  // OpenAI-shaped frame: data: {"choices":[{"delta":{"content":"..."}}]}
+  // and a terminating data: [DONE].
+  const parse = (line: string): string | null => {
+    if (line === "[DONE]") return null;
+    const chunk = JSON.parse(line) as {
+      choices?: { delta?: { content?: string } }[];
+    };
+    return chunk.choices?.[0]?.delta?.content ?? null;
+  };
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!res.ok) {
+      console.warn(`[gen] Groq returned ${res.status}: ${(await res.text()).slice(0, 160)}`);
+      return null;
+    }
+
+    if (onDelta && res.body) {
+      const full = await readSse(res.body, parse, onDelta);
+      if (full) return full;
+    }
+
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return data.choices?.[0]?.message?.content ?? null;
+  } catch (e) {
+    console.warn("[gen] Groq failed:", e);
+    return null;
   }
 }
 

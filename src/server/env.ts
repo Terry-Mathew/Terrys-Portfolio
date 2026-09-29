@@ -15,6 +15,7 @@ export type CloudflareEnvShape = Record<string, unknown> & {
   CACHE?: KVNamespace;
   AI?: Ai;
   ANTHROPIC_API_KEY?: string;
+  GROQ_API_KEY?: string;
   INGEST_KEY?: string;
 };
 

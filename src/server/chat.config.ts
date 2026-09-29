@@ -19,6 +19,16 @@ export const CHAT_CONFIG = {
   useAnthropic: false,
   anthropicModel: "claude-sonnet-4-5",
 
+  // Tier 2 fallback. Groq is reached over plain fetch (OpenAI-compatible), so
+  // no SDK. It matters because Workers AI's daily free allowance empties at
+  // 00:00 UTC; without this, visitors get raw extracted text until then.
+  // The key is a Worker secret (GROQ_API_KEY). Absent key = tier skipped.
+  //
+  // Verify the model id still exists at console.groq.com/docs/models before
+  // relying on it — free tiers rotate without notice.
+  useGroq: true,
+  groqModel: "llama-3.3-70b-versatile",
+
   // Llama 3.3 70B Instruct: strongest model on the Workers AI free tier.
   // Costs roughly 2x the 17B in neurons and adds latency, but the corpus is now
   // large enough (~9k chars) that model quality actually shows.

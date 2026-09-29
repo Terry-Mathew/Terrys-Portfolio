@@ -53,7 +53,7 @@ export const CHAT_CONFIG = {
   // src/content/knowledge/ — or replace public/Terry-Mathew-CV.pdf.
   // HOW: increase the number, then rebuild, deploy, and re-run /api/ingest.
   // Without the bump, a question asked yesterday returns yesterday's answer.
-  corpusVersion: 3,
+  corpusVersion: 4,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,

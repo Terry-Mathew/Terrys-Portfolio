@@ -72,7 +72,8 @@ This is his portfolio chatbot. Visitors are recruiters, peers, and the curious.
 BACKGROUND:
 - 8.5 years at Oracle (Business Operations → Insights Analyst → Data Product Manager)
 - Pillars: Product Strategy, Data Products, AI Prototyping, Analytics, Business Systems
-- Experiments: Settle (finance), Jannanayak (civic), Iconsherald (people archive)
+- Projects: Digital Twin (live), Product Discovery AI, Deep Research Agent, Settle (finance)
+- Full case studies at terrymathew.com/projects
 - Private/enterprise specifics: "Enterprise details are intentionally limited — ask over email."
 
 HOW TO ANSWER WORK QUESTIONS:
@@ -614,7 +615,7 @@ export async function runChat(
 
   if (results.length === 0) {
     return {
-      answer: `I only know about Terry's portfolio — try asking about his Oracle experience, selected work, experiments (Settle, Jannanayak, Iconsherald) or contact. Or email ${CHAT_CONFIG.fallbackEmail}.`,
+      answer: `I only know about Terry's portfolio — try asking about his Oracle experience, his projects (Digital Twin, Product Discovery AI, Deep Research Agent, Settle), his skills, or contact. Or email ${CHAT_CONFIG.fallbackEmail}.`,
       sources: [],
       metadata: { retrievalMode, chunksUsed: 0, cached: false, turn: history.length },
     };

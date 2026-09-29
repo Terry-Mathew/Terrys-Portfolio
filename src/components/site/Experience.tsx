@@ -34,10 +34,10 @@ export function Experience() {
                     Download resume <span className="arrow">↗</span>
                   </a>
                   <a
-                    href="#selected-work"
+                    href="#experiments"
                     className="link-arrow label-eyebrow px-1 py-3 text-graphite-dim transition-colors hover:text-ember"
                   >
-                    Selected work <span className="arrow">→</span>
+                    Projects <span className="arrow">→</span>
                   </a>
                 </div>
               </Reveal>

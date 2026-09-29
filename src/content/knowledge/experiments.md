@@ -1,47 +1,68 @@
-# Experiments
+# Projects
 
-Three projects Terry builds outside client work. Each one is a question he
-wanted to answer properly rather than a product he is selling.
+Four projects Terry builds himself. Product direction and design are his; the
+implementation is AI-assisted. Full case studies live at terrymathew.com/projects.
 
-## Settle — building
+## Digital Twin — live
 
-Financial clarity before you commit.
+The AI persona running on this site. It answers questions about Terry's
+background, experience, projects and skills, and can capture a visitor's contact
+details so he can follow up.
 
-Settle is a decision simulator for money. It exists because a commitment like a
-loan or a long purchase is usually evaluated on the monthly figure alone, and
-the monthly figure hides everything that actually determines whether the
-commitment is survivable. It covers debt, EMIs, savings and future purchases,
-and its purpose is to make the full shape of a decision visible before it is
-made rather than after.
+It is the project the rest of this site is built around, and it runs entirely on
+Cloudflare's free tier: Workers for the API, Vectorize for semantic search, D1
+for the document store and keyword index, KV for the answer cache, and Workers AI
+for both embeddings and generation. Retrieval is hybrid — vector similarity
+combined with BM25 keyword search, fused with Reciprocal Rank Fusion — and
+follow-up questions are rewritten into standalone queries before retrieval, so
+"how long was he a lead?" resolves the pronoun against the conversation.
 
-## Jannanayak — experiment
+## Product Discovery AI — working prototype
 
-Making civic information easier to understand.
+A multi-agent system for product discovery. Separate agents handle competitor
+research, customer pain synthesis, opportunity sizing, risk assessment and
+strategy synthesis, with a quality-audit step at the end to check the work before
+it reaches a human.
 
-Jannanayak looks at representation, public information and civic systems, and
-asks a narrow question: why is so much civic information technically available
-and practically unusable? Most of it is written for an audience that already
-understands the process it describes.
+The design problem was stopping several plausible-sounding agents from agreeing
+with each other. The audit step exists because agents will happily produce a
+well-structured report that is quietly wrong. The result compresses a multi-week
+discovery process into minutes.
 
-## Iconsherald — exploring
+## Deep Research Agent — in development
 
-People, ideas, and the work they leave behind.
+An autonomous research system built on the OpenAI Agents SDK. A planner agent
+breaks a topic into twelve to fifteen search vectors, retrieval runs them
+concurrently, and a writer agent synthesises the evidence into a structured,
+citation-backed report.
 
-Iconsherald is a richer way to document people, institutions and the
-contributions they make. The instinct comes from the same place as the Oracle
-work: most record-keeping captures an output and loses the reasoning, and most
-biographies compress a life into a list of roles.
+The two problems that shaped it were depth versus latency, which parallel
+execution solved, and the snippet barrier — search APIs return fragments without
+enough context, so an analyst pass filters noise before synthesis rather than
+handing raw fragments to the writer.
 
-## What they share
+## Settle — in progress
 
-They are deliberately small and deliberately finished enough to demonstrate.
-Product direction and design are Terry's. The implementation is AI-assisted.
-Demos and code are at terrymathew.com.
+A personal finance decision simulator. It connects income, expenses, savings,
+debts, investments, assets and planned purchases in one picture, so someone can
+see what a commitment looks like over time before making it.
+
+It exists because a loan or a large purchase is usually judged on the monthly
+figure alone, and the monthly figure hides most of what determines whether the
+commitment is survivable. Settle does not give financial advice or tell people
+what to do — it helps them explore the scenarios first.
+
+## What these have in common
+
+Each one is a workflow problem before it is a model problem. The AI handles the
+parts that need judgement and approximation; the rules and audits handle the
+parts that must be correct and repeatable.
 
 ## Things worth asking
 
-- "what is Settle"
-- "what is Jannanayak"
-- "what is Iconsherald"
+- "what is the digital twin"
+- "what is settle"
+- "what is the product discovery AI"
+- "what is the deep research agent"
 - "what side projects does he have"
 - "what is he building outside work"

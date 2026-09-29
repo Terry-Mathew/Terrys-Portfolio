@@ -49,11 +49,10 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
   },
   {
     id: "work",
-    anchor: "#selected-work",
+    anchor: "#experience",
     triggers: [
       "work",
       "case stud",
-      "project",
       "partner systems",
       "analytics",
       "reports",
@@ -61,28 +60,42 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
       "portfolio",
     ],
     answer:
-      "Selected professional work: (1) Global Partner Systems — turning fragmented partner operations into usable systems; (2) Trusted Partner Analytics — one shared metrics model and vocabulary for reviews and planning; (3) From Reports to Decisions — self-serve answers for recurring questions. Enterprise details are intentionally limited — ask over email.",
+      "Partner systems work at Oracle: (1) Global Partner Systems — turned fragmented partner operations into usable systems; (2) Trusted Partner Analytics — one shared metrics model and vocabulary for reviews and planning; (3) From Reports to Decisions — self-serve answers for recurring questions. Enterprise details are intentionally limited — ask over email.",
+  },
+  {
+    id: "projects",
+    anchor: "#experiments",
+    triggers: ["project", "projects", "side project", "building", "portfolio", "build"],
+    answer:
+      "Four projects. Digital Twin — a serverless AI persona on this site that answers questions and captures verified leads (live). Product Discovery AI — a CrewAI multi-agent system for competitor research, customer-pain mining and market sizing (working prototype). Deep Research Agent — an autonomous research pipeline that produces citation-backed reports (in development). Settle — a personal finance decision simulator for exploring debt, savings and purchases (in progress). Each has a full case study at terrymathew.com/projects.",
   },
   {
     id: "settle",
-    anchor: "#experiments",
-    triggers: ["settle", "finance", "money", "experiment", "building", "app"],
+    anchor: "/projects/settle",
+    triggers: ["settle", "finance", "money", "debt", "emi", "savings"],
     answer:
-      "Settle (status: Building) — financial clarity before you commit. A decision simulator for money, debt, EMIs, savings and future purchases.",
+      "Settle is a personal finance decision simulator. It connects income, expenses, savings, debts, investments, assets and planned purchases in one picture, so you can see what a decision looks like over time before you make it. It does not give financial advice or tell you what to do — it helps you explore the scenarios.",
   },
   {
-    id: "jannanayak",
-    anchor: "#experiments",
-    triggers: ["jannanayak", "civic", "experiment"],
+    id: "digital-twin",
+    anchor: "/projects/digital-twin",
+    triggers: [
+      "digital twin",
+      "chatbot",
+      "chat bot",
+      "this site",
+      "assistant",
+      "how does this work",
+    ],
     answer:
-      "Jannanayak (status: Experiment) — making civic information easier to understand. Technology that helps people understand representation, public information and civic systems.",
+      "The Digital Twin is the AI persona running on this site. It is a serverless assistant grounded in Terry's biography and work history, so it can answer questions about his experience, projects and skills. It runs on Cloudflare Workers with Vectorize, D1 and Workers AI, uses hybrid retrieval, and is built to capture contact details without letting anyone fabricate them.",
   },
   {
-    id: "iconsherald",
-    anchor: "#experiments",
-    triggers: ["iconsherald", "exploring", "archive", "people"],
+    id: "capabilities",
+    anchor: "#capabilities",
+    triggers: ["skill", "skills", "stack", "tool", "tools", "technology", "capabilit", "good at"],
     answer:
-      "Iconsherald (status: Exploring) — people, ideas and the work they leave behind. A richer way to document people, institutions and meaningful contributions.",
+      "Terry works across four areas. Product: strategy, roadmapping, user research, cross-functional leadership. Data: SQL, analytics, KPI definition, data pipelines, Oracle Analytics Cloud. AI: prompt engineering, multi-agent systems, RAG architecture, AI prototyping, AI ethics. Building: Python, CrewAI, LangChain, Supabase, Vercel, n8n.",
   },
   {
     id: "contact",

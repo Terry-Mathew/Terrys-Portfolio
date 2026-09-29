@@ -3,6 +3,7 @@
 
 - bio.md — one-paragraph bio + pillars
 - experience.md — Oracle timeline, 8.5 years
-- work.md — 3 case studies (partner systems, analytics, reports-to-decisions)
-- experiments.md — Settle / Jannanayak / Iconsherald
+- work.md — anonymised enterprise work (chatbot context; not a page section)
+- experiments.md — the four projects (Digital Twin, Product Discovery AI, Deep Research Agent, Settle)
+- skills.md — capabilities + certifications
 - contact.md — email + socials

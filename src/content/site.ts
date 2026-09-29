@@ -20,36 +20,6 @@ export const profile = {
   resume: "/Terry-Mathew-CV.pdf",
 };
 
-export const caseStudies = [
-  {
-    index: "01",
-    title: "Global Partner Systems",
-    tags: "Product · Data · Workflow · Global",
-    summary: "Turning fragmented partner operations into systems people could actually use.",
-    problem: "Information lived across different systems, teams and regions.",
-    role: "Product definition, workflow decisions, reporting, UAT and stakeholder alignment.",
-    changed: "Created clearer operational structures and more consistent decision-making.",
-  },
-  {
-    index: "02",
-    title: "Trusted Partner Analytics",
-    tags: "Data · Metrics · Governance",
-    summary: "Getting many teams to agree on what the numbers actually mean.",
-    problem: "Competing definitions meant every review started with arguing over the data.",
-    role: "Metric design, data modelling decisions, validation and adoption across regions.",
-    changed: "One shared model and vocabulary that reviews and planning could rely on.",
-  },
-  {
-    index: "03",
-    title: "From Reports to Decisions",
-    tags: "Product · Insights · AI",
-    summary: "Replacing report requests with tools built around the questions people ask.",
-    problem: "Teams waited on manual reports to answer recurring, predictable questions.",
-    role: "Discovery, prioritisation, prototype direction and rollout with business owners.",
-    changed: "Self-serve answers for common questions and more time for the hard ones.",
-  },
-];
-
 export const timeline = [
   {
     period: "2024–2026",
@@ -85,49 +55,5 @@ export const timeline = [
 
 export const beforeOracle = ["HR", "IT Support", "Retail", "Hospitality"];
 
-export const capabilities = [
-  {
-    title: "Product",
-    body: "Turning ambiguous problems into requirements, workflows, priorities and product decisions.",
-    keywords: ["Product discovery", "PRDs", "Stakeholder alignment"],
-  },
-  {
-    title: "Data",
-    body: "Turning fragmented data into reliable information and decision systems.",
-    keywords: ["Data products", "Analytics", "Metrics"],
-  },
-  {
-    title: "AI",
-    body: "Experimenting with AI for automation, interfaces and decision support.",
-    keywords: ["AI prototypes", "Experimentation", "Evaluation"],
-  },
-  {
-    title: "Systems",
-    body: "Understanding where technology, process, incentives and people intersect.",
-    keywords: ["Workflow design", "Business systems", "Governance"],
-  },
-];
-
-export const experiments = [
-  {
-    name: "Settle",
-    status: "Building",
-    tagline: "Financial clarity before you commit.",
-    body: "A decision simulator for money, debt, EMIs, savings and future purchases.",
-    cta: "Explore Settle",
-  },
-  {
-    name: "Jannanayak",
-    status: "Experiment",
-    tagline: "Making civic information easier to understand.",
-    body: "Technology that helps people understand representation, public information and civic systems.",
-    cta: "Explore Jannanayak",
-  },
-  {
-    name: "Iconsherald",
-    status: "Exploring",
-    tagline: "People, ideas and the work they leave behind.",
-    body: "A richer way to document people, institutions and meaningful contributions.",
-    cta: "Explore Iconsherald",
-  },
-];
+// Capability groups live in ./expertise and projects in ./projects. This file
+// is deliberately only identity, career history and contact details.

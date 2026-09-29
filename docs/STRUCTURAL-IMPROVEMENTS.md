@@ -16,7 +16,7 @@
 - Fixes (no visual change): Nav deep-links preserved (`/#experience` works), resize re-probe,
   Hero `width/height` + `decoding`, Reveal ref type, Experiments keyed covers map.
 - RAG chatbot (Cloudflare-native, static mode): `src/server/chat.ts` server function +
-  `src/server/knowledge.ts` bundled KB (bio/oracle/work/settle/jannanayak/iconsherald/contact)
+  `src/server/knowledge.ts` bundled KB (bio/oracle/work/projects/capabilities/contact)
   + wired `ChatWidget.tsx` (input, suggested prompts, source anchors). Zero AI cost.
   Flip `CHAT_CONFIG.mode` to `"vector"` + uncomment wrangler bindings for Workers AI + Vectorize.
 

@@ -9,7 +9,6 @@ const links = [
   { label: "Experience", href: "#experience" },
   { label: "Contact", href: "#contact" },
 ];
-
 export function Nav() {
   const [open, setOpen] = useState(false);
   const [onPaper, setOnPaper] = useState(false);

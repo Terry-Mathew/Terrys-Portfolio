@@ -46,10 +46,15 @@ const SKIP = new Set(["README.md", "RAG-ARCHITECTURE.md"]);
 const CATEGORY: Record<string, string> = {
   "bio.md": "about",
   "experience.md": "experience",
-  "work.md": "selected-work",
-  "projects.md": "projects",
-  "skills.md": "capabilities",
+  // "work" is chatbot context only — the Selected Work section was removed, so
+  // anchoring to #selected-work would emit a dead source link.
+  "work.md": "experience",
+  // The home-page project section is id="experiments"; "projects" is a real
+  // route but there is no #projects anchor to link to. experiments.md is the
+  // single project document — a second one only creates two answers to the
+  // same question.
   "experiments.md": "experiments",
+  "skills.md": "capabilities",
   "contact.md": "contact",
   "off-the-clock.md": "off-the-clock",
   "approach.md": "approach",

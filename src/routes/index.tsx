@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { Nav } from "@/components/site/Nav";
 import { Hero } from "@/components/site/Hero";
-import { SelectedWork } from "@/components/site/SelectedWork";
+import { Experiments } from "@/components/site/Experiments";
 import { About } from "@/components/site/About";
 import { Experience } from "@/components/site/Experience";
 import { Capabilities } from "@/components/site/Capabilities";
-import { Experiments } from "@/components/site/Experiments";
+import { Credentials } from "@/components/site/Credentials";
 import { OffTheClock } from "@/components/site/OffTheClock";
 import { Contact } from "@/components/site/Contact";
 
@@ -58,11 +58,11 @@ function Index() {
       />
       <Nav />
       <Hero />
-      <Experiments />
       <About />
       <Experience />
-      <SelectedWork />
+      <Experiments />
       <Capabilities />
+      <Credentials />
       <OffTheClock />
       <Contact />
       <Suspense fallback={null}>

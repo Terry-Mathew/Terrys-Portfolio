@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "assets": "node scripts/render-assets.mjs",
     "eval": "node scripts/eval.mjs",
+    "test:notify": "node --test scripts/notify-test.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

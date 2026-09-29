@@ -17,6 +17,11 @@ export type CloudflareEnvShape = Record<string, unknown> & {
   ANTHROPIC_API_KEY?: string;
   GROQ_API_KEY?: string;
   INGEST_KEY?: string;
+  /** Worker secret, never `vars` — anyone holding it can spam the phone. */
+  PUSHOVER_TOKEN?: string;
+  PUSHOVER_USER?: string;
+  /** Plain `vars` in wrangler.jsonc. */
+  ENVIRONMENT?: string;
 };
 
 type MaybeEnv = {

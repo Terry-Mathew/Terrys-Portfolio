@@ -89,4 +89,42 @@ export const CHAT_CONFIG = {
   repetitionPenalty: 1.1,
 
   fallbackEmail: "terry.perangat@gmail.com",
+
+  // Lead capture.
+  //
+  // Tool calling runs on Groq, not on Workers AI: this project's own history
+  // records Gemini Flash, Llama 3.3 and Nemotron all failing or rate-limiting
+  // on structured tool calls. Groq is OpenAI-compatible and reliable. If Groq
+  // is unavailable the chat still answers — it just does not capture leads.
+  useTools: true,
+
+  // A model can loop call -> reject -> call. Three iterations is one retry plus
+  // a final answer before falling through to a neutral reply.
+  maxToolIterations: 3,
+
+  notifications: {
+    enabled: true,
+    // Models fire record_user_details eagerly, on the first "tell me about
+    // yourself". Requiring a real note first is the cheapest guard.
+    minNotesLength: 20,
+    // Per-IP ceilings, backed by KV. Without these one visitor can fill the
+    // phone in under a minute.
+    maxContactsPerIpPerHour: 1,
+    maxUnknownPerIpPerHour: 3,
+  },
+
+  // Input handling. Blocked keywords are logged, never pushed — they are one
+  // word to type, so notifying on them is a spam button.
+  security: {
+    maxInputLength: 500,
+    maxHistoryMessages: 12,
+    maxHistoryItemLength: 800,
+    blockedKeywords: [
+      "ignore previous",
+      "ignore all",
+      "system prompt",
+      "jailbreak",
+      "disregard your",
+    ],
+  },
 } as const;

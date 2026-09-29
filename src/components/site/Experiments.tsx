@@ -66,7 +66,7 @@ export function Experiments() {
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <SectionLabel tone="light">Selected projects</SectionLabel>
+              <SectionLabel tone="light">Projects</SectionLabel>
               <h2 className="display-xl mt-6 text-[clamp(2.6rem,6vw,5rem)] leading-[1.02]">
                 A few things
                 <br />
@@ -80,10 +80,6 @@ export function Experiments() {
               All projects <span className="arrow">→</span>
             </a>
           </div>
-          <p className="mt-6 max-w-xl leading-relaxed text-graphite-dim">
-            Products, platforms and ideas exploring complicated real-world problems. Each one has a
-            full case study behind it.
-          </p>
         </Reveal>
 
         <div className="mt-16 grid gap-8 md:grid-cols-3">

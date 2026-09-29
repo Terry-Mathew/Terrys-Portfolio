@@ -18,7 +18,7 @@ export const capabilityGroups = [
   {
     title: "Data",
     icon: "chart",
-    skills: ["SQL", "Analytics", "KPI Definition", "Data Pipelines", "Oracle Analytics Cloud"],
+    skills: ["SQL", "Analytics", "Power BI", "Snowflake", "ETL", "Oracle Analytics Cloud"],
   },
   {
     title: "AI",
@@ -34,7 +34,19 @@ export const capabilityGroups = [
   {
     title: "Building",
     icon: "boxes",
-    skills: ["Python", "CrewAI", "LangChain", "Supabase", "Vercel", "n8n"],
+    skills: [
+      "Python",
+      "TypeScript",
+      "CrewAI",
+      "LangChain",
+      "PostgreSQL",
+      "Neon",
+      "Convex",
+      "Supabase",
+      "Cloudflare",
+      "Vercel",
+      "n8n",
+    ],
   },
 ] as const;
 

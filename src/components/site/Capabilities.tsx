@@ -30,41 +30,38 @@ export function Capabilities() {
                   <br />
                   of thinking.
                 </h2>
-                <p className="mt-6 max-w-sm leading-relaxed text-graphite-dim">
-                  The value is rarely in one discipline. It is in the seams between them — where the
-                  product decision, the data model, and the thing people actually need to do line
-                  up.
-                </p>
               </Reveal>
             </div>
           </div>
 
           <div className="lg:col-span-8">
-            <div className="grid gap-px bg-graphite/15 sm:grid-cols-2">
+            <dl className="border-t border-graphite/20">
               {capabilityGroups.map((group, i) => {
                 const Icon = ICONS[group.icon];
                 return (
-                  <Reveal key={group.title} delay={i * 70} className="bg-paper-2 p-8 md:p-10">
-                    <div className="flex items-center gap-3">
-                      <Icon className="size-5 shrink-0 text-ember" aria-hidden />
-                      <h3 className="display-xl text-2xl text-graphite md:text-3xl">
-                        {group.title}
-                      </h3>
-                    </div>
-                    <ul className="mt-6 flex flex-wrap gap-x-2 gap-y-2">
+                  <Reveal
+                    key={group.title}
+                    delay={i * 70}
+                    className="grid gap-x-8 gap-y-3 border-b border-graphite/20 py-6 sm:grid-cols-[9rem_1fr] sm:py-7"
+                  >
+                    <dt className="flex items-center gap-3">
+                      <Icon className="size-4 shrink-0 text-ember" aria-hidden />
+                      <span className="label-eyebrow text-graphite">{group.title}</span>
+                    </dt>
+                    <dd className="flex flex-wrap gap-x-2 gap-y-1.5">
                       {group.skills.map((skill) => (
-                        <li
-                          key={skill}
-                          className="label-eyebrow rounded-full border border-graphite/20 px-3 py-1.5 text-graphite-dim transition-colors hover:border-ember/60 hover:text-graphite"
-                        >
+                        <span key={skill} className="label-eyebrow text-graphite-dim">
                           {skill}
-                        </li>
+                          <span className="ml-2.5 text-ember/40" aria-hidden>
+                            ·
+                          </span>
+                        </span>
                       ))}
-                    </ul>
+                    </dd>
                   </Reveal>
                 );
               })}
-            </div>
+            </dl>
           </div>
         </div>
       </div>

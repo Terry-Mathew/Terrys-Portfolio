@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatTurn } from "@/server/chat";
 
-const SUGGESTIONS = [
-  "What did he do at Oracle?",
-  "What is Settle?",
-  "What is he looking for in a role?",
-];
-
 /**
  * Remove inline citation markers, scoped to the documents that were retrieved.
  * Leaving a partially-arrived marker in place until it completes is deliberate —
@@ -111,6 +105,7 @@ export function ChatWidget() {
           retrievalMode?: string;
           chunksUsed?: number;
           cached?: boolean;
+          answer?: string;
         };
         try {
           d = JSON.parse(line.slice(5).trim());
@@ -126,6 +121,12 @@ export function ChatWidget() {
           // Diagnostic only — never rendered. Lets a degraded retrieval path be
           // spotted in devtools without putting instrumentation in the UI.
           console.info(`[rag] ${d.retrievalMode} | ${d.chunksUsed} chunks | cached=${d.cached}`);
+          // Not every reply streams. Rate-limited and extractive (no model
+          // answered) responses return early and send no deltas — the answer
+          // exists only here. Without this the widget throws "empty response"
+          // and replaces a perfectly good reply with "Something went wrong",
+          // which is what a visitor sees whenever the model tiers are capped.
+          if (!answer && d.answer) append(d.answer);
         }
       };
 
@@ -183,17 +184,15 @@ export function ChatWidget() {
 
           <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-5 py-3">
             {messages.length === 0 ? (
-              <div className="space-y-1 pt-2">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => void send(s)}
-                    className="block text-left font-editorial text-base leading-relaxed text-bone-dim/70 transition-colors hover:text-ember"
-                  >
-                    {s}
-                  </button>
-                ))}
+              <div className="pt-2">
+                <p className="font-editorial text-lg leading-relaxed text-bone">
+                  Hi traveller. I&rsquo;m Terry&rsquo;s digital twin — his work, his projects, his
+                  opinions, minus the parts he&rsquo;ll only tell you in person.
+                </p>
+                <p className="mt-4 font-editorial text-lg leading-relaxed text-bone-dim">
+                  Want Terry to get in touch? Leave your name and an email or number and I&rsquo;ll
+                  pass it straight to him — he reads these himself.
+                </p>
               </div>
             ) : (
               messages.map((m, i) => (

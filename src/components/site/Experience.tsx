@@ -33,12 +33,6 @@ export function Experience() {
                   >
                     Download resume <span className="arrow">↗</span>
                   </a>
-                  <a
-                    href="#experiments"
-                    className="link-arrow label-eyebrow px-1 py-3 text-graphite-dim transition-colors hover:text-ember"
-                  >
-                    Projects <span className="arrow">→</span>
-                  </a>
                 </div>
               </Reveal>
 

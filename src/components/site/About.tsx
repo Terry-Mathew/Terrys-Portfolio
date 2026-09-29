@@ -30,19 +30,25 @@ export function About() {
                   understanding how information, processes, and people fit together.
                 </p>
                 <p>
-                  I've worked on global partner systems, analytics products, operational workflows,
-                  and decision tools used across different teams and functions. The common thread
-                  has been the same: take something complicated, create structure around it, and
-                  make it easier to use or act on.
+                  I&rsquo;ve worked on global partner systems, analytics products, operational
+                  workflows, and decision tools used across different teams and functions. The
+                  common thread has been the same: take something complicated, create structure
+                  around it, and make it easier to use or act on.
                 </p>
                 <p>
-                  Outside work, I build my own product ideas, experiment with AI, and spend a fair
-                  amount of time exploring things that have nothing to do with job titles.
-                </p>
-                <p className="font-editorial text-[1.25rem] text-graphite">
-                  This site is a mix of both.
+                  Outside work, I build my own product ideas and experiment with AI. This site is a
+                  mix of both.
                 </p>
               </div>
+            </Reveal>
+
+            <Reveal delay={220}>
+              <a
+                href="#experiments"
+                className="link-arrow label-eyebrow mt-10 inline-flex text-graphite-dim transition-colors hover:text-ember"
+              >
+                See what I&rsquo;m building <span className="arrow">→</span>
+              </a>
             </Reveal>
           </div>
 

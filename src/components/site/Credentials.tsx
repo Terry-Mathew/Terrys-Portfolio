@@ -59,10 +59,6 @@ export function Credentials() {
               </button>
             </div>
           </div>
-          <p className="mt-6 max-w-xl leading-relaxed text-graphite-dim">
-            Certified across Oracle, Google Cloud, Udemy and Accenture. Every credential links to
-            its verification badge.
-          </p>
         </Reveal>
 
         <div

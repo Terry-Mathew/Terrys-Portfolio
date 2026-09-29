@@ -31,6 +31,10 @@ export const CHAT_CONFIG = {
   // a specific id and verify tool support at openrouter.ai before relying on it.
   useOpenRouter: true,
   openRouterModel: "openrouter/free",
+  // A second slot for question condensing, so the same routing alias can be
+  // pointed at a smaller/faster model without touching the chat model. Leave
+  // empty to reuse openRouterModel.
+  openRouterCondenseModel: "",
 
   // Tier 2. Groq, also OpenAI-compatible, free, no daily neuron cap. Stays the
   // tool-calling backup behind OpenRouter. Free tiers rotate without notice —

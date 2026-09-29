@@ -672,39 +672,98 @@ async function callGroq(
  * "lead" only — "he" resolves to nothing. Condensing first means retrieval runs
  * on the resolved question, and two phrasings of the same intent share one
  * cache entry instead of drifting apart.
+ *
+ * Runs on the OpenAI-compatible tiers, not Workers AI. Workers AI's 10k
+ * neurons/day were being drained by every follow-up question, which is the
+ * same budget ingestion needs for embeddings — the chat was starving the
+ * corpus rebuild it depends on. Workers AI stays as a last-resort fallback so
+ * pronoun resolution still degrades gracefully if both API tiers are down.
+ *
+ * Returns the original question on any failure: a bad rewrite is worse than
+ * none, because retrieval on a mangled query returns confidently wrong
+ * chunks.
  */
 async function condenseQuestion(
   question: string,
   history: Turn[],
   env: RagEnv | undefined,
 ): Promise<string> {
-  if (history.length === 0 || !env?.AI) return question;
+  if (history.length === 0) return question;
 
+  const transcript = history
+    .map((m) => (m.role === "user" ? `Visitor: ${m.text}` : `Terry: ${m.text}`))
+    .join("\n");
+
+  const prompt = [
+    {
+      role: "system" as const,
+      content:
+        "Rewrite the visitor's latest question as a standalone search query. " +
+        "Resolve pronouns using the conversation. Keep it under 20 words. " +
+        "Output only the rewritten query, nothing else. " +
+        "If it is already standalone, repeat it unchanged.",
+    },
+    { role: "user" as const, content: `${transcript}\n\nVisitor: ${question}` },
+  ];
+
+  const accept = (raw: string | null | undefined): string | null => {
+    const rewritten = raw?.trim().split("\n")[0]?.trim();
+    if (!rewritten || rewritten.length < 3 || rewritten.length > 300) return null;
+    return rewritten;
+  };
+
+  const tiers = [
+    {
+      label: "OpenRouter",
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: env?.OPENROUTER_API_KEY,
+      model: CHAT_CONFIG.openRouterCondenseModel || CHAT_CONFIG.openRouterModel,
+      enabled: CHAT_CONFIG.useOpenRouter,
+    },
+    {
+      label: "Groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      key: env?.GROQ_API_KEY,
+      model: CHAT_CONFIG.groqModel,
+      enabled: CHAT_CONFIG.useGroq,
+    },
+  ];
+
+  for (const tier of tiers) {
+    if (!tier.enabled || !tier.key) continue;
+    try {
+      const res = await fetch(tier.url, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${tier.key}` },
+        body: JSON.stringify({
+          model: tier.model,
+          messages: prompt,
+          max_tokens: 64,
+          temperature: 0,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) {
+        console.warn(`[condense] ${tier.label} returned ${res.status}`);
+        continue;
+      }
+      const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      const rewritten = accept(data.choices?.[0]?.message?.content);
+      if (rewritten) return rewritten;
+    } catch (e) {
+      console.warn(`[condense] ${tier.label} failed:`, e);
+    }
+  }
+
+  // Last resort. Free, and only reached when both API tiers are unavailable.
+  if (!env?.AI) return question;
   try {
-    const transcript = history
-      .map((m) => (m.role === "user" ? `Visitor: ${m.text}` : `Terry: ${m.text}`))
-      .join("\n");
-
     const res = (await env.AI.run(CHAT_CONFIG.condenseModel, {
-      messages: [
-        {
-          role: "system",
-          content:
-            "Rewrite the visitor's latest question as a standalone search query. " +
-            "Resolve pronouns using the conversation. Keep it under 20 words. " +
-            "Output only the rewritten query, nothing else. " +
-            "If it is already standalone, repeat it unchanged.",
-        },
-        { role: "user", content: `${transcript}\n\nVisitor: ${question}` },
-      ],
+      messages: prompt,
       max_tokens: 64,
       temperature: 0,
     })) as { response?: string };
-
-    const rewritten = res.response?.trim().split("\n")[0]?.trim();
-    // A bad rewrite is worse than none — fall back to the original question.
-    if (!rewritten || rewritten.length < 3 || rewritten.length > 300) return question;
-    return rewritten;
+    return accept(res.response) ?? question;
   } catch (e) {
     console.warn("Question condensing failed, using raw question:", e);
     return question;

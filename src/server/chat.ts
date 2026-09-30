@@ -12,6 +12,21 @@ import { sanitiseHistory, type Turn } from "@/server/history";
 
 export type ChatTurn = { role: "user" | "bot"; text: string };
 
+/**
+ * Stand-in for retrieved context when the search found nothing.
+ *
+ * Phrased as an instruction rather than as absent text. An empty CONTEXT block
+ * reads to the model as a malfunction and it starts narrating the failure —
+ * "based on the context provided". This reads as a known fact about the turn,
+ * which is what it is, and it keeps the reply in voice.
+ */
+const NO_CONTEXT =
+  "(Nothing in the knowledge base matched this one. Reply from your own " +
+  "knowledge of Terry and the shape of the site. If it is a greeting, a " +
+  "joke, or something that never needed a document, just reply like a " +
+  "person. If it is a real question you cannot answer, say so in one line " +
+  "and point at something you can answer.)";
+
 export type ChatReply = {
   answer: string;
   sources: string[];
@@ -131,6 +146,26 @@ LENGTH — IMPORTANT:
 - Only produce the long version if the visitor asks for it. If they say "more",
   "deeper", "tell me about the bugs" or similar, open it up and be specific.
   Two questions in a row on the same topic means they want the detail.
+
+HOW TO OPEN A CONVERSATION:
+- Some openings are not questions: "hey", "hi", "yo", "hello", "good morning",
+  an emoji, or a single word. These still get a reply, in your voice, like a
+  person who was already here. Never answer one with a list of things to ask
+  about. That is what a help desk does.
+- Shape only, never copied:
+    · "Hey. Ask me anything — the Oracle years, the projects, the tools."
+    · "Hi. Fair warning, I only know the stuff on this page."
+- If they open with something that is not a greeting either, treat it as the
+  question it is.
+
+WHEN THE CONTEXT SAYS NOTHING MATCHED:
+- The CONTEXT block will sometimes say plainly that nothing matched. That is
+  information, not an error. Do not apologise for it and do not report it.
+  "Based on the context provided, ..." is a phrase that must never appear.
+- A greeting, a joke, or a question that never needed a document is answered
+  from the shape of the site and what you already know about Terry.
+- A real question you cannot answer gets one honest line, then a redirect to
+  something you can answer.
 
 HOW TO HANDLE QUESTIONS THAT ARE OUTSIDE THE KNOWLEDGE BASE:- Some questions are simply not about Terry. "What is the capital of Peru?"
   "What is 2+2?" "Who won the election?" "Write me a poem."
@@ -765,19 +800,12 @@ async function condenseQuestion(
     }
   }
 
-  // Last resort. Free, and only reached when both API tiers are unavailable.
-  if (!env?.AI) return question;
-  try {
-    const res = (await env.AI.run(CHAT_CONFIG.condenseModel, {
-      messages: prompt,
-      max_tokens: 64,
-      temperature: 0,
-    })) as { response?: string };
-    return accept(res.response) ?? question;
-  } catch (e) {
-    console.warn("Question condensing failed, using raw question:", e);
-    return question;
-  }
+  // No Workers AI fallback by design. It would draw on the same 10,000
+  // neurons/day the ingest needs, and an LLM call costs orders of magnitude
+  // more of that budget than an embedding. Losing it means pronouns in a
+  // follow-up resolve less well during an outage; the question is still
+  // answered, just retrieved on its raw words.
+  return question;
 }
 
 /**
@@ -965,15 +993,21 @@ export async function runChat(
 
   onPhase?.({ phase: "retrieved", count: results.length });
 
-  if (results.length === 0) {
-    return {
-      answer: `I only know about Terry's portfolio — try asking about his Oracle experience, his projects (Digital Twin, Product Discovery AI, Deep Research Agent, Settle), his skills, or contact. Or email ${CHAT_CONFIG.fallbackEmail}.`,
-      sources: [],
-      metadata: { retrievalMode, chunksUsed: 0, cached: false, turn: history.length },
-    };
-  }
+  // NOTE: an empty result set does NOT short-circuit to a canned message.
+  //
+  // It used to. "Hey" retrieved nothing, so the visitor got a bulleted list of
+  // topics written by nobody — the model was never asked. That is also why the
+  // replies read like a generic assistant: with no context in the prompt the
+  // model has no voice to work from and falls back to "Based on the context
+  // provided, ...". Retrieval and personality are coupled more tightly than
+  // they look.
+  //
+  // A greeting, a joke and a question we cannot answer are all things a person
+  // handles without a document open. So the model always gets the turn, with an
+  // explicit note when there is nothing to draw on.
+  const contextText =
+    results.length > 0 ? results.map((r) => `[${r.id}] ${r.content}`).join("\n\n") : NO_CONTEXT;
 
-  const contextText = results.map((r) => `[${r.id}] ${r.content}`).join("\n\n");
   const sources = [...new Set(results.map((r) => r.anchor))];
   onSources?.(
     sources,

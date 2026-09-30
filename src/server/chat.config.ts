@@ -17,10 +17,21 @@ export const CHAT_CONFIG = {
   // path is identical and the credit balance turns the tail of the day back
   // into real answers.
   //
-  // Workers AI is kept last rather than dropped: it is free and instant when
-  // it is available, so there is no reason to discard a working tier. Set
-  // useWorkersAiGeneration to false to remove it.
-  useWorkersAiGeneration: true,
+  // Workers AI is embeddings-only.
+  //
+  // It used to be the last generation tier, and that is what starved the corpus
+  // rebuild. One LLM answer costs orders of magnitude more of the 10,000
+  // neurons/day than one query embedding, so a handful of fallback answers —
+  // the eval suite fires twenty per deploy and every one of them lands here
+  // when OpenRouter is capped — exhausts the day and the ingest cannot run.
+  // That is the 4006 error.
+  //
+  // With this off, those neurons serve retrieval and nothing else, so only the
+  // work that actually needs them can spend them. The cost is that when
+  // OpenRouter and Groq both fail, the chat drops straight to the extractive
+  // fallback instead of trying Workers AI — which is where it was heading
+  // anyway, just after destroying the embedding budget.
+  useWorkersAiGeneration: false,
 
   // Tier 1. OpenRouter. Secret is OPENROUTER_API_KEY.
   //
@@ -93,7 +104,12 @@ export const CHAT_CONFIG = {
   // The history limits live in `security` below, not here. They are a security
   // control, not a conversation preference, and having them in two places is how
   // the SSE route ended up shipping without them.
-  condenseModel: "@cf/meta/llama-3.2-3b-instruct", // last-resort fallback; the rewrite runs on OpenRouter
+  // Question condensing runs on the OpenAI-compatible tiers. There is no
+  // Workers AI fallback: it draws on the same 10,000 neurons/day the ingest
+  // needs, and an LLM call costs orders of magnitude more of that budget than
+  // an embedding. Losing it means pronouns in a follow-up resolve less well
+  // during an outage; the question is still answered, just retrieved on the raw
+  // words.
 
   // Sampling. These target verbatim echo: the model copying a phrase from the
   // system prompt or from its own previous turn. All three are supported on the

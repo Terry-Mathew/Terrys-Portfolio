@@ -135,41 +135,61 @@ jobs:
       - name: Ingest the knowledge corpus
         # The corpus is bundled at build time, so it can only be loaded AFTER
         # the version carrying the new knowledge files is live. Until this runs,
-        # the chatbot answers from the previous release's content — which is why
-        # a content change used to be invisible until someone remembered this
-        # command by hand.
+        # the chatbot answers from the previous release's content.
         #
-        # Failure is a warning, not a block: a corpus that failed to load
-        # degrades retrieval but does not take the site down, and blocking here
-        # would roll back a perfectly good deploy over a quota limit.
+        # This step previously reported success while doing nothing at all,
+        # because INGEST_KEY was not set as a GitHub secret, the request was
+        # unauthorised, and the `if` below only warned. The same mistake the
+        # project docs warn about: a step that cannot fail cannot tell you
+        # anything. It now distinguishes "no key configured", "request refused"
+        # and "corpus did not load", and the last two fail the job.
         run: |
-          set +e
-          resp=$(curl -sS -X POST https://terrymathew.com/api/ingest \
-            -H "x-ingest-key: ${{ secrets.INGEST_KEY }}" --max-time 120)
-          echo "ingest: $resp"
-          if echo "$resp" | grep -q '"ok":true'; then
-            indexed=$(echo "$resp" | grep -oE '"indexed":[0-9]+' | cut -d: -f2)
-            removed=$(echo "$resp" | grep -oE '"removedDocs":[0-9]+' | cut -d: -f2)
-            echo "::notice::Corpus current: ${indexed:-0} chunk(s) indexed, ${removed:-0} stale document(s) removed."
-          else
-            echo "::warning::Corpus ingest did not succeed — retrieval will serve the previous content."
+          if [ -z "${{ secrets.INGEST_KEY }}" ]; then
+            echo "::error::INGEST_KEY is not set as a GitHub environment secret, so the corpus cannot be loaded. Set it with: gh secret set INGEST_KEY --env production"
+            exit 1
           fi
+          resp=$(curl -sS -X POST https://terrymathew.com/api/ingest \
+            -H "x-ingest-key: ${{ secrets.INGEST_KEY }}" --max-time 180 -w '\nHTTP:%{http_code}')
+          echo "ingest: $resp"
+          if ! echo "$resp" | grep -q '"ok":true'; then
+            echo "::error::Corpus ingest did not succeed — retrieval will serve the previous content until it does."
+            exit 1
+          fi
+          indexed=$(echo "$resp" | grep -oE '"indexed":[0-9]+' | cut -d: -f2)
+          removed=$(echo "$resp" | grep -oE '"removedDocs":[0-9]+' | cut -d: -f2)
+          vectors=$(echo "$resp" | grep -oE '"removedVectors":[0-9]+' | cut -d: -f2)
+          echo "::notice::Corpus current: ${indexed:-0} chunk(s) indexed, ${removed:-0} stale document(s) and ${vectors:-0} stale vector(s) removed."
 
       - name: Probe semantic retrieval
-        # A page-level check plus a chat event is not enough: the site can be
-        # fully healthy while Vectorize is empty, and the only symptom is that
-        # answers quietly come from the keyword path. This asserts the vector
-        # path is actually the one running.
+        # A page check plus a chat event is not enough: the site can be fully
+        # healthy while Vectorize is empty, and the only symptom is answers
+        # quietly coming from the keyword path.
+        #
+        # Retries, because the first request after a deploy can land while the
+        # edge is still serving a stale isolate. It reports which check failed
+        # rather than dying silently on a non-matching grep.
         run: |
-          set -euo pipefail
-          body=$(curl -sS -X POST https://terrymathew.com/api/chat \
-            -H 'content-type: application/json' \
-            -d '{"q":"what is settle","history":[]}' --max-time 45)
-          mode=$(echo "$body" | grep -oE '"retrievalMode":"[a-z]+"' | head -1 | cut -d'"' -f4)
-          gen=$(echo "$body" | grep -oE '"generation":"[a-z-]+"' | head -1 | cut -d'"' -f4)
-          echo "retrieval=${mode} generation=${gen}"
+          mode=""
+          gen=""
+          for i in 1 2 3; do
+            body=$(curl -sS -X POST https://terrymathew.com/api/chat \
+              -H 'content-type: application/json' \
+              -d '{"q":"what is settle","history":[]}' --max-time 45 || true)
+            if echo "$body" | grep -q '"type"'; then
+              mode=$(echo "$body" | grep -oE '"retrievalMode":"[a-z]+"' | head -1 | cut -d'"' -f4 || true)
+              gen=$(echo "$body" | grep -oE '"generation":"[a-z-]+"' | head -1 | cut -d'"' -f4 || true)
+              [ -n "$mode" ] && break
+            fi
+            echo "attempt $i: no usable response, retrying in 10s"
+            sleep 10
+          done
+          if [ -z "$mode" ]; then
+            echo "::error::No response from /api/chat after 3 attempts. Cannot confirm retrieval."
+            exit 1
+          fi
+          echo "retrieval=${mode} generation=${gen:-none}"
           if [ "$mode" = "static" ]; then
-            echo "::error::Retrieval fell back to static — the vector index is not serving."
+            echo "::error::Retrieval fell back to static — the vector index is not serving. Ingestion is the usual cause."
             exit 1
           fi
 

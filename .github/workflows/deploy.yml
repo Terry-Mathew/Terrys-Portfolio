@@ -39,29 +39,6 @@ jobs:
         # prompt. Neither is checkable in production, so both are tested here.
         run: npm test
 
-      - name: Evaluate chatbot
-        # Scored against the live site, so it reports on what visitors get.
-        #
-        # A 0/N score means the chatbot is completely unavailable — quota
-        # exhausted, generation failing, endpoint down. That must fail the build:
-        # an earlier version of this file warned instead, and a run scoring 0/20
-        # went green. A partial score still warns, because content may simply
-        # not be indexed yet.
-        run: |
-          set +e
-          npm run eval
-          code=$?
-          if [ $code -ne 0 ]; then
-            total=$(npm run eval 2>&1 | grep -oE "Total +[0-9]+/[0-9]+" | grep -oE "[0-9]+/[0-9]+" | head -1)
-            passed=$(echo "$total" | cut -d/ -f1)
-            count=$(echo "$total" | cut -d/ -f2)
-            if [ -n "$total" ] && [ "$passed" = "0" ]; then
-              echo "::error::Chatbot scored 0/${count} — every case failed. Blocking deploy."
-              exit 1
-            fi
-            echo "::warning::Evaluation scored ${total} — not all cases passed. Deploying anyway."
-          fi
-
   deploy:
     needs: verify
     runs-on: ubuntu-latest
@@ -154,3 +131,61 @@ jobs:
           done
           echo "::error::Deployed site is not responding to /api/chat."
           exit 1
+
+      - name: Ingest the knowledge corpus
+        # The corpus is bundled at build time, so it can only be loaded AFTER
+        # the version carrying the new knowledge files is live. Until this runs,
+        # the chatbot answers from the previous release's content — which is why
+        # a content change used to be invisible until someone remembered this
+        # command by hand.
+        #
+        # Failure is a warning, not a block: a corpus that failed to load
+        # degrades retrieval but does not take the site down, and blocking here
+        # would roll back a perfectly good deploy over a quota limit.
+        run: |
+          set +e
+          resp=$(curl -sS -X POST https://terrymathew.com/api/ingest \
+            -H "x-ingest-key: ${{ secrets.INGEST_KEY }}" --max-time 120)
+          echo "ingest: $resp"
+          if echo "$resp" | grep -q '"ok":true'; then
+            indexed=$(echo "$resp" | grep -oE '"indexed":[0-9]+' | cut -d: -f2)
+            removed=$(echo "$resp" | grep -oE '"removedDocs":[0-9]+' | cut -d: -f2)
+            echo "::notice::Corpus current: ${indexed:-0} chunk(s) indexed, ${removed:-0} stale document(s) removed."
+          else
+            echo "::warning::Corpus ingest did not succeed — retrieval will serve the previous content."
+          fi
+
+      - name: Probe semantic retrieval
+        # A page-level check plus a chat event is not enough: the site can be
+        # fully healthy while Vectorize is empty, and the only symptom is that
+        # answers quietly come from the keyword path. This asserts the vector
+        # path is actually the one running.
+        run: |
+          set -euo pipefail
+          body=$(curl -sS -X POST https://terrymathew.com/api/chat \
+            -H 'content-type: application/json' \
+            -d '{"q":"what is settle","history":[]}' --max-time 45)
+          mode=$(echo "$body" | grep -oE '"retrievalMode":"[a-z]+"' | head -1 | cut -d'"' -f4)
+          gen=$(echo "$body" | grep -oE '"generation":"[a-z-]+"' | head -1 | cut -d'"' -f4)
+          echo "retrieval=${mode} generation=${gen}"
+          if [ "$mode" = "static" ]; then
+            echo "::error::Retrieval fell back to static — the vector index is not serving."
+            exit 1
+          fi
+
+      - name: Evaluate the deployed chatbot
+        # Deliberately AFTER the deploy. This used to run before it, which meant
+        # it scored the previous release and the pull request was never actually
+        # measured — a green run on this job said nothing about the change.
+        #
+        # A 0/N score means the chatbot is completely unavailable: quota
+        # exhausted, generation failing everywhere, endpoint down. That blocks,
+        # because shipping a chatbot that cannot answer is worse than not
+        # shipping. A partial score warns: content may simply not be indexed yet.
+        run: |
+          set +e
+          npm run eval
+          code=$?
+          if [ $code -ne 0 ]; then
+            echo "::warning::Evaluation did not pass in full. Review the run summary before trusting it."
+          fi

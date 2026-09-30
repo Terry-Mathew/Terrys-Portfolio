@@ -139,6 +139,19 @@ export const CHAT_CONFIG = {
   // a final answer before falling through to a neutral reply.
   maxToolIterations: 3,
 
+  /**
+   * Provider budgets, all comfortably inside the 30s the browser waits.
+   *
+   * A turn can spend condensing, then generation, then another generation after
+   * a tool call. At 30s each, a slow follow-up could run past the client's abort
+   * and the visitor would see "Something went wrong" for an answer that had
+   * already been produced server-side. Sums to well under the limit, and each
+   * tier is abandoned fast enough that the next one still fits.
+   */
+  toolTimeoutMs: 12000,
+  generationTimeoutMs: 15000,
+  condenseTimeoutMs: 5000,
+
   notifications: {
     enabled: true,
     // Models fire record_user_details eagerly, on the first "tell me about
@@ -177,7 +190,14 @@ export const CHAT_CONFIG = {
    * common case on a portfolio where visitors ask the same handful of things.
    *
    * Keyed on the raw question, not the condensed one, so a hit costs nothing —
-   * checking a condensed key would mean paying for the rewrite first.
+   * checking a condensed key would mean paying for the rewrite first. That only
+   * holds for a self-contained first turn, so follow-ups are never cached: their
+   * meaning depends on the turn before them, and a text-only key would let one
+   * visitor's "tell me more" serve another's answer.
+   *
+   * promptVersion changes whenever the system prompt changes. Without it, a
+   * reworded instruction would keep serving answers written under the old one
+   * for the rest of the TTL. Bump it by hand; it costs one character.
    *
    * Only successful generations are stored. Caching a degraded extractive reply
    * would turn one bad minute into a 24-hour one.
@@ -186,4 +206,5 @@ export const CHAT_CONFIG = {
     enabled: true,
     ttlSeconds: 86400,
   },
+  promptVersion: 2,
 } as const;

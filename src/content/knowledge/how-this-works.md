@@ -8,11 +8,21 @@ numbers, finds the passages in Terry's knowledge base that sit closest to those
 numbers, and hands them to a language model along with instructions about who
 Terry is. The model writes the answer using only what it was handed.
 
-Five services do the work. **Vectorize** stores number-vectors for meaning-based
-search. **D1** stores the full text for exact-word search. **KV** caches answers
-to repeated questions. **Workers AI** turns text into vectors and generates the
-replies. **Workers** runs the code that ties them together. There is no database
-server, no container, and no external AI provider. It costs nothing to run.
+Five Cloudflare services do the storage and search work. **Vectorize** stores
+number-vectors for meaning-based search. **D1** stores the passage text and
+provides exact-word search. **KV** caches retrieval results and first-turn
+answers. **Workers AI** turns text into vectors. **Workers** runs the code that
+ties them together. There is no database server and no container.
+
+Generation is a different matter, and it is the part that changed most. A model
+provider writes the replies: **OpenRouter** first, **Groq** as a fallback, both
+keyed as Worker secrets. The reason is arithmetic rather than taste. Workers AI
+has a free allowance of 10,000 units a day, and one generated answer costs
+orders of magnitude more of that allowance than one embedding does. Serving
+traffic from it meant the corpus rebuild — which needs embeddings — could not
+run. Generation moved to a paid provider, and Workers AI now does embeddings
+and nothing else. The trade is a per-token cost on a site that would otherwise
+be free, against a knowledge base that can actually be updated.
 
 Search is hybrid: meaning *and* keywords, fused together. That matters because
 each method fails differently. Asking "what did he do before Oracle" finds the
@@ -28,30 +38,43 @@ cases.
 | Runtime | Cloudflare Workers | No server to manage, free tier covers it |
 | Framework | TanStack Start + Nitro | SSR React with server functions |
 | Vectors | Cloudflare Vectorize, 768 dimensions | Free, fast, good at short text |
-| Keyword search | D1 with SQLite FTS5 | BM25 in the same database as the documents |
+| Passages + search | D1 with SQLite FTS5 | Passage text for retrieval, BM25 for keywords |
 | Fusion | Reciprocal Rank Fusion, K=60 | Merges rankings without needing comparable scores |
-| Generation | An open model hosted by Cloudflare AI | Runs free, strong at following instructions |
-| Caching | Cloudflare KV | Repeat questions skip retrieval entirely |
-| Streaming | Server-sent events | First token paints in ~1.9s instead of after the full answer |
+| Generation | OpenRouter, then Groq | Paid tier that is available when free tiers are spent |
+| Embeddings | Workers AI | One model, and the only thing drawing on its daily allowance |
+| Caching | Cloudflare KV | Retrieval per question, whole answers for first turns |
+| Streaming | Server-sent events | Answer text arrives over an open connection |
 
 ## How a question is processed
 
-1. **Rate limit check.** Ten questions a minute per IP.
-2. **Follow-up resolution.** If there is conversation history, a small model
-   rewrites the question as a standalone one. "How long was he leading that
-   team?" becomes "How long was Terry a team lead at Oracle?" so the search has
+1. **Rate limit check.** Twenty questions a minute per IP, counted per Worker
+   isolate and keyed on `cf-connecting-ip`, which the client cannot forge.
+2. **Answer cache lookup.** A self-contained first question is looked up in KV by
+   question text, corpus version and prompt version. A hit returns immediately
+   and costs nothing. Follow-ups are never cached: "tell me more" means nothing
+   without the turn before it, and a text-only key would let one visitor's copy
+   of it be served to another.
+3. **Follow-up resolution.** If there is conversation history, a model rewrites
+   the question as a standalone one. "How long was he leading that team?"
+   becomes "How long was Terry a team lead at Oracle?" so the search has
    something to match against.
-3. **Embedding.** Workers AI converts the resolved question into a 768-dimension
-   vector.
-4. **Hybrid retrieval.** Three searches run: vector similarity, BM25 keyword
+4. **Embedding.** Workers AI converts the resolved question into a
+   768-dimension vector.
+5. **Hybrid retrieval.** Three searches run: vector similarity, BM25 keyword
    search, and a static trigger table. Their rankings are merged with Reciprocal
-   Rank Fusion, which scores each result as `weight / (60 + rank)`.
-5. **Cache lookup.** The merged results are cached in KV under a key built from
-   a corpus version and a hash of the question. A repeat question skips steps 3
-   and 4 entirely.
-6. **Generation.** The top passages, the conversation so far, and a persona
-   prompt go to the language model, which streams the answer token by token.
-7. **Sources.** The sections actually used are listed underneath the reply.
+   Rank Fusion, which scores each result as `weight / (60 + rank)` and *adds*
+   that across every list the result appears in. The accumulation is the entire
+   point — a document that all three methods rank highly is corroborated and
+   should outrank one that only a single method found.
+6. **Passage selection.** Vectorize stores a vector per passage, so the search
+   identifies the exact passages that matched and those are what reach the
+   model. Returning the whole parent document instead would put every unrelated
+   section in the prompt and make chunking improve ranking while doing nothing
+   for context precision.
+7. **Generation.** The passages, the conversation so far, and a persona prompt
+   go to the provider, which writes the answer. If one provider is rate-limited
+   the next is tried.
+8. **Sources.** The sections actually used are listed underneath the reply.
 
 ## The persona prompt
 
@@ -74,10 +97,22 @@ searchable rather than just downloadable. At build time, `import.meta.glob`
 discovers every `.md` file in the folder — adding a file requires no code change.
 
 `POST /api/ingest` then chunks each document, embeds every chunk, writes the
-vectors to Vectorize, and records the document text and a content hash in D1.
-Content hashes make it idempotent: running it twice costs nothing the second
-time, and a document whose text has not changed is skipped. `?force=1` rebuilds
-everything from scratch.
+vectors to Vectorize, stores the passage text in D1, and records the document
+text and a content hash. Content hashes make it idempotent: running it twice
+costs nothing the second time, and a document whose text has not changed is
+skipped. `?force=1` rebuilds everything from scratch.
+
+The ingest also reconciles. Upsert only ever adds or replaces, so two kinds of
+debris survive it indefinitely: a document whose Markdown file was deleted keeps
+its row and its vectors, and a document that shrank keeps the passages past its
+new end. Both stay retrievable while being absent from the site. The ingest now
+enumerates what the source files actually account for and deletes the rest, and
+reports how much it removed — because a cleanup that runs silently is a cleanup
+nobody notices is broken.
+
+The knowledge files are bundled at build time, so the ordering is fixed: edit,
+deploy, then ingest. Running the ingest before the deploy that carries the new
+content loads the old text. CI does all three in that order.
 
 The order of those writes matters, and getting it wrong is the most instructive
 bug in this project.
@@ -150,6 +185,66 @@ model's actual input schema. `stream: true` was supported the whole time. The
 correction turned three seconds of blank screen into visible text from the first
 token.
 
+**A fusion function was not the one it was named after.** The code said
+"Reciprocal Rank Fusion" and the docs repeated it, but the loop kept the largest
+contribution from each ranking instead of adding them. A document that all three
+search methods found scored exactly the same as one that only a single method
+found — there was no consensus boost at all. It was invisible because both
+implementations produce plausible-looking orderings, so nothing in a log ever
+looked wrong. It was only found by writing down what RRF actually does and
+checking the arithmetic against it. A comment asserting a property is not the
+property.
+
+**Passages were found and then thrown away.** Vectorize stores a vector per
+chunk, so the search identified the right passage and then handed the model the
+entire parent document. Chunking improved ranking and did nothing for context
+precision; every unrelated section in the file consumed prompt space. This one
+had the extra sting of the documentation claiming "the top passages" while the
+code did the opposite.
+
+**The answer cache could serve one visitor another visitor's reply.** The key was
+the question text alone. A follow-up like "tell me more" is not self-contained —
+its answer depends entirely on the turn before it — so one visitor's "tell me
+more" was served to anyone else who asked it. If an answer ever echoed a
+supplied name or email, the cached copy would have handed one visitor another
+visitor's details. Only self-contained first turns are cached now, and the key
+carries a prompt version so a reworded instruction cannot keep serving answers
+written under the old one.
+
+**Deleted content stayed answerable.** Ingestion only ever upserted. Removing a
+Markdown file left its row, its vectors and its passages in place, so the
+chatbot kept answering from a project that was no longer on the site. A document
+that shrank kept every passage past its new end. Both are now reconciled on each
+ingest, and the count of removals is reported rather than assumed.
+
+**The chatbot was starving its own corpus.** Generation ran on Workers AI as a
+last-resort tier, and the test suite fires twenty questions per deploy. When the
+free provider was rate-limited, every one of those fell through to it. One
+generated answer costs orders of magnitude more of the daily allowance than one
+embedding does, so a handful of fallback answers exhausted the budget and the
+corpus could not be rebuilt — the knowledge base could not be updated because the
+chatbot had been answering questions. Workers AI now does embeddings and nothing
+else.
+
+**A test that measured the old release.** The evaluation suite ran before the
+deploy, against the live site, which meant it scored the version already running
+and never the change being shipped. A green run said nothing about the commit
+under review. It runs after the deploy now, against the code it is meant to
+measure.
+
+**A hard-coded free limit in two places.** The conversation-length caps were
+configured once and applied in one of the two routes that accepted a
+conversation. The route the site actually used cast the browser's array
+straight through, so the limits were configuration that did nothing. Three
+overlapping settings for one control is how that happened.
+
+**A truthful metric that broke a measurement.** Cache hits were reported as
+`retrievalMode: static, generation: none`, because that is literally what
+happens — no model ran. It also made the evaluation suite score healthy cache
+reads as provider outages, and the sources list was not replayed, so the
+interface lost them. Reporting the cache as a degraded retrieval was the least
+honest possible way to describe a fast, correct answer.
+
 ## How it is tested
 
 Correctness here has meant checking that a claim is true before making it, not
@@ -165,14 +260,20 @@ correct-looking numbers.
 
 ## Why it is built this way
 
-No external AI provider. That means no API key to manage, no per-token billing,
-and no third party who can retire a model id and break the site — which happened
-once during development and is the reason the model name now appears in exactly
-one place in the configuration.
+Storage stays on Cloudflare. No vector database to run, and the corpus is small
+enough to fit comfortably inside the free tier.
 
-No vector database to run. Cloudflare's is sufficient at this scale and costs
-nothing, and the corpus is small enough that the whole system fits comfortably
-inside the free tier.
+Generation does not, and the reason is worth stating plainly. The first version
+served every answer from the free tier and claimed that was the design. It held
+right up until the two free allowances ran out on the same evening, and the
+site spent the rest of the day returning raw passages with a note that the
+assistant was unavailable. Keeping a system on free tiers is not free; it is a
+system whose availability is set by someone else's quota. Moving generation to a
+paid tier bought a small, bounded, predictable cost and an assistant that works
+at nine at night.
+
+The model name appears in exactly one place in the configuration, because a
+retired model id silently broke generation once already.
 
 Simplicity where it does not show. The pieces that survive are the ones that
 earned their complexity by failing without them.

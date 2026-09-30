@@ -124,6 +124,9 @@ export type IngestResult = {
   indexed: number;
   unchanged: string[];
   dimensions: number;
+  /** Documents and vectors deleted because no source file accounts for them. */
+  removedDocs: number;
+  removedVectors: number;
   message: string;
 };
 
@@ -143,6 +146,8 @@ export async function ingestKnowledge(
       indexed: 0,
       unchanged: [],
       dimensions: 0,
+      removedDocs: 0,
+      removedVectors: 0,
       message: `Missing Cloudflare binding(s): ${REQUIRED.filter((k) => !env[k]).join(", ")}.`,
     };
   }
@@ -164,7 +169,7 @@ export async function ingestKnowledge(
   // a matching hash, skips the document, and reports success while the vector
   // index stays empty. D1 and Vectorize would permanently disagree, and
   // retrieval would silently degrade to keyword lookup forever.
-  const pending: { id: string; hash: string }[] = [];
+  const pending: { id: string; hash: string; chunkCount: number }[] = [];
 
   for (const source of SOURCES) {
     const hash = await sha256(source.body);
@@ -173,8 +178,20 @@ export async function ingestKnowledge(
       .first<{ hash: string }>();
 
     if (!force && existing?.hash === hash) {
-      unchanged.push(source.id);
-      continue;
+      // A document indexed before passages were stored has vectors but no
+      // retrievable text. Content is unchanged, so the hash says "skip" — but
+      // retrieval would have nothing to return for it. Treat missing passages
+      // as needing the work, so one run repairs every pre-migration document.
+      const { results: passageRows } = await bindings.DB.prepare(
+        "SELECT id FROM chunks WHERE doc_id = ?",
+      )
+        .bind(source.id)
+        .all<{ id: string }>();
+      if (passageRows.length > 0) {
+        unchanged.push(source.id);
+        continue;
+      }
+      console.warn(`[ingest] ${source.id} has no stored passages — re-embedding to create them.`);
     }
 
     const chunks = chunk(source.body, CHAT_CONFIG.chunkSize, CHAT_CONFIG.chunkOverlap);
@@ -194,7 +211,7 @@ export async function ingestKnowledge(
       });
     });
 
-    pending.push({ id: source.id, hash });
+    pending.push({ id: source.id, hash, chunkCount: chunks.length });
   }
 
   if (vectors.length > 0 && dimensions !== CHAT_CONFIG.dimensions) {
@@ -203,6 +220,8 @@ export async function ingestKnowledge(
       indexed: 0,
       unchanged,
       dimensions,
+      removedDocs: 0,
+      removedVectors: 0,
       message:
         `Model returned ${dimensions} dimensions but CHAT_CONFIG.dimensions is ` +
         `${CHAT_CONFIG.dimensions}. Fix the config and recreate the Vectorize index first.`,
@@ -220,6 +239,8 @@ export async function ingestKnowledge(
         indexed: 0,
         unchanged,
         dimensions,
+        removedDocs: 0,
+        removedVectors: 0,
         message: `Vectorize upsert failed: ${
           error instanceof Error ? error.message : "unknown error"
         }. No hashes were written, so the next run will retry.`,
@@ -244,15 +265,114 @@ export async function ingestKnowledge(
       .run();
   }
 
+  // Passage text, so retrieval can return the chunk that matched instead of the
+  // whole document it came from.
+  for (const { id } of pending) {
+    const source = SOURCES.find((s) => s.id === id)!;
+    const chunks = chunk(source.body, CHAT_CONFIG.chunkSize, CHAT_CONFIG.chunkOverlap);
+    await bindings.DB.prepare("DELETE FROM chunks WHERE doc_id = ?").bind(id).run();
+    for (const [i, text] of chunks.entries()) {
+      await bindings.DB.prepare(
+        "INSERT INTO chunks (id, doc_id, idx, content, updated_at) VALUES (?, ?, ?, ?, ?)",
+      )
+        .bind(`${id}#${i}`, id, i, text, Date.now())
+        .run();
+    }
+  }
+
+  const reconciliation = await reconcile(bindings, pending);
+
   return {
     ok: true,
     indexed: vectors.length,
     unchanged,
     dimensions,
+    ...reconciliation,
     message: vectors.length
-      ? `Indexed ${vectors.length} chunk(s) at ${dimensions} dimensions.`
+      ? `Indexed ${vectors.length} chunk(s) at ${dimensions} dimensions.` +
+        (reconciliation.removedDocs || reconciliation.removedVectors
+          ? ` Removed ${reconciliation.removedDocs} stale document(s) and ${reconciliation.removedVectors} stale vector(s).`
+          : "")
       : `Nothing changed. ${unchanged.length} document(s) already current.`,
   };
+}
+
+/**
+ * Delete everything the current source files no longer account for.
+ *
+ * Upsert alone only ever adds or replaces. Two things survive it forever:
+ *
+ *  - a document whose Markdown file was deleted. Its row keeps its vectors, so
+ *    the chatbot keeps answering from content that is no longer on the site.
+ *    This is how a project stayed retrievable long after it was pulled from
+ *    the page.
+ *  - a document that shrank. If a file had five chunks and now has three,
+ *    `id#3` and `id#4` remain in the index and still match searches, pointing
+ *    at passages the source no longer contains.
+ *
+ * Driven from the `documents` and `chunks` tables rather than by enumerating
+ * the vector index, which has no list API. Both stale cases name their own
+ * vector ids, so nothing has to be discovered by search.
+ */
+async function reconcile(
+  bindings: RagEnv,
+  pending: { id: string; hash: string; chunkCount: number }[],
+): Promise<{ removedDocs: number; removedVectors: number }> {
+  const expectedDocs = new Set(SOURCES.map((s) => s.id));
+  const refreshed = new Map(pending.map((p) => [p.id, p.chunkCount]));
+  let removedDocs = 0;
+  let removedVectors = 0;
+
+  // 1. Documents whose file no longer exists.
+  const { results: allDocs } = await bindings.DB.prepare("SELECT id FROM documents").all<{
+    id: string;
+  }>();
+  for (const row of allDocs) {
+    if (expectedDocs.has(row.id)) continue;
+    const { results: orphanChunks } = await bindings.DB.prepare(
+      "SELECT id FROM chunks WHERE doc_id = ?",
+    )
+      .bind(row.id)
+      .all<{ id: string }>();
+    const ids = orphanChunks.map((c) => c.id);
+    if (ids.length) {
+      try {
+        await bindings.VECTORIZE.deleteByIds(ids);
+      } catch (e) {
+        console.warn(`[ingest] vector delete failed for ${row.id}:`, e);
+      }
+    }
+    await bindings.DB.prepare("DELETE FROM chunks WHERE doc_id = ?").bind(row.id).run();
+    await bindings.DB.prepare("DELETE FROM documents WHERE id = ?").bind(row.id).run();
+    removedDocs++;
+    removedVectors += ids.length;
+  }
+
+  // 2. Passages past the end of a document that shrank this run.
+  for (const [docId, count] of refreshed) {
+    const { results: tail } = await bindings.DB.prepare(
+      "SELECT id FROM chunks WHERE doc_id = ? AND idx >= ?",
+    )
+      .bind(docId, count)
+      .all<{ id: string }>();
+    if (tail.length === 0) continue;
+    try {
+      await bindings.VECTORIZE.deleteByIds(tail.map((t) => t.id));
+    } catch (e) {
+      console.warn(`[ingest] vector delete failed for ${docId}:`, e);
+    }
+    await bindings.DB.prepare("DELETE FROM chunks WHERE doc_id = ? AND idx >= ?")
+      .bind(docId, count)
+      .run();
+    removedVectors += tail.length;
+  }
+
+  if (removedDocs || removedVectors) {
+    console.warn(
+      `[ingest] reconciled: removed ${removedDocs} stale document(s), ${removedVectors} stale vector(s)`,
+    );
+  }
+  return { removedDocs, removedVectors };
 }
 
 export type VerifyResult = {

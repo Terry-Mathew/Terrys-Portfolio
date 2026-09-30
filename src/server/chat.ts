@@ -15,17 +15,30 @@ export type ChatTurn = { role: "user" | "bot"; text: string };
 /**
  * Stand-in for retrieved context when the search found nothing.
  *
- * Phrased as an instruction rather than as absent text. An empty CONTEXT block
- * reads to the model as a malfunction and it starts narrating the failure —
- * "based on the context provided". This reads as a known fact about the turn,
- * which is what it is, and it keeps the reply in voice.
+ * Two failure modes to avoid, and they pull in opposite directions:
+ *
+ *  - An empty CONTEXT block reads to the model as a malfunction, and it
+ *    narrates the failure: "based on the context provided, ...". That is how
+ *    the bot ended up sounding like a help desk.
+ *  - Saying "reply from your own knowledge" to fix the tone grants the model
+ *    licence to state facts about a real person that the knowledge base never
+ *    contained. That is a straight contradiction of "answer only from the
+ *    context" and "never invent a fact about Terry", and it is the one rule
+ *    that must not bend for the sake of tone.
+ *
+ * So this permits persona and framing only. The model's own knowledge of Terry
+ * is explicitly off limits as a source of fact. It can be dry, it can decline,
+ * it can point somewhere useful — but if a question needs a fact, the answer is
+ * that it does not have it.
  */
 const NO_CONTEXT =
-  "(Nothing in the knowledge base matched this one. Reply from your own " +
-  "knowledge of Terry and the shape of the site. If it is a greeting, a " +
-  "joke, or something that never needed a document, just reply like a " +
-  "person. If it is a real question you cannot answer, say so in one line " +
-  "and point at something you can answer.)";
+  "(Nothing in the knowledge base matched this one. Two things follow, and the " +
+  "second matters more. One: you may use your own voice, and you may decide " +
+  "this needs no document at all. Two: you may NOT state a fact about Terry " +
+  "from memory. If the reply needs a fact — a role, a date, a tool, a project, " +
+  "a number — you do not have it, and saying so is the correct answer. " +
+  "Greetings, thanks and jokes need no facts and are yours to write. " +
+  "Anything else gets one honest line and a pointer to something you can answer.)";
 
 export type ChatReply = {
   answer: string;
@@ -162,10 +175,13 @@ WHEN THE CONTEXT SAYS NOTHING MATCHED:
 - The CONTEXT block will sometimes say plainly that nothing matched. That is
   information, not an error. Do not apologise for it and do not report it.
   "Based on the context provided, ..." is a phrase that must never appear.
-- A greeting, a joke, or a question that never needed a document is answered
-  from the shape of the site and what you already know about Terry.
-- A real question you cannot answer gets one honest line, then a redirect to
-  something you can answer.
+- Voice is still yours. A greeting, a thank-you, a joke, or a question that
+  never needed a document is answered like a person who was already here.
+- FACTS ARE NOT. You may not fill the gap from memory. If the reply needs a
+  fact — a role, a date, a tool, a project, a number — you do not have it.
+  "I don't know that one" is the correct answer and costs nothing. Making it up
+  is the one failure this rule exists to prevent.
+- Redirect after that: one line, then something you can answer.
 
 HOW TO HANDLE QUESTIONS THAT ARE OUTSIDE THE KNOWLEDGE BASE:- Some questions are simply not about Terry. "What is the capital of Peru?"
   "What is 2+2?" "Who won the election?" "Write me a poem."
@@ -361,24 +377,27 @@ async function generateWithTools(
 ): Promise<{ text: string; provider: "openrouter" | "groq" | "none" } | null> {
   if (!CHAT_CONFIG.useTools || !CHAT_CONFIG.notifications.enabled) return null;
 
-  const tier = CHAT_CONFIG.useOpenRouter
-    ? {
-        label: "OpenRouter",
-        url: "https://openrouter.ai/api/v1/chat/completions",
-        key: env?.OPENROUTER_API_KEY,
-        model: CHAT_CONFIG.openRouterModel,
-        provider: "openrouter" as const,
-      }
-    : CHAT_CONFIG.useGroq
-      ? {
-          label: "Groq",
-          url: "https://api.groq.com/openai/v1/chat/completions",
-          key: env?.GROQ_API_KEY,
-          model: CHAT_CONFIG.groqModel,
-          provider: "groq" as const,
-        }
-      : null;
-  if (!tier?.key) return null;
+  // A list, not a single pick. The previous version used a ternary, so an
+  // enabled-but-keyless OpenRouter silently ended tool calling — the comment
+  // above this function claimed Groq was the backup and no code ever tried it.
+  const tiers = [
+    {
+      label: "OpenRouter",
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: env?.OPENROUTER_API_KEY,
+      model: CHAT_CONFIG.openRouterModel,
+      enabled: CHAT_CONFIG.useOpenRouter,
+      provider: "openrouter" as const,
+    },
+    {
+      label: "Groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      key: env?.GROQ_API_KEY,
+      model: CHAT_CONFIG.groqModel,
+      enabled: CHAT_CONFIG.useGroq,
+      provider: "groq" as const,
+    },
+  ];
 
   const messages: OpenAIMessage[] = [
     { role: "system", content: buildSystemPrompt() },
@@ -389,79 +408,83 @@ async function generateWithTools(
     { role: "user", content: `Context:\n${context}\n\nQuestion: ${question}` },
   ];
 
-  for (let iteration = 0; iteration < CHAT_CONFIG.maxToolIterations; iteration++) {
-    let reply: OpenAiToolResponse;
-    try {
-      const res = await fetch(tier.url, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${tier.key}` },
-        body: JSON.stringify({
-          model: tier.model,
-          messages,
-          tools: TOOLS,
-          tool_choice: "auto",
-          max_tokens: 1024,
-          temperature: CHAT_CONFIG.temperature,
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!res.ok) {
-        console.warn(
-          `[tools] ${tier.label} returned ${res.status}: ${(await res.text()).slice(0, 200)}`,
-        );
-        return null;
+  for (const tier of tiers) {
+    if (!tier.enabled || !tier.key) continue;
+
+    for (let iteration = 0; iteration < CHAT_CONFIG.maxToolIterations; iteration++) {
+      let reply: OpenAiToolResponse;
+      try {
+        const res = await fetch(tier.url, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${tier.key}` },
+          body: JSON.stringify({
+            model: tier.model,
+            messages,
+            tools: TOOLS,
+            tool_choice: "auto",
+            max_tokens: 1024,
+            temperature: CHAT_CONFIG.temperature,
+          }),
+          signal: AbortSignal.timeout(CHAT_CONFIG.toolTimeoutMs),
+        });
+        if (!res.ok) {
+          console.warn(
+            `[tools] ${tier.label} returned ${res.status}: ${(await res.text()).slice(0, 200)}`,
+          );
+          return null;
+        }
+        reply = (await res.json()) as OpenAiToolResponse;
+      } catch (e) {
+        console.warn(`[tools] ${tier.label} call failed:`, e);
+        break;
       }
-      reply = (await res.json()) as OpenAiToolResponse;
-    } catch (e) {
-      console.warn(`[tools] ${tier.label} call failed, falling back to plain generation:`, e);
-      return null;
-    }
 
-    const choice = reply.choices?.[0];
-    if (!choice) return null;
-    const message = choice.message;
-    const content = typeof message?.content === "string" ? message.content : "";
+      const choice = reply.choices?.[0];
+      if (!choice) return null;
+      const message = choice.message;
+      const content = typeof message?.content === "string" ? message.content : "";
 
-    const structured: ToolCall[] = (message?.tool_calls ?? []).map((tc) => ({
-      id: tc.id,
-      name: tc.function?.name ?? "",
-      args: safeJson(tc.function?.arguments),
-    }));
-    const calls =
-      structured.length > 0
-        ? structured
-        : [parseToolCallFromText(content)].filter((c): c is ToolCall => c !== null);
+      const structured: ToolCall[] = (message?.tool_calls ?? []).map((tc) => ({
+        id: tc.id,
+        name: tc.function?.name ?? "",
+        args: safeJson(tc.function?.arguments),
+      }));
+      const calls =
+        structured.length > 0
+          ? structured
+          : [parseToolCallFromText(content)].filter((c): c is ToolCall => c !== null);
 
-    // A plain text answer ends the loop.
-    if (calls.length === 0) {
-      if (!content) return null;
-      // Tools are off this path, so any deltas were already flushed by the
-      // streaming path; emit the whole answer for consistency.
-      onDelta?.(content);
-      return { text: content, provider: tier.provider };
-    }
+      // A plain text answer ends the loop.
+      if (calls.length === 0) {
+        if (!content) return null;
+        // Tools are off this path, so any deltas were already flushed by the
+        // streaming path; emit the whole answer for consistency.
+        onDelta?.(content);
+        return { text: content, provider: tier.provider };
+      }
 
-    messages.push({
-      role: "assistant",
-      content: content || null,
-      tool_calls: calls.map((c) => ({
-        id: c.id,
-        type: "function" as const,
-        function: { name: c.name, arguments: JSON.stringify(c.args) },
-      })),
-    });
+      messages.push({
+        role: "assistant",
+        content: content || null,
+        tool_calls: calls.map((c) => ({
+          id: c.id,
+          type: "function" as const,
+          function: { name: c.name, arguments: JSON.stringify(c.args) },
+        })),
+      });
 
-    for (const call of calls) {
-      const { output } = await runToolCall(call, messages, env, ip);
-      messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(output) });
+      for (const call of calls) {
+        const { output } = await runToolCall(call, messages, env, ip);
+        messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(output) });
+      }
     }
   }
 
-  console.warn("[tools] iteration cap reached — returning a neutral reply");
-  return {
-    text: "I'm having trouble finishing that. Could you say a bit more?",
-    provider: tier.provider,
-  };
+  // Every tier exhausted its iterations, or none was reachable. Return null so
+  // the caller falls through to plain generation: losing tool calling costs
+  // lead capture, but answering the visitor does not depend on it.
+  console.warn("[tools] no tier produced an answer — falling back to plain generation");
+  return null;
 }
 
 function safeJson(raw: string | undefined): Record<string, unknown> {
@@ -691,7 +714,7 @@ async function callOpenRouter(
     url: "https://openrouter.ai/api/v1/chat/completions",
     key: env.OPENROUTER_API_KEY,
     model: CHAT_CONFIG.openRouterModel,
-    timeoutMs: 30000,
+    timeoutMs: CHAT_CONFIG.generationTimeoutMs,
   });
 }
 
@@ -706,7 +729,7 @@ async function callGroq(
     url: "https://api.groq.com/openai/v1/chat/completions",
     key: env?.GROQ_API_KEY,
     model: CHAT_CONFIG.groqModel,
-    timeoutMs: 20000,
+    timeoutMs: CHAT_CONFIG.generationTimeoutMs,
   });
 }
 
@@ -786,7 +809,7 @@ async function condenseQuestion(
           max_tokens: 64,
           temperature: 0,
         }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(CHAT_CONFIG.condenseTimeoutMs),
       });
       if (!res.ok) {
         console.warn(`[condense] ${tier.label} returned ${res.status}`);
@@ -938,21 +961,41 @@ export async function runChat(
   // sit before condensing: resolving the rewrite is itself a model call, so
   // keying on the condensed question would spend money to look for a way to
   // avoid spending money.
-  const answerKey = `chat:v${CHAT_CONFIG.corpusVersion}:${hashString(qTrimmed.toLowerCase())}`;
-  if (CHAT_CONFIG.answerCache.enabled && env?.CACHE) {
+  //
+  // First turns only. Keying on the raw question is what makes a hit free, but
+  // it is only sound when the question stands alone. A follow-up like "tell me
+  // more" is meaningless without the turn before it, so keying on the text
+  // alone lets one visitor's "tell me more" serve another's answer — and if
+  // that answer ever echoed a supplied name or email, the cached copy would
+  // hand one visitor another's details. With no history in the key, two
+  // visitors asking the same first question have the same context by
+  // construction, so the answer is genuinely the same for both.
+  const cacheable = CHAT_CONFIG.answerCache.enabled && history.length === 0;
+  const answerKey = `chat:v${CHAT_CONFIG.corpusVersion}:p${CHAT_CONFIG.promptVersion}:${hashString(qTrimmed.toLowerCase())}`;
+  if (cacheable && env?.CACHE) {
     try {
       const hit = await env.CACHE.get(answerKey, "json");
       if (hit && typeof (hit as { answer?: unknown }).answer === "string") {
-        const cachedAnswer = hit as { answer: string; sources?: string[] };
+        const c = hit as {
+          answer: string;
+          sources?: string[];
+          docIds?: string[];
+          retrievalMode?: "static" | "vector" | "hybrid";
+          generation?: "openrouter" | "workers-ai" | "groq" | "anthropic";
+        };
+        // Replay the real metadata and sources. Reporting a hit as
+        // static/none made healthy cache reads look like outages, which is
+        // both a measurement lie and a false failure in the eval suite.
+        onSources?.(c.sources ?? [], c.docIds ?? []);
         return {
-          answer: cachedAnswer.answer,
-          sources: cachedAnswer.sources ?? [],
+          answer: c.answer,
+          sources: c.sources ?? [],
           metadata: {
-            retrievalMode: "static" as const,
+            retrievalMode: c.retrievalMode ?? "static",
             chunksUsed: 0,
             cached: true,
-            turn: history.length,
-            generation: "none" as const,
+            turn: 0,
+            generation: c.generation ?? "none",
           },
         };
       }
@@ -1036,11 +1079,19 @@ export async function runChat(
   // Only a real generation is worth remembering. Storing the extractive
   // fallback would pin one bad minute — every tier rate-limited, say — into
   // every repeat of that question for the next 24 hours.
-  if (!degraded && CHAT_CONFIG.answerCache.enabled && env?.CACHE) {
+  if (cacheable && env?.CACHE) {
     try {
-      await env.CACHE.put(answerKey, JSON.stringify({ answer: finalAnswer, sources }), {
-        expirationTtl: CHAT_CONFIG.answerCache.ttlSeconds,
-      });
+      await env.CACHE.put(
+        answerKey,
+        JSON.stringify({
+          answer: finalAnswer,
+          sources,
+          docIds: results.map((r) => r.id),
+          retrievalMode,
+          generation: generated.provider,
+        }),
+        { expirationTtl: CHAT_CONFIG.answerCache.ttlSeconds },
+      );
     } catch (e) {
       console.warn("[cache] answer write failed, continuing:", e);
     }

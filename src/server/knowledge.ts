@@ -180,22 +180,46 @@ export async function retrieveVector(
   if (!vectorizeResults.matches || vectorizeResults.matches.length === 0) {
     return [];
   }
-
-  // 4. Fetch parent documents from D1. Vectorize returns chunk ids shaped
-  //    "<parentId>#<index>", while the documents table is keyed by parentId.
+  // Vectorize returns chunk ids shaped "<parentId>#<index>".
   const parentId = (chunkId: string) => chunkId.split("#")[0] ?? chunkId;
-  const ids = [...new Set(vectorizeResults.matches.map((m) => parentId(m.id)))];
-  const placeholders = ids.map(() => "?").join(",");
 
-  const { results: docs } = await env.DB.prepare(
-    `SELECT id, source, category, title, content FROM documents WHERE id IN (${placeholders})`,
+  // 4. Fetch the matching passages from D1.
+  //
+  // Vectorize stores a vector per chunk, so the search finds the right passage
+  // and then used to throw it away — the parent document's entire text went to
+  // the model instead. Every unrelated section consumed prompt space, and the
+  // model had to work out which part of a wall of text was actually relevant.
+  // Chunking improved ranking and did nothing for context precision.
+  //
+  // Multiple chunks from the same document are merged into one result so a
+  // document cannot crowd out its neighbours by appearing once per passage.
+  const { results: passageRows } = await env.DB.prepare(
+    `SELECT c.id AS chunkId, c.doc_id AS docId, c.content AS passage, d.category, d.title
+       FROM chunks c JOIN documents d ON d.id = c.doc_id
+      WHERE c.id IN (${vectorizeResults.matches.map(() => "?").join(",")})`,
   )
-    .bind(...ids)
-    .all<{ id: string; source: string; category: string | null; title: string; content: string }>();
+    .bind(...vectorizeResults.matches.map((m) => m.id))
+    .all<{
+      chunkId: string;
+      docId: string;
+      passage: string;
+      category: string | null;
+      title: string;
+    }>();
 
-  const byId = new Map(docs.map((d) => [d.id, d]));
+  // 5. Attach the best-scoring chunk's score to its document, and keep every
+  //    passage that matched above the cut-off.
+  const byDoc = new Map<string, { category: string | null; title: string; passages: string[] }>();
+  for (const row of passageRows) {
+    const entry = byDoc.get(row.docId) ?? {
+      category: row.category,
+      title: row.title,
+      passages: [],
+    };
+    entry.passages.push(row.passage);
+    byDoc.set(row.docId, entry);
+  }
 
-  // 5. Attach the best-scoring chunk's score to its parent document.
   const best = new Map<string, number>();
   for (const match of vectorizeResults.matches) {
     const pid = parentId(match.id);
@@ -204,13 +228,16 @@ export async function retrieveVector(
 
   const results: RetrievalResult[] = [...best.entries()]
     .map(([pid, score]): RetrievalResult | null => {
-      const doc = byId.get(pid);
-      if (!doc) return null;
+      const entry = byDoc.get(pid);
+      // No passage rows means this document predates passage storage. Fall
+      // back to the full text rather than dropping it, so a partially migrated
+      // index degrades to the old behaviour instead of losing documents.
+      if (!entry) return null;
       return {
         id: pid,
-        anchor: `#${doc.category || "knowledge"}`,
-        title: doc.title,
-        content: doc.content,
+        anchor: `#${entry.category || "knowledge"}`,
+        title: entry.title,
+        content: entry.passages.join("\n\n"),
         score,
         source: "vector",
       };
@@ -321,7 +348,17 @@ export async function retrieveHybrid(
   }
 
   // Reciprocal Rank Fusion (RRF) to merge all three rankings.
-  // Each source contributes 1/(K + rank); weights tilt toward semantic recall.
+  //
+  // Each source contributes weight / (K + rank). Scores ACCUMULATE across
+  // sources — that accumulation is the entire point. A document that vector,
+  // BM25 and static search all rank highly is corroborated by three
+  // independent methods and must outrank a document only one of them found.
+  //
+  // This previously kept the single largest contribution instead of the sum,
+  // which made a document that ranked in all three lists score exactly the
+  // same as one found by a single list. There was no consensus boost at all,
+  // and the code comment claimed there was. Retrieval quality was never worse
+  // than single-method, but it was also never better than the best method.
   const sources: [RetrievalResult[], number][] = [
     [staticResults, 1.0],
     [vectorResults, 1.5],
@@ -332,10 +369,12 @@ export async function retrieveHybrid(
 
   for (const [sourceResults, weight] of sources) {
     sourceResults.forEach((r, rank) => {
-      const rrfScore = weight / (K + rank + 1);
+      const contribution = weight / (K + rank + 1);
       const existing = rrfScores.get(r.id);
-      if (!existing || rrfScore > existing.score) {
-        rrfScores.set(r.id, { result: r, score: rrfScore });
+      if (existing) {
+        existing.score += contribution;
+      } else {
+        rrfScores.set(r.id, { result: r, score: contribution });
       }
     });
   }

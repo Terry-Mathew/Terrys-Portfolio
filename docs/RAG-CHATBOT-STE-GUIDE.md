@@ -89,6 +89,15 @@ This is how the system finds a part when your words do not match the file. If yo
 "loan repayments", the system finds the part about "debt" and "EMIs". The words are
 different. The meaning is the same.
 
+**Important:** the system stores the words of each part next to its vector. When the search
+finds a part, the system sends the words of that part to the AI service. The system does not
+send the whole file.
+
+**Important:** the system must not send a whole file. A file has parts that do not match the
+question. Those parts waste the space in the prompt. The system sent whole files for a long
+time. The search found the right part. Then the system threw the part away and sent the whole
+file instead. The order of results was correct. The text sent to the AI service was wrong.
+
 ### 2.3 The load command
 
 The load command sends your knowledge files into the vector store. The command name is
@@ -108,7 +117,36 @@ POST https://terrymathew.com/api/ingest
 The command needs a key. The key is in the secret key storage. The section 10 explains the
 command.
 
-### 2.4 The keyword search
+**Important:** the command also removes old data. If you delete a knowledge file, the command
+removes that file from the search systems. If you make a file shorter, the command removes
+the parts that no longer exist.
+
+**This was broken for a long time.** The command only added and changed data. It never removed
+anything. A deleted file stayed in the search systems. A file that became shorter kept its
+extra parts. The chatbot could answer from a file that was no longer on the site. The command
+now removes this data and reports the count.
+
+### 2.4 The order of the work
+
+You must follow this order each time you change a knowledge file.
+
+```
+1. Change the knowledge file
+2. Send the change to GitHub
+3. Wait for the build and the deploy
+4. Run the ingest command
+```
+
+**Why step 3 must come before step 4.** The build copies the knowledge files into the program.
+The program on the server has the old files until step 3 finishes. The ingest command uses
+the files inside the program. So the ingest command uses the old files if you run it before
+step 3 finishes.
+
+**Why this matters.** A worker changed a knowledge file. Then the worker ran the ingest command
+at once. The chatbot used the old text. The worker did not understand why. The order is the
+answer.
+
+### 2.5 The keyword search
 
 The system has a second search method. This method does not use vectors. This method uses
 words.
@@ -123,17 +161,39 @@ method finds the right part.
 
 The system uses both methods. This is called **hybrid search**.
 
-### 2.5 The answer memory
+### 2.6 The answer memory
 
 The system stores answers for a short time. This storage is called **KV**. KV is fast. It is
 not a real database.
 
-The system uses KV for one job. If you ask the same question twice, the system gives the
-second answer from memory. The system does not ask the AI again.
+The system uses KV for two jobs.
 
-The system forgets the answer after 24 hours.
+The first job is the search memory. If you ask the same question twice, the system does not run
+the search again. It takes the answer from KV. The system forgets the search memory after 24
+hours.
 
-### 2.6 The AI services
+The second job is the answer memory. The system stores the whole answer for a question. A
+visitor who asks the same question again gets the answer at once.
+
+**Important:** the system stores a whole answer only for a first question. A first question is a
+question that stands alone. "What is Settle?" is a first question. "Tell me more" is not.
+"T﻿ell me more" has no meaning without the turn before it.
+
+**Why this rule matters.** The memory key is the words of the question. If the system stored an
+answer for "Tell me more", then any visitor who wrote "Tell me more" would receive that answer.
+Two visitors could ask it after two different conversations. They would receive the same answer.
+One of them would receive the wrong answer. If the answer repeated a name or an email that the
+first visitor gave, the second visitor would receive the first visitor's details.
+
+The system does not store an answer for a second question. The second question is not a first
+question. The system must not store it.
+
+**Important:** the key also contains two numbers. The first number is the corpus version. The
+second number is the prompt version. A worker must change the second number each time a worker
+changes the system prompt. Otherwise the system keeps old answers after you change the words
+that produce them.
+
+### 2.7 The AI services
 
 The system needs an AI service to write the answer. The system has three AI services. The
 system tries them in order.
@@ -146,7 +206,7 @@ system tries them in order.
 If the first service fails, the system tries the next one. If all three fail, the system
 shows the words from the knowledge file. The system does not show an error message.
 
-### 2.7 Question condensing
+### 2.8 Question condensing
 
 If you ask a second question, the question often has words with no meaning by themselves.
 
@@ -191,7 +251,7 @@ visitor cannot change it.
 
 ### Step 2 — Condense the question
 
-The system rewrites the second and later questions. Section 2.7 describes this step.
+The system rewrites the second and later questions. Section 2.8 describes this step.
 
 ### Step 3 — Find the parts
 
@@ -199,12 +259,34 @@ The system searches three ways at the same time. It searches the word list. It s
 vectors. It searches the keyword index.
 
 Then the system puts the three lists together. The system does not use one list. The system
-uses a **rank** system. This system is called **Reciprocal Rank Fusion**.
+uses a **rank** system. This system is called **Reciprocal Rank Fusion**. Section 2.4 describes
+this system.
+
+**Important:** the system returns only the parts that matched. It does not return the whole
+file. A file has many parts. Most files have parts that do not match. Sending a whole file
+sends the parts that do not match. They take space in the prompt. They make the answer worse.
 
 Rank fusion is important. The three search methods give different scores. A score of 200 in
 one method is not the same as a score of 200 in another method. Rank fusion uses the
 position of each part. Position 1 is always better than position 2. So the scores from
 different methods can be compared fairly.
+
+**Important:** the system ADDS the points from each list. It does not keep the best points from
+one list.
+
+Example. Three lists find six parts. Part A is first in all three lists. Part B is first in one
+list only.
+
+- Part A gets points three times.
+- Part B gets points one time.
+
+Part A comes first. The system does not compare the points of part A with the points of part B.
+The system adds the points of part A to the points of part A to the points of part A.
+
+**This rule was broken for a long time.** The system kept the best points and threw the other
+points away. Under that rule, part A and part B received the same points. A part that three
+search methods agreed on received no extra points. The order still looked correct, so nobody
+found the error. A worker found it by writing down the correct rule and checking the numbers.
 
 ### Step 4 — Write the answer
 
@@ -492,6 +574,50 @@ visitor cannot change `cf-connecting-ip`. Cloudflare sets it.
 file described different projects. Both files had the same name on the page. A visitor
 could get two different answers to one question.
 
+### Decision 12 — Store a whole answer only for a first question
+
+**What we decided:** The system stores a whole answer in the memory only when the
+question stands alone. A second question is never stored.
+
+**Reason:** The memory key is the words of the question. A second question such
+as "tell me more" has no meaning alone. The system gave one visitor the answer
+that the system made for another visitor. Error 2 describes the risk in full.
+
+### Decision 13 — Add the points from all three lists
+
+**What we decided:** The system adds the points from every list that found a
+part. The system does not keep only the best points.
+
+**Reason:** The whole purpose of using three search methods is that they agree
+in some places. A part that all three found is confirmed. The system was
+throwing that confirmation away. Error 1 describes the error in full.
+
+### Decision 14 — Send the parts, not the files
+
+**What we decided:** The system sends the parts that matched. The system does
+not send the whole knowledge file.
+
+**Reason:** The system cuts each file into parts and makes a vector for each
+part. The system found the right part. Then the system sent the whole file. The
+parts that did not match took the space in the prompt. The system now keeps the
+words of each part next to its vector and sends those.
+
+### Decision 15 — Move the work after the build
+
+**What we decided:** The build and the test now run in this order.
+
+```
+1. Change the knowledge file
+2. Send the change
+3. Build and put on the server
+4. Load the knowledge files
+5. Test the new program
+```
+
+**Reason:** The test asked questions of the live site. The live site ran the old
+program. The test measured the wrong program. Error 5 describes the error in
+full.
+
 ### Decision 11 — Add a static knowledge base for the fallback
 
 **What we decided:** The system has a small knowledge base inside the code. This base has
@@ -506,7 +632,61 @@ had no entry in this base. A visitor could ask about a project and get no answer
 
 This section describes the errors. Each error has a cause and a rule for next time.
 
-### Error 1 — The chat showed "Something went wrong" when it worked
+### Error 1 — The system said one thing and did another
+
+Two errors in this list came from the same habit. A worker wrote a word into a
+comment. Another worker read the comment and believed it.
+
+- The code said "Reciprocal Rank Fusion". The code did not do Reciprocal Rank
+  Fusion. It kept the best points from each list and threw the rest away. A
+  part that all three search methods found received no extra points.
+- A documentation file said the system sends "the top passages". The code sent
+  the whole file. The search found the right part and then threw it away.
+
+**Rule:** a comment is not the code. Write down what the thing should do, then
+check the numbers. Do not repeat a claim you have not checked. If you explain
+the system to another person, read the source first.
+
+### Error 2 — The answer memory gave one visitor another visitor's reply
+
+The memory key was the words of the question. A second question such as "tell
+me more" has no meaning alone. One visitor wrote "tell me more". Another
+visitor wrote "tell me more" after a different conversation. The system gave
+both visitors the first answer.
+
+**Rule:** store a whole answer only when the question stands alone. Do not
+store an answer for a question that depends on the turn before it.
+
+### Error 3 — The chatbot used up the daily amount for the knowledge base
+
+The chat used the 10,000 units each day. The load command also needs these
+units. One answer costs much more of these units than one vector. The test
+program asks twenty questions each time you send code. When the first AI
+service had no credit, all twenty answers used the daily amount for the chat.
+The load command then could not run.
+
+**Rule:** give one daily amount to one job. Or buy a plan for the important
+job. Do not let a job that runs all day take from a job that runs twice a day.
+
+### Error 4 — Deleted knowledge files stayed answerable
+
+The load command only added and changed. It never removed. A file that a worker
+deleted still had text in the search systems. The chatbot answered from a
+project that was no longer on the site.
+
+**Rule:** every cleanup must remove what no longer exists. A cleanup that runs
+without saying what it removed is a cleanup nobody can check.
+
+### Error 5 — A test measured the old program
+
+The test program asked questions of the live site. The live site ran the old
+program at that time. The new program was not on the site yet. The test passed
+and told you nothing about your change.
+
+**Rule:** test the new program, not the old one. Send the code first. Then
+test.
+
+### Error 6 — The chat showed "Something went wrong" when it worked
 
 **What happened:** A visitor asked a question. The server sent a correct answer. The chat
 showed an error message.
@@ -518,7 +698,7 @@ words. Then the chat showed an error.
 **Rule:** Test every answer path. The system has four paths. A normal answer, a busy
 answer, no-AI answer, and a long question. Test all four.
 
-### Error 2 — We fixed the test but not the chat
+### Error 7 — We fixed the test but not the chat
 
 **What happened:** The test program read the second message. The chat program did not. So
 the test passed. The chat failed.
@@ -526,14 +706,14 @@ the test passed. The chat failed.
 **Rule:** Fix the cause, not only the place where you see the problem. Find every place
 that reads the answer. Fix all of them together.
 
-### Error 3 — A missing file stopped the build
+### Error 8 — A missing file stopped the build
 
 **What happened:** We removed two images from the project. The page still used them. The
 build failed.
 
 **Rule:** After you remove a file, search for its name. The name can be in ten places.
 
-### Error 4 — The photo was cut so the person was not in the picture
+### Error 9 — The photo was cut so the person was not in the picture
 
 **What happened:** A photo showed no person. The photo is tall. The box on the page was
 wide. The system cut the top and the bottom. The person was at the top.
@@ -541,14 +721,14 @@ wide. The system cut the top and the bottom. The person was at the top.
 **Rule:** Look at the photo before you change the box. Count where the subject is in the
 photo. Then set the position.
 
-### Error 5 — The name of the account was wrong in three places
+### Error 10 — The name of the account was wrong in three places
 
 **What happened:** Your Instagram name was wrong in the page, in the data for search
 engines, and in the chat answer. It was correct in only one file.
 
 **Rule:** Find the true value first. Then search for the wrong value everywhere.
 
-### Error 6 — The system could not load the knowledge files
+### Error 11 — The system could not load the knowledge files
 
 **What happened:** The load command failed. The error said the daily amount was finished.
 
@@ -556,7 +736,7 @@ engines, and in the chat answer. It was correct in only one file.
 
 **Rule:** Do not use the same daily amount for two jobs. One job can take everything.
 
-### Error 7 — The system made many calls that could not work
+### Error 12 — The system made many calls that could not work
 
 **What happened:** The system tried Groq. Groq was full. The system tried again for each
 visitor. Each failed call used a little more of Groq's daily amount.
@@ -564,7 +744,7 @@ visitor. Each failed call used a little more of Groq's daily amount.
 **Rule:** A limit that says no still uses a small amount. A system must stop at the first
 limit. A system must not keep trying a service that already said no.
 
-### Error 8 — Old files stay in the search systems forever
+### Error 13 — Old files stay in the search systems forever
 
 **What happened:** We removed a knowledge file. The system still had it. A visitor could
 get the old information.
@@ -573,7 +753,7 @@ get the old information.
 
 **Rule:** The load command must remove files that you deleted. We must add this step.
 
-### Error 9 — The system was slower after we made it correct
+### Error 14 — The system was slower after we made it correct
 
 **What happened:** A follow-up question took 9 seconds. Before the change, it took 4
 seconds. The old answer was wrong. The new answer is correct.

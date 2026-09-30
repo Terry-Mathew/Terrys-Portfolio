@@ -10,21 +10,34 @@ questions about the work.
 ## The chatbot
 
 Ask it anything about the work. It answers from a knowledge base, not from
-memory, so it cannot invent facts about a real person.
+memory — when retrieval finds nothing it says so rather than filling the gap,
+which is the only rule that matters when the subject is a real person.
 
 - **Hybrid retrieval** — vector similarity (Cloudflare Vectorize, 768d) *and*
   BM25 keyword search (D1 + SQLite FTS5), merged with Reciprocal Rank Fusion.
   Each method fails differently: vectors catch paraphrase, BM25 catches exact
-  terms like `1.2B credits`.
+  terms like `1.2B credits`. A document found by all three outranks one found
+  by a single method.
+- **Passage-level context** — Vectorize stores a vector per passage and the
+  passages that matched are what reach the model, not the whole parent document.
 - **Conversational** — follow-ups are rewritten into standalone queries before
   retrieval, so *"how long was he leading that team?"* resolves its pronoun
   against the conversation rather than searching for the word "team".
 - **Persona** — a system prompt with separate modes for work, personal, and
   hostile questions, plus guards against prompt injection and against
   disclosing the prompt itself.
-- **Streaming** — token-by-token over server-sent events.
-- **Free** — the entire system runs on Cloudflare's free tier. No external AI
-  provider, no API key, no per-token cost.
+- **Lead capture** — a guarded tool that can record a visitor's contact details
+  and push a notification. Every write passes deterministic checks first, so a
+  hallucinated email cannot reach a phone.
+- **Caching** — retrieval per question; whole answers for self-contained first
+  turns only, so a follow-up can never be served another conversation's reply.
+
+**Cost:** storage, search and embeddings run on Cloudflare's free tier. Text
+generation uses OpenRouter with Groq as a fallback, because the free generation
+allowances on both were observed exhausted on the same evening — keeping the
+chatbot on free tiers turned out to mean its availability was set by someone
+else's quota. Details and the reasoning are in
+[`how-this-works.md`](src/content/knowledge/how-this-works.md).
 
 Full architecture: [`src/content/knowledge/how-this-works.md`](src/content/knowledge/how-this-works.md)
 

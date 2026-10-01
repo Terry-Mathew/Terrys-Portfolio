@@ -13,11 +13,12 @@
     "eval": "node scripts/eval.mjs",
     "test:notify": "node --test scripts/notify-test.mjs",
     "test:history": "node --test scripts/history-test.mjs",
-    "test": "npm run test:notify && npm run test:history && npm run test:retrieval && npm run test:cache",
+    "test": "npm run test:notify && npm run test:history && npm run test:retrieval && npm run test:cache && npm run test:pipeline",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test:retrieval": "node --test scripts/retrieval-test.mjs",
-    "test:cache": "node --test scripts/cache-test.mjs"
+    "test:cache": "node --test scripts/cache-test.mjs",
+    "test:pipeline": "node --test scripts/pipeline-test.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"

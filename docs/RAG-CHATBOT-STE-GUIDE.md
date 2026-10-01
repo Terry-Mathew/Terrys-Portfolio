@@ -660,6 +660,10 @@ taking from this list, and it is written out at the end of the section.
 | 16 | A limit was set but never applied | Use one code path for both routes | A 9.7 MB request becomes 9,600 characters |
 | 17 | A true number made a measurement wrong | Report what actually happened | A cache hit no longer reads as an outage |
 | 18 | A build step reported success and did nothing | Make the step able to fail | The build fails when the key is missing |
+| 19 | The keyword index was a frozen copy of an old month | Write to it on every load | The result is thicker than the old placeholder |
+| 20 | The search said "hybrid" while one method ran | Count the methods that returned | A test fails below two |
+| 21 | A note promised a repair the code did not contain | Write the repair | The log names how many documents needed it |
+| 22 | The test for a broken system was skipped by it | Give the search its own address | The test no longer skips |
 
 ### 8.2 The records
 
@@ -1022,9 +1026,115 @@ that fixes it.
 
 **How we know.** The build now fails when the key is missing.
 
-**Rule.** The pattern that runs through all eighteen errors: a system that
-reports success is not evidence that it worked. Six of these errors returned a
-correct result while doing nothing, or nothing while returning a correct result.
+**Rule.** The pattern that runs through all of these: a system that reports
+success is not evidence that it worked. Six of these errors returned a correct
+result while doing nothing, or did nothing while returning a correct result.
+
+---
+
+#### 19 — The keyword index was a photograph of an old month
+
+**What happened.** A visitor asked the chatbot about Terry's trips. The chatbot
+answered with his job title. The document that describes his trips was in the
+search system the whole time. The search simply did not return it for that
+question.
+
+**Cause.** Three things, each on its own enough to do this.
+
+- The keyword table had no writer. Code read the table on every search. No code
+  wrote to it. Its nine rows came from somewhere else, at a time when the
+  documents were different.
+- Nothing ever updated those rows. They were frozen. The row for the projects
+  document was 230 characters while the file on disk was 3,068. The row for the
+  experience document was 482 characters against 3,967 on disk.
+- The rows held a file that had been deleted, and had no row for a file that
+  had been added. The search was answering confidently from a corpus that no
+  longer described the site.
+
+**Why it stayed hidden.** The search returned results. They were the wrong
+results, but results. Nothing reported that the rows were old.
+
+**The fix.** The load command now writes to the keyword table in the same loop
+that writes the documents, so the two cannot drift. It removes the old row
+first, because that table cannot update a row in place. When it removes a
+document that no longer exists, it removes that document's keyword row too.
+
+**How we know.** A test asks whether the keyword result is thicker than the old
+placeholder. The old one was 482 characters.
+
+---
+
+#### 20 — The search said "hybrid" while running on one method
+
+**What happened.** The health check reported that the search was running in
+hybrid mode. Hybrid mode means more than one method returned something. Only
+one did.
+
+**Cause.** The mode was set from the call finishing without an error. The search
+function catches its own errors and returns whatever it has, including nothing.
+A call that finishes successfully proves nothing about what contributed to it.
+So a search running on a single hand-written keyword table reported itself as
+hybrid, the same as a search with all three methods working.
+
+**Why this matters more than it sounds.** This is the same fault as error 17 —
+a number that reads as a health signal and measures nothing. It is the reason a
+dead vector path and a stale keyword index both looked fine for as long as they
+did.
+
+**The fix.** The mode is now built from the methods that actually returned a
+result. One method reports what that method is. Two or more report hybrid. None
+reports that there is nothing.
+
+**How we know.** A test asks the search for a method count and fails when fewer
+than two contributed.
+
+---
+
+#### 21 — A note promised a repair that the code did not contain
+
+**What happened.** A comment in the passage-retrieval code said a document with
+no stored passage would fall back to its full text. The line under it returned
+nothing instead.
+
+**Cause.** The comment described the intended behaviour. The code did not do it.
+The comment was written first, as a plan, and the code under it was written to
+something easier — drop the document.
+
+**Why it matters.** A document with no stored passage was dropped from the vector
+search entirely. Every document was affected, because the passage table was
+empty. So the vector search was returning nothing while reporting success, and
+the comment above it said it was degrading gracefully.
+
+**The fix.** The code now fetches the full text for any document whose passage
+is missing, and warns in the log how many it had to do this for.
+
+**How we know.** The warning names the count. A zero means the passage table is
+complete.
+
+**Rule.** A comment describing behaviour the code does not have is worse than no
+comment. It stops the next person reading the code and stops them checking.
+
+---
+
+#### 22 — The test for a broken system was skipped by the broken system
+
+**What happened.** The test that checks the search would look at the result of
+the chatbot's answer. When the answer came from the answer memory, the test had
+nothing to look at. It passed by skipping.
+
+**Cause.** The test asked the chatbot a question and read the sources. The
+chatbot returns from its answer memory before the search runs. So the one
+condition under which the test had something to say — the corpus is stale and
+the answer is served from memory — is the one condition where the test said
+nothing.
+
+**The fix.** A new address runs the search and stops. It does not write an
+answer and does not read the answer memory. The test uses it. It needs the same
+key as the load command, and it gives nothing to a caller without that key.
+
+**How we know.** The test no longer skips when the answer is remembered.
+
+**Rule.** A check that cannot run in the state you most need it is not a check.
 
 ## 9. How to work better next time
 

@@ -37,7 +37,15 @@ jobs:
         # The lead-capture guards and the conversation clamp are the only things
         # standing between a browser and a bogus notification or an uncapped
         # prompt. Neither is checkable in production, so both are tested here.
+        #
+        # INGEST_KEY is passed so the three retrieval diagnostics run rather
+        # than skip. Without it they are silently absent, and the whole reason
+        # they exist is that a stale corpus and a bad persona produce the same
+        # symptom — so a check that quietly stops running is worse than one
+        # that never existed.
         run: npm test
+        env:
+          INGEST_KEY: ${{ secrets.INGEST_KEY }}
 
   deploy:
     needs: verify

@@ -142,6 +142,27 @@ export function retrieveStatic(question: string, topK = 3): RetrievalResult[] {
   }));
 }
 
+/**
+ * Turn a stored `documents.category` into a link the widget can render.
+ *
+ * A category is either a section id on the home page ("about") or a path to a
+ * real route ("/projects/digital-twin"). Both shapes are needed: `how-this-works`
+ * documents a project and has no section anywhere, while `bio` has a section and
+ * no page of its own.
+ *
+ * This previously always prefixed `#`, which turned a route into
+ * `#/projects/digital-twin` — a fragment on the current page, not a link to the
+ * case study. Two dead source links shipped that way before anything checked
+ * that a citation pointed at something real.
+ */
+export function anchorFor(category: string | null | undefined): string {
+  const value = category?.trim();
+  if (!value) return "#knowledge";
+  if (value.startsWith("/")) return value;
+  if (value.startsWith("#")) return value;
+  return `#${value}`;
+}
+
 // Vector retrieval using Cloudflare Vectorize + D1 + KV cache
 export async function retrieveVector(
   question: string,
@@ -258,7 +279,7 @@ export async function retrieveVector(
       if (!entry) return null;
       return {
         id: pid,
-        anchor: `#${entry.category || "knowledge"}`,
+        anchor: anchorFor(entry.category),
         title: entry.title,
         content: entry.passages.join("\n\n"),
         score,
@@ -312,12 +333,10 @@ export async function retrieveHybrid(
   const staticResults = retrieveStatic(question, config.topK);
 
   // Vector results (semantic)
-  let vectorResults: RetrievalResult[] = [];
-  try {
-    vectorResults = await retrieveVector(question, env, config);
-  } catch (e) {
+  const vectorPromise = retrieveVector(question, env, config).catch((e) => {
     console.warn("Vector retrieval failed, using static only:", e);
-  }
+    return [] as RetrievalResult[];
+  });
 
   // BM25 results from D1 FTS5.
   //
@@ -329,10 +348,10 @@ export async function retrieveHybrid(
   //  2. SQLite's bm25() returns NEGATIVE numbers, lower = better match. The
   //     old 1/(1+score) transform divided by ~zero and produced Infinity and
   //     negative similarities. Negate it so higher is better, then normalise.
-  let bm25Results: RetrievalResult[] = [];
-  try {
+  const bm25Promise = (async (): Promise<RetrievalResult[]> => {
     const ftsQuery = toFtsQuery(question);
-    if (ftsQuery) {
+    if (!ftsQuery) return [];
+    try {
       const { results } = await env.DB.prepare(
         `SELECT d.id, d.source, d.category, d.title, d.content,
                 -bm25(documents_fts) AS score
@@ -356,19 +375,27 @@ export async function retrieveHybrid(
       const rows = (results as unknown as Bm25Row[]) || [];
       const best = rows[0]?.score ?? 0;
 
-      bm25Results = rows.map((r) => ({
+      return rows.map((r) => ({
         id: r.id,
-        anchor: `#${r.category || "knowledge"}`,
+        anchor: anchorFor(r.category),
         title: r.title,
         content: r.content,
         // Relative to the top hit, so RRF fusion sees a comparable scale.
         score: best > 0 ? r.score / best : 0,
         source: "bm25" as const,
       }));
+    } catch (e) {
+      console.warn("BM25 retrieval failed:", e);
+      return [];
     }
-  } catch (e) {
-    console.warn("BM25 retrieval failed:", e);
-  }
+  })();
+
+  // Vector and BM25 are independent: one embeds and queries Vectorize, the other
+  // runs an FTS5 MATCH against D1. Awaiting them in sequence made p95 latency
+  // the SUM of both round trips rather than the slower one, and this sits
+  // directly in front of the first token the visitor sees. Neither depends on
+  // the other's result, so there is nothing to sequence.
+  const [vectorResults, bm25Results] = await Promise.all([vectorPromise, bm25Promise]);
 
   // Reciprocal Rank Fusion (RRF) to merge all three rankings.
   //

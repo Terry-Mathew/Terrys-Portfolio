@@ -35,17 +35,43 @@ export const CHAT_CONFIG = {
 
   // Tier 1. OpenRouter. Secret is OPENROUTER_API_KEY.
   //
-  // "openrouter/free" is a routing alias: OpenRouter decides which free models
-  // back it, and that choice can change without notice. That is a feature here
-  // (it self-heals to whatever is currently good) but it does mean the model
-  // behind the id is not pinned. For deterministic behaviour, replace it with
-  // a specific id and verify tool support at openrouter.ai before relying on it.
+  // PINNED, deliberately. This used to be "openrouter/free", which is a
+  // routing alias rather than a model: OpenRouter picks whatever backs it and
+  // can change that without notice or a release here. Two consequences, both
+  // observed:
+  //   - Persona discipline moved without a commit. The instruction that this
+  //     project cannot bend is "never invent a fact about Terry", and that is
+  //     exactly the instruction a swapped model breaks first.
+  //   - It governs TOOL CALLING too, not just prose. `generateWithTools`
+  //     reuses `openRouterModel`, so the alias decided lead capture as well.
+  //
+  // Claude Sonnet 4.5 for both roles. The reasoning for it is this project's
+  // own record rather than a leaderboard: the comment on `useTools` below says
+  // Gemini Flash, Llama 3.3 and Nemotron all failed or rate-limited on
+  // structured tool calls. Sonnet is the model that does not need a fallback
+  // tier to capture an email address.
+  //
+  // Cost, for the shape a turn actually takes (≈8k input tokens after the
+  // system prompt, retrieved passages and capped history; ≈250 output tokens):
+  // about $0.028 an answer, $0.056 on a turn that captures a lead and so runs
+  // twice. This is the *paid* tier — the whole reason it is first is that it
+  // still answers when both free tiers are spent, which is when visitors most
+  // need a working chatbot.
+  //
+  // Verified against OpenRouter's public /api/v1/models: id exists, declares
+  // tool support, 1M context (the turn needs under 16k), $3/$15 per MTok.
+  // The live tool round trip and p95 latency still need a key — run
+  // `OPENROUTER_API_KEY=… npm run verify:models` before trusting it, and diff
+  // `npm run eval` before and after. See scripts/verify-models.mjs.
   useOpenRouter: true,
-  openRouterModel: "openrouter/free",
-  // A second slot for question condensing, so the same routing alias can be
-  // pointed at a smaller/faster model without touching the chat model. Leave
-  // empty to reuse openRouterModel.
-  openRouterCondenseModel: "",
+  openRouterModel: "anthropic/claude-sonnet-4.5",
+  // A second slot for question condensing, so the chat model can be changed
+  // without touching the rewrite. Pinned to the Haiku sibling rather than
+  // reusing the chat model: condensing is a 20-word rewrite against a short
+  // transcript, so paying Sonnet rates for it buys nothing, and keeping it in
+  // one provider family keeps the failure modes predictable.
+  // Leave empty to reuse openRouterModel.
+  openRouterCondenseModel: "anthropic/claude-haiku-4.5",
 
   // Tier 2. Groq, also OpenAI-compatible, free, no daily neuron cap. Stays the
   // tool-calling backup behind OpenRouter. Free tiers rotate without notice —
@@ -82,7 +108,18 @@ export const CHAT_CONFIG = {
   // src/content/knowledge/ — or replace public/Terry-Mathew-CV.pdf.
   // HOW: increase the number, then rebuild, deploy, and re-run /api/ingest.
   // Without the bump, a question asked yesterday returns yesterday's answer.
-  corpusVersion: 4,
+  //
+  // 4 → 5: two source anchors that pointed at nothing. `off-the-clock.md`
+  // claimed an id no element carries (the section is `beyond-work`), and
+  // `how-this-works.md` claimed an id that exists nowhere on the site at all.
+  //
+  // A category is part of what retrieval *returns* — it becomes the source
+  // link on the answer — so correcting one is a change to the index, not to the
+  // corpus text. The ingest-side hash catches the D1 row, but the retrieval and
+  // answer caches are keyed here, and both store the anchor. Without this bump
+  // the fixed links would have been correct in the index and dead in every
+  // cached answer for the next 24 hours.
+  corpusVersion: 5,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,

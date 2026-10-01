@@ -42,7 +42,35 @@ const rawModules = import.meta.glob("../content/knowledge/*.md", {
 
 const SKIP = new Set(["README.md", "RAG-ARCHITECTURE.md"]);
 
-/** Anchors the site's source links to. Unknown files fall back to "knowledge". */
+/**
+ * Where the chatbot's source links point.
+ *
+ * Each value is either a bare section id on the home page, or a path to a real
+ * route. Both are resolved by {@link anchorFor} in knowledge.ts, which prefixes
+ * a bare id with `#` and leaves a path alone.
+ *
+ * Three of these were wrong, and all of them shipped:
+ *  - "off-the-clock" — no element on the site carries that id. The section is
+ *    `id="beyond-work"` (OffTheClock.tsx), so every citation to Terry's
+ *    hobbies was a link to nowhere.
+ *  - "how-this-works" — no route and no element with that id at all. The
+ *    document explaining the chatbot pointed at nothing. It is now the Digital
+ *    Twin case study, which is the real page that describes it.
+ *  - "resume" — no such section either. The resume is a PDF, not a section, so
+ *    it links to the file itself. That is the same target the nav and the
+ *    contact section already use, so a citation agrees with the rest of the page.
+ *
+ * "approach" and "speaking" used to be listed here too, and both were wrong:
+ * neither `approach.md` nor `speaking.md` is in the corpus, and no element
+ * carries either id. They are removed rather than pointed somewhere plausible —
+ * an inert mapping for a file that does not exist is dead code that will
+ * quietly mislabel the day someone adds one. scripts/pipeline-test.mjs checks
+ * every remaining entry against the ids and routes that actually exist.
+ *
+ * Anything unknown falls back to "knowledge", which has no anchor either. That
+ * is deliberate: a dead `#knowledge` link is visible and fixable, whereas
+ * guessing an anchor that does not exist hides the mistake.
+ */
 const CATEGORY: Record<string, string> = {
   "bio.md": "about",
   "experience.md": "experience",
@@ -56,11 +84,9 @@ const CATEGORY: Record<string, string> = {
   "experiments.md": "experiments",
   "skills.md": "capabilities",
   "contact.md": "contact",
-  "off-the-clock.md": "off-the-clock",
-  "approach.md": "approach",
-  "speaking.md": "speaking",
-  "resume.md": "resume",
-  "how-this-works.md": "how-this-works",
+  "off-the-clock.md": "beyond-work",
+  "resume.md": "/Terry-Mathew-CV.pdf",
+  "how-this-works.md": "/projects/digital-twin",
 };
 
 const humanize = (name: string) =>
@@ -119,6 +145,28 @@ async function sha256(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * What the stored hash actually covers: the text, plus where it links to.
+ *
+ * Hashing the body alone meant a category-only change could never land. The
+ * document is skipped when its body hash matches, and `documents.category` is
+ * only rewritten for documents that were NOT skipped — so editing `CATEGORY`
+ * changed the mapping in the source and changed nothing in the index. The
+ * chatbot carried on emitting the dead anchor until someone noticed the dead
+ * link by hand.
+ *
+ * The deploy workflow calls ingest without `?force=1`, so this is the only
+ * mechanism that can carry a category change to production. The NUL separator
+ * cannot occur in a filename, so `a\u0000bc` and `ab\u0000c` cannot collide.
+ *
+ * Cost: changing this invalidates every document once and forces one full
+ * re-embed. That is a one-time cost and it is the correct trade — the hash has
+ * to cover everything that is written to the row.
+ */
+function fingerprint(source: { category: string; body: string }): string {
+  return `${source.category}\u0000${source.body}`;
+}
+
 export type IngestResult = {
   ok: boolean;
   indexed: number;
@@ -172,7 +220,7 @@ export async function ingestKnowledge(
   const pending: { id: string; hash: string; chunkCount: number }[] = [];
 
   for (const source of SOURCES) {
-    const hash = await sha256(source.body);
+    const hash = await sha256(fingerprint(source));
     const existing = await bindings.DB.prepare("SELECT hash FROM documents WHERE id = ?")
       .bind(source.id)
       .first<{ hash: string }>();

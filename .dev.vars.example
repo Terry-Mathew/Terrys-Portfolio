@@ -1,0 +1,12 @@
+# Local secrets for `wrangler dev` and `npm run verify:models`.
+# Copy to `.dev.vars` and fill in. `.dev.vars` is gitignored — never commit it.
+
+# Tool-calling and generation tier. Verified with `npm run verify:models`.
+OPENROUTER_API_KEY="sk-or-..."
+
+# Free generation and tool-calling backup.
+GROQ_API_KEY="gsk_..."
+
+# Authorises POST /api/ingest. Required by the retrieval diagnostics in
+# `npm test`, which skip without it.
+INGEST_KEY="..."

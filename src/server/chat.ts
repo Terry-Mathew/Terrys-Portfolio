@@ -49,13 +49,78 @@ export type ChatReply = {
     cached: boolean;
     turn: number;
     rateLimited?: boolean;
+    /**
+     * Whether this turn was served by a fallback rather than the real pipeline —
+     * the extractive answer, or the static keyword table standing in for the
+     * index. This is the signal the panel's availability dot shows.
+     *
+     * It lives here rather than being inferred from `retrievalMode` at the route
+     * because several replies return `retrievalMode: "static"` without anything
+     * being wrong at all: an over-long question, a blocked keyword, and a
+     * rate-limited turn are all answered before any retrieval is attempted.
+     * Reading "static" as "degraded" on those marked a perfectly healthy
+     * chatbot as broken.
+     */
+    degraded?: boolean;
     /** Which provider actually produced the reply: "workers-ai", "groq",
      *  "anthropic", or "none" when generation was unavailable. */
     generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
     /** The standalone question retrieval actually ran on, when it was rewritten. */
     resolvedQuery?: string | undefined;
+    /** Wall-clock split of the turn, for the eval harness and Worker logs. */
+    timings?: { retrievalMs: number; generationMs: number; latencyMs: number };
   };
 };
+
+/**
+ * The visitor walked away from this turn.
+ *
+ * This is a distinct outcome from "a provider failed", and the distinction is
+ * load-bearing. Both arrive at the same `catch` inside the provider calls, and
+ * that catch used to return null — which the chain read as "this tier did not
+ * answer, try the next one". So cancelling mid-stream fired a full failover:
+ * the visitor closed the panel, and OpenRouter's aborted request was followed
+ * by a brand new Groq request, billed, that nobody would ever read.
+ *
+ * Throwing this instead unwinds the whole chain, so nothing new starts after
+ * the visitor has left.
+ */
+export class ChatCancelled extends Error {
+  constructor() {
+    super("chat cancelled");
+    this.name = "ChatCancelled";
+  }
+}
+
+export const isChatCancelled = (e: unknown): e is ChatCancelled =>
+  e instanceof ChatCancelled || (e instanceof Error && e.name === "ChatCancelled");
+
+/**
+ * One signal that fires when any input fires.
+ *
+ * Each provider tier already bounds itself with `AbortSignal.timeout`; the
+ * visitor's cancellation has to reach the same fetches without replacing those
+ * bounds. `AbortSignal.any` is used where the runtime provides it and a
+ * hand-rolled controller otherwise — the combination is the only thing that
+ * stops a failover chain, so it must not rest on one runtime feature being
+ * present.
+ */
+export function combineSignals(...signals: (AbortSignal | undefined | null)[]): AbortSignal | null {
+  const live = signals.filter((s): s is AbortSignal => Boolean(s));
+  if (live.length === 0) return null;
+  if (live.length === 1) return live[0]!;
+  if (typeof AbortSignal.any === "function") return AbortSignal.any(live);
+
+  const controller = new AbortController();
+  for (const s of live) {
+    if (s.aborted) {
+      controller.abort(s.reason);
+      break;
+    }
+    s.addEventListener("abort", () => controller.abort(s.reason), { once: true });
+  }
+  return controller.signal;
+}
 
 type RagEnv = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">> & {
   ANTHROPIC_API_KEY?: string;
@@ -285,6 +350,7 @@ async function generateAnswer(
   env: RagEnv | undefined,
   history: Turn[],
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<{
   text: string;
   provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
@@ -319,16 +385,19 @@ async function generateAnswer(
             },
           ],
         }),
-        signal: AbortSignal.timeout(15000),
+        signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.generationTimeoutMs)),
       });
 
       if (response.ok) {
         const data = (await response.json()) as { content: { text: string }[] };
         return { text: data.content[0]?.text || GENERATION_FAILED, provider: "anthropic" };
       }
-      console.warn("Anthropic returned", response.status, "- trying Workers AI.");
+      console.warn("Anthropic returned", response.status, "- trying the next tier.");
     } catch (e) {
-      console.warn("Anthropic API failed, falling back to Workers AI:", e);
+      // A cancelled turn is not an Anthropic outage. Swallowing it here would
+      // start the whole provider chain over for a visitor who already left.
+      if (isChatCancelled(e) || signal?.aborted) throw new ChatCancelled();
+      console.warn("Anthropic API failed, falling through:", e);
     }
   }
 
@@ -367,10 +436,13 @@ async function generateAnswer(
   // Order changed from Workers-AI-first after both free tiers were observed
   // exhausted on the same evening, which put most visitors on the extractive
   // fallback from late afternoon to midnight.
-  const openRouter = await callOpenRouter(messages, env, onDelta);
+  //
+  // A cancelled turn throws out of the first call rather than falling through
+  // to the second — see ChatCancelled.
+  const openRouter = await callOpenRouter(messages, env, onDelta, signal);
   if (openRouter) return { text: openRouter, provider: "openrouter" };
 
-  const groq = await callGroq(messages, env, onDelta);
+  const groq = await callGroq(messages, env, onDelta, signal);
   if (groq) return { text: groq, provider: "groq" };
 
   if (CHAT_CONFIG.useWorkersAiGeneration) {
@@ -402,6 +474,7 @@ async function generateWithTools(
   history: Turn[],
   ip: string,
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<{ text: string; provider: "openrouter" | "groq" | "none" } | null> {
   if (!CHAT_CONFIG.useTools || !CHAT_CONFIG.notifications.enabled) return null;
 
@@ -438,6 +511,7 @@ async function generateWithTools(
 
   for (const tier of tiers) {
     if (!tier.enabled || !tier.key) continue;
+    if (signal?.aborted) throw new ChatCancelled();
 
     for (let iteration = 0; iteration < CHAT_CONFIG.maxToolIterations; iteration++) {
       let reply: OpenAiToolResponse;
@@ -453,7 +527,7 @@ async function generateWithTools(
             max_tokens: 1024,
             temperature: CHAT_CONFIG.temperature,
           }),
-          signal: AbortSignal.timeout(CHAT_CONFIG.toolTimeoutMs),
+          signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.toolTimeoutMs)),
         });
         if (!res.ok) {
           console.warn(
@@ -463,6 +537,10 @@ async function generateWithTools(
         }
         reply = (await res.json()) as OpenAiToolResponse;
       } catch (e) {
+        // `break` here used to be reached by a cancelled fetch too, which moved
+        // the loop to Groq and started a second billed request for a turn the
+        // visitor had already abandoned.
+        if (isChatCancelled(e) || signal?.aborted) throw new ChatCancelled();
         console.warn(`[tools] ${tier.label} call failed:`, e);
         break;
       }
@@ -661,10 +739,20 @@ async function callOpenAiCompatible(
   messages: ChatMessage[],
   env: RagEnv | undefined,
   onDelta: ((text: string) => void) | undefined,
-  opts: { label: string; url: string; key: string | undefined; model: string; timeoutMs: number },
+  opts: {
+    label: string;
+    url: string;
+    key: string | undefined;
+    model: string;
+    timeoutMs: number;
+    signal?: AbortSignal | undefined;
+  },
 ): Promise<string | null> {
   const { label, url, key, model } = opts;
   if (!key) return null;
+  // Checked before the request rather than only after it fails: the point is to
+  // avoid spending the call at all once the visitor is gone.
+  if (opts.signal?.aborted) throw new ChatCancelled();
 
   const body = {
     model,
@@ -692,7 +780,9 @@ async function callOpenAiCompatible(
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(opts.timeoutMs),
+      // The visitor's cancellation and this tier's own budget, as one signal.
+      // Either one ends the fetch; the caller decides what that means.
+      signal: combineSignals(opts.signal, AbortSignal.timeout(opts.timeoutMs)),
     });
 
     if (!res.ok) {
@@ -719,6 +809,12 @@ async function callOpenAiCompatible(
     }
     return data.choices?.[0]?.message?.content ?? null;
   } catch (e) {
+    // An aborted fetch is indistinguishable from a failed one here, and this
+    // catch used to return null for both — which read as "this tier did not
+    // answer" and started the next provider. Cancelling a turn therefore spent
+    // a full failover, and any text already streamed to the visitor was
+    // replaced by a second, different answer they were no longer reading.
+    if (isChatCancelled(e) || opts.signal?.aborted) throw new ChatCancelled();
     console.warn(`[gen] ${label} failed:`, e);
     return null;
   }
@@ -735,6 +831,7 @@ async function callOpenRouter(
   messages: ChatMessage[],
   env: RagEnv | undefined,
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   if (!CHAT_CONFIG.useOpenRouter || !env?.OPENROUTER_API_KEY) return null;
   return callOpenAiCompatible(messages, env, onDelta, {
@@ -743,6 +840,7 @@ async function callOpenRouter(
     key: env.OPENROUTER_API_KEY,
     model: CHAT_CONFIG.openRouterModel,
     timeoutMs: CHAT_CONFIG.generationTimeoutMs,
+    signal,
   });
 }
 
@@ -750,6 +848,7 @@ async function callGroq(
   messages: ChatMessage[],
   env: RagEnv | undefined,
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   if (!CHAT_CONFIG.useGroq) return null;
   return callOpenAiCompatible(messages, env, onDelta, {
@@ -758,6 +857,7 @@ async function callGroq(
     key: env?.GROQ_API_KEY,
     model: CHAT_CONFIG.groqModel,
     timeoutMs: CHAT_CONFIG.generationTimeoutMs,
+    signal,
   });
 }
 
@@ -783,6 +883,7 @@ async function condenseQuestion(
   question: string,
   history: Turn[],
   env: RagEnv | undefined,
+  signal?: AbortSignal,
 ): Promise<string> {
   if (history.length === 0) return question;
 
@@ -837,7 +938,7 @@ async function condenseQuestion(
           max_tokens: 64,
           temperature: 0,
         }),
-        signal: AbortSignal.timeout(CHAT_CONFIG.condenseTimeoutMs),
+        signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.condenseTimeoutMs)),
       });
       if (!res.ok) {
         console.warn(`[condense] ${tier.label} returned ${res.status}`);
@@ -847,6 +948,10 @@ async function condenseQuestion(
       const rewritten = accept(data.choices?.[0]?.message?.content);
       if (rewritten) return rewritten;
     } catch (e) {
+      // Condensing is a paid call that exists only to improve retrieval. A
+      // cancelled turn must not fall through to the next tier here either —
+      // retrieval would then run against a question the visitor has abandoned.
+      if (isChatCancelled(e) || signal?.aborted) throw new ChatCancelled();
       console.warn(`[condense] ${tier.label} failed:`, e);
     }
   }
@@ -920,6 +1025,11 @@ export type ChatPhase = { phase: "searching" } | { phase: "retrieved"; count: nu
  * stream tokens, so progress is reported at the boundaries that genuinely
  * exist — before retrieval, and after — rather than faking a token-by-token
  * reveal that never happened.
+ *
+ * `signal` is the visitor's connection. It is threaded into every outbound
+ * provider call, and a cancelled turn throws {@link ChatCancelled} out of the
+ * chain rather than falling through to the next tier. Callers that do not care
+ * (the server function) simply never pass it.
  */
 export async function runChat(
   q: string,
@@ -932,15 +1042,23 @@ export async function runChat(
    *  inline citation markers while tokens stream in — a marker can be split
    *  across deltas, so it cannot be removed after the fact. */
   onSources?: (sources: string[], docIds: string[]) => void,
+  signal?: AbortSignal,
 ): Promise<ChatReply> {
   const qTrimmed = q.trim();
   const ip = request ? clientIp(request, resolved) : "unknown";
+  const startedAt = Date.now();
 
   if (!qTrimmed) {
     return {
       answer: "Ask me about Terry's work, experience, projects or contact.",
       sources: [],
-      metadata: { retrievalMode: "static", chunksUsed: 0, cached: false, turn: history.length },
+      metadata: {
+        retrievalMode: "static",
+        chunksUsed: 0,
+        cached: false,
+        turn: history.length,
+        degraded: false,
+      },
     };
   }
 
@@ -948,7 +1066,13 @@ export async function runChat(
     return {
       answer: "That's a lot to read in one go — could you ask a shorter question?",
       sources: [],
-      metadata: { retrievalMode: "static", chunksUsed: 0, cached: false, turn: history.length },
+      metadata: {
+        retrievalMode: "static",
+        chunksUsed: 0,
+        cached: false,
+        turn: history.length,
+        degraded: false,
+      },
     };
   }
 
@@ -962,7 +1086,13 @@ export async function runChat(
     return {
       answer: "I'm here to answer questions about Terry. What can I help you with?",
       sources: [],
-      metadata: { retrievalMode: "static", chunksUsed: 0, cached: false, turn: history.length },
+      metadata: {
+        retrievalMode: "static",
+        chunksUsed: 0,
+        cached: false,
+        turn: history.length,
+        degraded: false,
+      },
     };
   }
 
@@ -976,6 +1106,7 @@ export async function runChat(
         cached: false,
         turn: history.length,
         rateLimited: true,
+        degraded: false,
       },
     };
   }
@@ -1024,6 +1155,12 @@ export async function runChat(
             cached: true,
             turn: 0,
             generation: c.generation ?? "none",
+            degraded: (c.generation ?? "none") === "none" || c.retrievalMode === "static",
+            timings: {
+              retrievalMs: 0,
+              generationMs: 0,
+              latencyMs: Date.now() - startedAt,
+            },
           },
         };
       }
@@ -1037,8 +1174,12 @@ export async function runChat(
   // Retrieval runs on the resolved question, not the raw one.
   const searchQuery =
     history.length > 0 && bindingsPresent
-      ? await condenseQuestion(qTrimmed, history, env)
+      ? await condenseQuestion(qTrimmed, history, env, signal)
       : qTrimmed;
+
+  // Retrieval itself cannot be cancelled — the D1, Vectorize and AI bindings
+  // take no signal — but nothing after it should start if the visitor has gone.
+  if (signal?.aborted) throw new ChatCancelled();
 
   let results: Awaited<ReturnType<typeof retrieveHybrid>>;
   let retrievalMode: "static" | "vector" | "hybrid" = "static";
@@ -1073,6 +1214,7 @@ export async function runChat(
   }
 
   onPhase?.({ phase: "retrieved", count: results.length });
+  const retrievalMs = Date.now() - startedAt;
 
   // NOTE: an empty result set does NOT short-circuit to a canned message.
   //
@@ -1101,18 +1243,21 @@ export async function runChat(
   let generated: {
     text: string;
     provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
-  } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta);
+  } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta, signal);
   if (!generated) {
-    generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta);
+    generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta, signal);
   }
-  const degraded = generated.provider === "none";
+  const generationMs = Date.now() - startedAt - retrievalMs;
+  // "no model answered" — narrower than the `degraded` metadata field below,
+  // which also covers retrieval that fell back to the keyword table.
+  const unanswered = generated.provider === "none";
 
   // When generation is unavailable — daily quota exhausted, model retired, API
   // down — answer with the retrieved text itself instead of an error. Retrieval
   // does not depend on the AI binding, so the visitor still gets a real answer
   // rather than a dead chatbot. Extractive rather than generated, and labelled,
   // so it is never mistaken for something the model wrote.
-  const finalAnswer = degraded ? extractiveAnswer(results, searchQuery) : generated.text;
+  const finalAnswer = unanswered ? extractiveAnswer(results, searchQuery) : generated.text;
 
   // Only a real generation is worth remembering. Storing the extractive
   // fallback would pin one bad minute — every tier rate-limited, say — into
@@ -1145,6 +1290,14 @@ export async function runChat(
       turn: history.length,
       generation: generated.provider,
       resolvedQuery: searchQuery !== qTrimmed ? searchQuery : undefined,
+      // The real pipeline ran and did not hold up. The extractive answer is
+      // still a real answer, so this is reported rather than thrown.
+      degraded: generated.provider === "none" || retrievalMode === "static",
+      timings: {
+        retrievalMs,
+        generationMs,
+        latencyMs: Date.now() - startedAt,
+      },
     },
   };
 }

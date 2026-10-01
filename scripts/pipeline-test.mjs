@@ -17,12 +17,28 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const BASE = process.env.PIPELINE_URL ?? "https://terrymathew.com";
+
+// Probes are the golden set's retrieval cases, read from the same file the
+// evaluation scores against.
+//
+// This list used to be a hand-written `PROBES` constant that no longer existed
+// anywhere in the repo. The `for (const p of PROBES)` sat OUTSIDE the try block
+// below, so it threw a ReferenceError instead of skipping — which made
+// `npm test` fail and turned the `verify` job in deploy.yml permanently red.
+//
+// The duplicate is also why it drifted: a question added to evals/golden.json
+// was never tested here, and a question removed here never failed. One source
+// of truth cannot disagree with itself.
+const spec = JSON.parse(readFileSync(join(ROOT, "evals", "golden.json"), "utf8"));
+const PROBES = spec.cases
+  .filter((c) => c.category === "retrieval" && Array.isArray(c.requires) && c.requires.length > 0)
+  .map((c) => ({ id: c.id, q: c.question, expect: c.requires }));
 // ---------------------------------------------------------------- diagnostic 1
 //
 // Retrieval only. /api/retrieve runs the search and stops: no generation, no
@@ -49,6 +65,13 @@ async function retrieve(question) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+test("the golden set yields retrieval probes", () => {
+  assert.ok(
+    PROBES.length > 0,
+    "evals/golden.json produced no retrieval probes — check that the cases still carry a `category: retrieval` and a `requires` list",
+  );
+});
 
 test("retrieval alone contains the answer for known questions", async (t) => {
   if (!KEY) {
@@ -171,6 +194,94 @@ test("ingest and query use the same embedding model and dimension", () => {
 // passage answerable; chunks that are too large drag noise in with the
 // signal. This checks the real files against the configured band rather than
 // asserting that the chunker does what it is told.
+
+// ---------------------------------------------------------------- diagnostic 4
+//
+// Source links. Every citation the chatbot renders comes from
+// `documents.category` in ingest.ts, and that value is typed by hand into a
+// map nobody validates.
+//
+// Two of them were wrong and both shipped: "off-the-clock" named an id no
+// element carries (the section is `beyond-work`), and "how-this-works" named an
+// id that exists nowhere on the site. Every citation either one produced was a
+// link to nothing, and nothing reported it — retrieval "succeeded", the answer
+// rendered, the link was simply dead.
+//
+// This walks the map and checks each value against the ids and routes that
+// actually exist. It is a static check, so it needs neither a key nor a
+// network, and it fails at review time rather than at demo time.
+
+test("every source anchor in the category map resolves to something real", () => {
+  const ingest = readFileSync(join(ROOT, "src/server/ingest.ts"), "utf8");
+
+  const block = /const CATEGORY[^=]*=\s*\{([\s\S]*?)\n\};/.exec(ingest)?.[1];
+  assert.ok(block, "could not find the CATEGORY map in ingest.ts — has it been renamed?");
+
+  const entries = [...block.matchAll(/"([^"]+\.md)":\s*"([^"]+)"/g)].map((m) => ({
+    file: m[1],
+    target: m[2],
+  }));
+  assert.ok(entries.length > 0, "the CATEGORY map is empty");
+
+  // Section ids the site actually renders.
+  const idPattern = /id="([a-z0-9-]+)"/g;
+  const walk = (dir) => {
+    const out = [];
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) {
+        if (name === "node_modules" || name.startsWith(".")) continue;
+        out.push(...walk(full));
+        continue;
+      }
+      if (!/\.(tsx|ts)$/.test(name)) continue;
+      for (const m of readFileSync(full, "utf8").matchAll(idPattern)) out.push(m[1]);
+    }
+    return out;
+  };
+
+  const ids = new Set([...walk(join(ROOT, "src/components")), ...walk(join(ROOT, "src/routes"))]);
+
+  // Slugs the /projects/$projectId route accepts.
+  const projects = readFileSync(join(ROOT, "src/content/projects.ts"), "utf8");
+  const slugs = new Set([...projects.matchAll(/id:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]));
+
+  const dead = [];
+  for (const { file, target } of entries) {
+    if (target.startsWith("/")) {
+      // Three shapes are legitimate: a /projects/<slug> route, any other route
+      // file, or a static asset in public/ served from the root — the resume is
+      // a PDF, not a page.
+      const slug = target.startsWith("/projects/") ? target.slice("/projects/".length) : null;
+      if (slug) {
+        if (!slugs.has(slug)) dead.push(`${file} → ${target} (no project with id "${slug}")`);
+        continue;
+      }
+      const isRoute = existsSync(join(ROOT, "src/routes", `${target.slice(1)}.tsx`));
+      const isAsset = existsSync(join(ROOT, "public", target.slice(1)));
+      if (!isRoute && !isAsset) {
+        dead.push(`${file} → ${target} (no route file and nothing in public/)`);
+      }
+      continue;
+    }
+    const id = target.replace(/^#/, "");
+    if (!ids.has(id)) {
+      dead.push(
+        `${file} → ${target} (no element with id="${id}"; known ids: ` +
+          `${[...ids].sort().join(", ")})`,
+      );
+    }
+  }
+
+  assert.equal(
+    dead.length,
+    0,
+    `Source links point at things that do not exist:\n  ${dead.join("\n  ")}\n` +
+      "  Every citation rendered from these is a dead link. Point them at a real " +
+      "section id or route, or leave them out of CATEGORY to fall back to the " +
+      "obvious placeholder.",
+  );
+});
 
 test("knowledge files chunk into a workable size band", () => {
   const config = readFileSync(join(ROOT, "src/server/chat.config.ts"), "utf8");

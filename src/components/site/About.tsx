@@ -205,7 +205,13 @@ export function About() {
             </a>
           </div>
 
-          <div data-about-column className="lg:col-span-5">
+          {/* `data-about-reveal` as well as `data-about-column`: the column is
+              animated by GSAP like the other eight targets, so it has to start
+              behind the same shared `html.js` gate. Without it the column was
+              not covered, and because the gate is what hides everything before
+              the timeline runs, the image painted visible, was then hidden when
+              GSAP initialised, and animated back in. */}
+          <div data-about-column data-about-reveal className="lg:col-span-5">
             <figure className="tape relative mx-auto max-w-sm -rotate-2 bg-white p-3 shadow-[0_28px_60px_-28px_oklch(0_0_0/0.35)]">
               <Picture
                 avif={IGUANA_AVIF}

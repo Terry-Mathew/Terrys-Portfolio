@@ -174,6 +174,46 @@
   }
 }
 
+/* --- Hero entrance ----------------------------------------------------
+ *
+ * The hero is the one place that sets its own hidden state rather than going
+ * through [data-reveal], because GSAP owns its transform: the CSS must not
+ * write one, or it would collide with the scroll timeline's `y` and the
+ * pointer's `x`.
+ *
+ * Same `html.js` gate as above, for the same reason — without JavaScript the
+ * class is never added and the hero arrives already painted, which is what it
+ * used to do. Stating the hidden state in CSS rather than letting GSAP apply it
+ * is also what prevents a flash: the server sends the hero already faded, so
+ * there is no frame in which the finished hero is visible before the animation
+ * hides it.
+ */
+@layer base {
+  html.js [data-hero-reveal] {
+    opacity: 0;
+  }
+
+  /* `:not([data-hero-mask-done])` is what lets the mask be removed once the
+   * reveal has finished. Clearing GSAP's inline clip-path on its own would drop
+   * the element straight back under this rule and hide the portrait again. */
+  html.js [data-hero-mask]:not([data-hero-mask-done]) {
+    clip-path: inset(0% 0% 100% 0%);
+  }
+
+  /* Reduced motion wins, and it has to be stated here. `useGsapContext` skips
+   * building anything when the preference is set, so with only the gate above
+   * the hero would stay invisible forever. The global reduced-motion rule
+   * collapses transition durations but says nothing about opacity or clip-path,
+   * so it cannot cover this. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-hero-reveal],
+    [data-hero-mask] {
+      opacity: 1 !important;
+      clip-path: none !important;
+    }
+  }
+}
+
 /* --- Texture utilities ------------------------------------------------ */
 
 @utility film-grain {

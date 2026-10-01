@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 type RevealTag = "div" | "section" | "li" | "article" | "figure" | "header";
 
@@ -40,18 +40,22 @@ export function Reveal({
 
   const Element = Tag as "div";
 
+  // The hidden state is CSS, not an inline style, gated on `html.js` in
+  // styles.css. An inline opacity:0 here would ship in the SSR HTML and leave
+  // the whole page invisible when JavaScript is unavailable.
+  const style = {
+    "--reveal-y": `${y}px`,
+    "--reveal-delay": `${delay}ms`,
+  } as CSSProperties;
+
   return (
-    // Same timing/classes as before — ref type fixed, no visual change.
     <Element
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ref={ref as any}
       className={className}
-      style={{
-        opacity: shown ? 1 : 0,
-        transform: shown ? "none" : `translate3d(0, ${y}px, 0)`,
-        transition: `opacity 900ms cubic-bezier(0.22,0.61,0.36,1) ${delay}ms, transform 900ms cubic-bezier(0.22,0.61,0.36,1) ${delay}ms`,
-        willChange: shown ? undefined : "opacity, transform",
-      }}
+      data-reveal=""
+      {...(shown ? { "data-reveal-in": "" } : {})}
+      style={style}
     >
       {children}
     </Element>

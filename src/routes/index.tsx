@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { Nav } from "@/components/site/Nav";
+import { MotionSelfTest } from "@/components/site/MotionSelfTest";
 import { Hero } from "@/components/site/Hero";
 import { Experiments } from "@/components/site/Experiments";
 import { About } from "@/components/site/About";
@@ -37,7 +38,11 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="bg-ink">
+    <main id="main" data-skip-target tabIndex={-1} className="bg-ink">
+      {/* Development-only proof that the GSAP foundation is wired correctly.
+          `import.meta.env.DEV` is statically false in a production build, so
+          this and the GSAP import behind it are dropped from the bundle. */}
+      {import.meta.env.DEV && <MotionSelfTest />}
       {/* Placeholder person schema — same data as before, no visual change. */}
       <script
         type="application/ld+json"

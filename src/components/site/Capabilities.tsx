@@ -45,7 +45,7 @@ export function Capabilities() {
                     className="grid gap-x-8 gap-y-3 border-b border-graphite/20 py-6 sm:grid-cols-[9rem_1fr] sm:py-7"
                   >
                     <dt className="flex items-center gap-3">
-                      <Icon className="size-4 shrink-0 text-ember" aria-hidden />
+                      <Icon className="size-4 shrink-0 text-ember-ink" aria-hidden />
                       <span className="label-eyebrow text-graphite">{group.title}</span>
                     </dt>
                     <dd className="flex flex-wrap gap-x-2 gap-y-1.5">

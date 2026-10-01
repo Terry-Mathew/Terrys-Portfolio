@@ -246,6 +246,31 @@
   }
 }
 
+/* --- Experience timeline markers ---------------------------------------
+ *
+ * The only visual state this section carries. A dot at rest is exactly the
+ * authored `bg-ember` span; when its row becomes the active one it scales a
+ * little and gains a soft ember halo, so which role is being read is legible
+ * from the rail alone.
+ *
+ * Deliberately additive: nothing is hidden, no text is dimmed, and the rail
+ * border itself is untouched. With reduced motion, or without JavaScript, no
+ * `is-active` class is ever applied and every marker stays as authored.
+ *
+ * `transform` and `box-shadow` only — neither affects layout, so activating a
+ * row cannot move anything around it.
+ */
+.exp-dot {
+  transition:
+    transform 300ms var(--ease-out-soft),
+    box-shadow 300ms var(--ease-out-soft);
+}
+
+.is-active > .exp-dot {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--ember) 20%, transparent);
+}
+
 /* --- Texture utilities ------------------------------------------------ */
 
 @utility film-grain {

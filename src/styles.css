@@ -214,6 +214,38 @@
   }
 }
 
+/* --- About entrance ---------------------------------------------------
+ *
+ * Same reasoning as the hero gate above: the hidden state lives in CSS, gated on
+ * `html.js`, so a server-rendered About arrives fully painted and only fades in
+ * when scripting can actually bring it back.
+ *
+ * `[data-about-failed]` is the fail-open escape. If the GSAP timeline cannot be
+ * built, About.tsx stamps that attribute on the section and these rules undo
+ * everything the gate did. A GSAP failure must never leave a section of copy
+ * permanently invisible, so the failure path is styled here rather than being
+ * fixed up element by element in JavaScript.
+ */
+@layer base {
+  html.js [data-about-reveal] {
+    opacity: 0;
+  }
+
+  [data-about-failed] [data-about-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Reduced motion, stated explicitly for the same reason as the hero: the
+   * global rule collapses transition durations but says nothing about opacity. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-about-reveal] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+}
+
 /* --- Texture utilities ------------------------------------------------ */
 
 @utility film-grain {

@@ -182,6 +182,70 @@ export function anchorFor(category: string | null | undefined): string {
   return `#${value}`;
 }
 
+/**
+ * Did retrieval actually work, as distinct from did it find anything.
+ *
+ * These are different questions and conflating them is what made a healthy
+ * chatbot report itself as broken. A visitor asking "are you single" should
+ * match nothing — that is the correct outcome — and the index answering "nothing
+ * here" is the index working. Inferring health from the result count cannot tell
+ * that apart from an index that is down, so the answer was to report the
+ * methods that ran and the methods that failed, and let the caller decide.
+ */
+export type RetrievalHealth = {
+  /** Live, index-backed methods that completed without throwing. */
+  ran: ("vector" | "bm25")[];
+  /** Live methods that were attempted and threw. Empty on a healthy turn. */
+  failed: ("vector" | "bm25")[];
+  /** At least one live method ran and none failed. */
+  healthy: boolean;
+  /** Retrieval ran cleanly and matched nothing. A correct answer, not a fault. */
+  empty: boolean;
+};
+
+export type RetrievalOutcome = {
+  results: RetrievalResult[];
+  health: RetrievalHealth;
+};
+
+/** A retrieval path that never ran: no bindings, or static mode. */
+export function unrunRetrievalHealth(): RetrievalHealth {
+  return { ran: [], failed: [], healthy: false, empty: true };
+}
+
+/**
+ * Decide whether a retrieval turn worked, from what each method did.
+ *
+ * Split out and exported so it can be tested directly. The whole fix is this
+ * distinction, and a test that re-derives the same rule in the test file proves
+ * nothing about whether the server applies it.
+ *
+ * The rule:
+ *   - healthy  = at least one live index ran and none of them threw.
+ *   - empty    = healthy *and* nothing came back, which is a correct miss for a
+ *                question the corpus does not cover.
+ *   - a partial failure is not healthy. The site answered, but from a subset of
+ *     its retrieval, and calling that healthy is the same mistake as calling an
+ *     empty result a failure — in the other direction.
+ */
+export function assessRetrieval(input: {
+  vectorRan: boolean;
+  vectorFailed: boolean;
+  bm25Ran: boolean;
+  bm25Failed: boolean;
+  resultCount: number;
+}): RetrievalHealth {
+  const ran: ("vector" | "bm25")[] = [];
+  const failed: ("vector" | "bm25")[] = [];
+  if (input.vectorRan) ran.push("vector");
+  if (input.bm25Ran) ran.push("bm25");
+  if (input.vectorFailed) failed.push("vector");
+  if (input.bm25Failed) failed.push("bm25");
+
+  const healthy = ran.length > 0 && failed.length === 0;
+  return { ran, failed, healthy, empty: healthy && input.resultCount === 0 };
+}
+
 // Vector retrieval using Cloudflare Vectorize + D1 + KV cache
 export async function retrieveVector(
   question: string,
@@ -201,11 +265,17 @@ export async function retrieveVector(
   // existed have `source: "cache"` on disk for up to `cacheTTL`, and reading
   // one verbatim would put a value back into `source` that is no longer a
   // member of the union — silently reintroducing exactly the bug this removes.
-  const cached = (await env.CACHE.get(cacheKey, "json")) as
-    | (RetrievalResult & {
-        source?: string;
-      })[]
-    | null;
+  // A cache read failure is not a retrieval failure. The cache is an
+  // optimisation; if it is unavailable the correct response is to query the
+  // index directly, not to report the index as broken. Letting this throw would
+  // mark vector retrieval as failed and flip the availability dot.
+  let cached: (RetrievalResult & { source?: string })[] | null = null;
+  try {
+    const hit: unknown = await env.CACHE.get(cacheKey, "json");
+    cached = Array.isArray(hit) ? (hit as (RetrievalResult & { source?: string })[]) : null;
+  } catch (e) {
+    console.warn("[retrieval] cache read failed, querying the index directly:", e);
+  }
   if (cached) {
     return cached.map((r) => ({
       ...r,
@@ -362,15 +432,29 @@ export async function retrieveHybrid(
   question: string,
   env: Env,
   config: typeof import("./chat.config").CHAT_CONFIG,
-): Promise<RetrievalResult[]> {
+): Promise<RetrievalOutcome> {
+  // Whether each live method ran, and whether it worked. Recorded by the
+  // promises below rather than derived from the result count afterwards,
+  // because "matched nothing" and "did not run" produce the same array.
+  let vectorRan = false;
+  let vectorFailed = false;
+  let bm25Ran = false;
+  let bm25Failed = false;
+
   // Static results (fast, deterministic)
   const staticResults = retrieveStatic(question, config.topK);
 
   // Vector results (semantic)
-  const vectorPromise = retrieveVector(question, env, config).catch((e) => {
-    console.warn("Vector retrieval failed, using static only:", e);
-    return [] as RetrievalResult[];
-  });
+  const vectorPromise = retrieveVector(question, env, config)
+    .then((results) => {
+      vectorRan = true;
+      return results;
+    })
+    .catch((e) => {
+      vectorFailed = true;
+      console.warn("Vector retrieval failed, using static only:", e);
+      return [] as RetrievalResult[];
+    });
 
   // BM25 results from D1 FTS5.
   //
@@ -383,8 +467,14 @@ export async function retrieveHybrid(
   //     old 1/(1+score) transform divided by ~zero and produced Infinity and
   //     negative similarities. Negate it so higher is better, then normalise.
   const bm25Promise = (async (): Promise<RetrievalResult[]> => {
+    // A question with no term long enough to index is not a failure. It is a
+    // successful search that had nothing to search for, and counting it as an
+    // error is how "are you single" ended up looking like a broken index.
     const ftsQuery = toFtsQuery(question);
-    if (!ftsQuery) return [];
+    if (!ftsQuery) {
+      bm25Ran = true;
+      return [];
+    }
     try {
       const { results } = await env.DB.prepare(
         `SELECT d.id, d.source, d.category, d.title, d.content,
@@ -406,6 +496,7 @@ export async function retrieveHybrid(
         score: number;
       };
 
+      bm25Ran = true;
       const rows = (results as unknown as Bm25Row[]) || [];
       const best = rows[0]?.score ?? 0;
 
@@ -419,6 +510,7 @@ export async function retrieveHybrid(
         source: "bm25" as const,
       }));
     } catch (e) {
+      bm25Failed = true;
       console.warn("BM25 retrieval failed:", e);
       return [];
     }
@@ -468,7 +560,18 @@ export async function retrieveHybrid(
     .slice(0, config.rerankTopK)
     .map((v) => v.result);
 
-  return fused.length > 0 ? fused : staticResults;
+  const results = fused.length > 0 ? fused : staticResults;
+
+  return {
+    results,
+    health: assessRetrieval({
+      vectorRan,
+      vectorFailed,
+      bm25Ran,
+      bm25Failed,
+      resultCount: results.length,
+    }),
+  };
 }
 
 export function hashString(str: string): string {

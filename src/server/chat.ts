@@ -5,6 +5,8 @@ import {
   hashString,
   retrieveStatic,
   retrieveHybrid,
+  unrunRetrievalHealth,
+  type RetrievalHealth,
   type RetrievalResult,
 } from "@/server/knowledge";
 import { TOOLS, parseToolCallFromText, runToolCall, type ToolCall } from "@/server/chat-tools";
@@ -62,18 +64,21 @@ export type ChatReply = {
     answerCached?: boolean;
     rateLimited?: boolean;
     /**
-     * Whether this turn was served by a fallback rather than the real pipeline —
-     * the extractive answer, or the static keyword table standing in for the
-     * index. This is the signal the panel's availability dot shows.
+     * Whether this turn was served by a fallback rather than the real pipeline.
      *
-     * It lives here rather than being inferred from `retrievalMode` at the route
-     * because several replies return `retrievalMode: "static"` without anything
-     * being wrong at all: an over-long question, a blocked keyword, and a
-     * rate-limited turn are all answered before any retrieval is attempted.
-     * Reading "static" as "degraded" on those marked a perfectly healthy
-     * chatbot as broken.
+     * Derived from `retrieval.healthy` and whether a model answered — never from
+     * how many results came back. A question the corpus does not cover returns
+     * nothing, and nothing is the correct answer to it; treating an empty
+     * result set as a fault is what made a healthy chatbot show "Limited mode"
+     * because somebody asked it an out-of-scope question.
      */
     degraded?: boolean;
+    /**
+     * Explicit retrieval health for this turn: which live methods ran, which
+     * failed, and whether the empty result was a correct miss or a broken
+     * search. Present so that nothing downstream has to guess.
+     */
+    retrieval?: RetrievalHealth;
     /** Which provider actually produced the reply: "workers-ai", "groq",
      *  "anthropic", or "none" when generation was unavailable. */
     generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
@@ -1069,6 +1074,10 @@ export async function runChat(
         chunksUsed: 0,
         cached: false,
         turn: history.length,
+        // These replies are returned before retrieval is attempted, so there is
+        // no retrieval health to report and nothing that could be wrong. The
+        // `retrieval` field is omitted rather than filled in with a
+        // "did not run" object that reads like a failure.
         degraded: false,
       },
     };
@@ -1083,6 +1092,10 @@ export async function runChat(
         chunksUsed: 0,
         cached: false,
         turn: history.length,
+        // These replies are returned before retrieval is attempted, so there is
+        // no retrieval health to report and nothing that could be wrong. The
+        // `retrieval` field is omitted rather than filled in with a
+        // "did not run" object that reads like a failure.
         degraded: false,
       },
     };
@@ -1103,6 +1116,10 @@ export async function runChat(
         chunksUsed: 0,
         cached: false,
         turn: history.length,
+        // These replies are returned before retrieval is attempted, so there is
+        // no retrieval health to report and nothing that could be wrong. The
+        // `retrieval` field is omitted rather than filled in with a
+        // "did not run" object that reads like a failure.
         degraded: false,
       },
     };
@@ -1152,7 +1169,8 @@ export async function runChat(
           sources?: string[];
           docIds?: string[];
           retrievalMode?: "static" | "vector" | "hybrid";
-          generation?: "openrouter" | "workers-ai" | "groq" | "anthropic";
+          retrieval?: RetrievalHealth;
+          generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
         };
         // Replay the real metadata and sources. Reporting a hit as
         // static/none made healthy cache reads look like outages, which is
@@ -1172,7 +1190,13 @@ export async function runChat(
             answerCached: true,
             turn: 0,
             generation: c.generation ?? "none",
-            degraded: (c.generation ?? "none") === "none" || c.retrievalMode === "static",
+            // The whole turn was replayed, so health comes from the turn that
+            // produced it. It was not re-measured and must not be re-guessed.
+            degraded: (c.generation ?? "none") === "none" || !(c.retrieval?.healthy ?? false),
+            // Spread rather than assigned directly: an entry written before
+            // this field existed has none, and with exactOptionalPropertyTypes
+            // an explicit undefined is not the same as an absent key.
+            ...(c.retrieval ? { retrieval: c.retrieval } : {}),
             timings: {
               retrievalMs: 0,
               generationMs: 0,
@@ -1198,13 +1222,16 @@ export async function runChat(
   // take no signal — but nothing after it should start if the visitor has gone.
   if (signal?.aborted) throw new ChatCancelled();
 
-  let results: Awaited<ReturnType<typeof retrieveHybrid>>;
+  let results: RetrievalResult[];
+  let retrieval: RetrievalHealth;
   let retrievalMode: "static" | "vector" | "hybrid" = "static";
   let cached = false;
 
   if (CHAT_CONFIG.mode === "vector" && bindingsPresent) {
     try {
-      results = await retrieveHybrid(searchQuery, env!, CHAT_CONFIG);
+      const outcome = await retrieveHybrid(searchQuery, env!, CHAT_CONFIG);
+      results = outcome.results;
+      retrieval = outcome.health;
       cached = results.some((r) => r.fromCache === true);
       // Report the provenance of the results, not whether this turn re-queried
       // the index.
@@ -1235,6 +1262,7 @@ export async function runChat(
     } catch (e) {
       console.error("Vector retrieval failed, falling back to static:", e);
       results = retrieveStatic(qTrimmed, CHAT_CONFIG.topK);
+      retrieval = unrunRetrievalHealth();
       retrievalMode = "static";
     }
   } else {
@@ -1242,6 +1270,10 @@ export async function runChat(
       console.warn("Cloudflare bindings unavailable — serving static retrieval.");
     }
     results = retrieveStatic(searchQuery, CHAT_CONFIG.topK);
+    // No live method was attempted, so there is nothing to call healthy — this
+    // is the keyword table standing in for the index, which is the fallback
+    // worth flagging.
+    retrieval = unrunRetrievalHealth();
     retrievalMode = "static";
   }
 
@@ -1303,6 +1335,9 @@ export async function runChat(
           sources,
           docIds: results.map((r) => r.id),
           retrievalMode,
+          // Stored so a replay reports the health of the turn that actually ran,
+          // rather than guessing again from a mode that no longer implies it.
+          retrieval,
           generation: generated.provider,
         }),
         { expirationTtl: CHAT_CONFIG.answerCache.ttlSeconds },
@@ -1323,9 +1358,12 @@ export async function runChat(
       turn: history.length,
       generation: generated.provider,
       resolvedQuery: searchQuery !== qTrimmed ? searchQuery : undefined,
-      // The real pipeline ran and did not hold up. The extractive answer is
-      // still a real answer, so this is reported rather than thrown.
-      degraded: generated.provider === "none" || retrievalMode === "static",
+      // Explicit, and not derived from the result count. Retrieval reports
+      // whether its live methods worked; the empty result of an out-of-scope
+      // question is a correct miss, not a failure, and the extractive answer is
+      // still a real answer. Both are reported rather than thrown.
+      degraded: generated.provider === "none" || !retrieval.healthy,
+      retrieval,
       timings: {
         retrievalMs,
         generationMs,

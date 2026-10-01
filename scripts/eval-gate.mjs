@@ -57,26 +57,34 @@ export function scoreCase(c, result) {
     if (has(result.text, ban)) problems.push(content(`forbidden "${ban}" present`));
   }
 
-  // `retrievalMode: "static"` does NOT mean the index is dead, and treating it
-  // as if it did produced a "the vector index is probably empty" warning on
-  // healthy runs. Two cases where static is the correct answer:
+  // Degradation is reported explicitly by the server (`meta.retrieval.healthy`)
+  // rather than inferred here from `retrievalMode === "static"`.
   //
-  //  - An out-of-scope question. "Are you single" should match nothing, so
-  //    no method contributes and the run is reported as static. The model then
-  //    deflects from NO_CONTEXT, which is the intended behaviour.
-  //  - A cache hit. A replayed answer says where the result came from last
-  //    time, not what this turn's index is doing, so it is no evidence either
-  //    way. This was the case that actually fired: the server reported
-  //    `static/openrouter` on a fully working index, twice on one question
-  //    minutes apart, and the availability dot said "Limited mode".
+  // Inferring it was wrong three separate times. A retrieval-cache hit and a
+  // served-from-answer-cache turn both reported `static` while the index was
+  // fine, so healthy runs ended with "the vector index is probably empty". An
+  // out-of-scope question reports an empty result set for the same reason: the
+  // corpus correctly does not contain it. `static` means "the keyword table
+  // answered", which is not the same claim as "retrieval is broken".
   //
-  // So this only flags a retrieval case that ran live, found nothing outside
-  // the hand-written keyword table, and was not replayed — the actual fault.
-  const expectsRetrieval =
-    (c.category ?? (c.requires?.length ? "retrieval" : "behaviour")) === "retrieval";
+  // The old fallback stays for turns from a build that predates the field, so
+  // an older deployment is not silently scored as healthy.
   const servedFromCache = result.meta?.cached || result.meta?.answerCached;
-  if (result.meta?.retrievalMode === "static" && expectsRetrieval && !servedFromCache) {
-    problems.push(content("DEGRADED: static fallback, not vector retrieval"));
+  const health = result.meta?.retrieval;
+  const degraded = health
+    ? health.healthy === false
+    : result.meta?.retrievalMode === "static" &&
+      (c.category ?? (c.requires?.length ? "retrieval" : "behaviour")) === "retrieval" &&
+      !servedFromCache;
+
+  if (degraded) {
+    problems.push(
+      content(
+        health?.failed?.length
+          ? `DEGRADED: retrieval method(s) failed: ${health.failed.join(", ")}`
+          : "DEGRADED: no live retrieval method answered",
+      ),
+    );
   }
 
   return { pass: problems.length === 0, problems };

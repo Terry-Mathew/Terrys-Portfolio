@@ -188,60 +188,50 @@
  * there is no frame in which the finished hero is visible before the animation
  * hides it.
  */
+/* --- Motion visibility gates -------------------------------------------
+ *
+ * One rule for every section that hides its own entrance behind `html.js`.
+ * There are three — hero, About, Contact — and each needed the same three
+ * things: the gate, the fail-open escape, and the reduced-motion escape. Nine
+ * near-identical rules is a trap, because a fourth gated section would have to
+ * remember to copy all three or its content could be left permanently invisible.
+ *
+ * `:is()` collapses them without changing behaviour. Every argument is a single
+ * attribute selector of equal specificity, `:is()` adopts its most specific
+ * argument, and `html.js` contributes one class — so each merged rule lands at
+ * exactly the specificity it had before. Verified against the computed styles
+ * captured before and after this merge.
+ *
+ * The data attributes are deliberately not renamed: only this stylesheet changes.
+ */
 @layer base {
-  html.js [data-hero-reveal] {
+  html.js :is([data-hero-reveal], [data-about-reveal], [data-contact-reveal]) {
     opacity: 0;
   }
 
-  /* `:not([data-hero-mask-done])` is what lets the mask be removed once the
-   * reveal has finished. Clearing GSAP's inline clip-path on its own would drop
+  /* The portrait mask is its own rule because it clips rather than fades, and
+   * it has to be released once the reveal finishes. `:not([data-hero-mask-done])`
+   * is what lets it go: clearing GSAP's inline clip-path on its own would drop
    * the element straight back under this rule and hide the portrait again. */
   html.js [data-hero-mask]:not([data-hero-mask-done]) {
     clip-path: inset(0% 0% 100% 0%);
   }
 
-  /* Reduced motion wins, and it has to be stated here. `useGsapContext` skips
-   * building anything when the preference is set, so with only the gate above
-   * the hero would stay invisible forever. The global reduced-motion rule
-   * collapses transition durations but says nothing about opacity or clip-path,
-   * so it cannot cover this. */
-  @media (prefers-reduced-motion: reduce) {
-    [data-hero-reveal],
-    [data-hero-mask] {
-      opacity: 1 !important;
-      clip-path: none !important;
-    }
-  }
-}
-
-/* --- About entrance ---------------------------------------------------
- *
- * Same reasoning as the hero gate above: the hidden state lives in CSS, gated on
- * `html.js`, so a server-rendered About arrives fully painted and only fades in
- * when scripting can actually bring it back.
- *
- * `[data-about-failed]` is the fail-open escape. If the GSAP timeline cannot be
- * built, About.tsx stamps that attribute on the section and these rules undo
- * everything the gate did. A GSAP failure must never leave a section of copy
- * permanently invisible, so the failure path is styled here rather than being
- * fixed up element by element in JavaScript.
- */
-@layer base {
-  html.js [data-about-reveal] {
-    opacity: 0;
-  }
-
-  [data-about-failed] [data-about-reveal] {
+  :is([data-about-failed], [data-contact-failed]) :is([data-about-reveal], [data-contact-reveal]) {
     opacity: 1 !important;
     transform: none !important;
   }
 
-  /* Reduced motion, stated explicitly for the same reason as the hero: the
-   * global rule collapses transition durations but says nothing about opacity. */
+  /* Reduced motion, stated explicitly. The global rule collapses transition
+   * durations but says nothing about opacity, so it cannot cover this. */
   @media (prefers-reduced-motion: reduce) {
-    [data-about-reveal] {
+    :is([data-hero-reveal], [data-about-reveal], [data-contact-reveal]) {
       opacity: 1 !important;
       transform: none !important;
+    }
+
+    [data-hero-mask] {
+      clip-path: none !important;
     }
   }
 }
@@ -383,37 +373,6 @@
   .project-row:hover .project-row__arrow,
   .project-row:focus-visible .project-row__arrow {
     scale: 1;
-  }
-}
-
-/* --- Contact entrance -------------------------------------------------
- *
- * Same `html.js` gate as the hero and About, and for the same reason: the
- * server sends the section painted, so nothing flashes, and without JavaScript
- * the class is never added so nothing can be left hidden.
- *
- * `[data-contact-failed]` is the fail-open escape. If the timeline cannot be
- * built, Contact.tsx stamps it and this restores every target, so the worst
- * case is a closing section that appears without animating rather than one that
- * never appears.
- */
-@layer base {
-  html.js [data-contact-reveal] {
-    opacity: 0;
-  }
-
-  [data-contact-failed] [data-contact-reveal] {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  /* Reduced motion, stated explicitly. The global rule collapses transition
-   * durations but says nothing about opacity, so it cannot cover this. */
-  @media (prefers-reduced-motion: reduce) {
-    [data-contact-reveal] {
-      opacity: 1 !important;
-      transform: none !important;
-    }
   }
 }
 

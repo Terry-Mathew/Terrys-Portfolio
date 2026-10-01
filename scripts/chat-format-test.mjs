@@ -31,7 +31,7 @@ const { outputText } = ts.transpileModule(src, {
 const mod = await import(
   `data:text/javascript;base64,${Buffer.from(outputText).toString("base64")}`
 );
-const { parseChatMarkdown, toPlainText, isSafeUrl, SAFE_SCHEMES } = mod;
+const { parseChatMarkdown, toPlainText, isSafeUrl, knownUrlHref, KNOWN_URLS, SAFE_SCHEMES } = mod;
 
 const render = (text, streaming = false) => parseChatMarkdown(text, { streaming });
 /** What the visitor actually sees, with all markup removed. */
@@ -313,6 +313,164 @@ test("7b. prose containing asterisks as multiplication is not mangled", () => {
 test("7c. an empty answer produces no nodes", () => {
   assert.deepEqual(render(""), []);
   assert.deepEqual(render("", true), []);
+});
+
+// ---------------------------------------- allowlisted contact URLs
+//
+// The model writes contact details the way a person says them: bare, often
+// without a scheme and sometimes without `www`. A schemeless host has no scheme
+// to validate, so the safe-URL rule refuses it — which left the LinkedIn
+// reference unclickable on the one answer whose job is to produce a lead.
+//
+// The fix is an exact list, not a pattern. Nothing else becomes a link.
+
+const hrefs = (text) => {
+  const out = [];
+  const walk = (list) => {
+    for (const n of list) {
+      if (n.kind === "bold") walk(n.children);
+      else if (n.href) out.push(n.href);
+    }
+  };
+  walk(render(text));
+  return out;
+};
+
+// 1. bare LinkedIn URL
+test("a bare LinkedIn URL becomes a link", () => {
+  const answer =
+    "You can reach me at terry.perangat@gmail.com, or on LinkedIn at linkedin.com/in/terry-mathew. Either works.";
+  assert.deepEqual(hrefs(answer), [
+    "mailto:terry.perangat@gmail.com",
+    "https://linkedin.com/in/terry-mathew",
+  ]);
+  // The label is the bare host, and the sentence period is not part of it.
+  const link = render(answer).find((n) => n.kind === "link");
+  assert.equal(link.label, "linkedin.com/in/terry-mathew");
+  assert.equal(
+    flat(answer),
+    "You can reach me at terry.perangat@gmail.com, or on LinkedIn at linkedin.com/in/terry-mathew. Either works.",
+  );
+});
+
+test("the www spelling of an allowlisted URL also links", () => {
+  assert.deepEqual(hrefs("See www.linkedin.com/in/terry-mathew."), [
+    "https://www.linkedin.com/in/terry-mathew",
+  ]);
+});
+
+test("an allowlisted URL written with a scheme still links, and drops the scheme from the label", () => {
+  const nodes = render("Find me at https://linkedin.com/in/terry-mathew.");
+  assert.equal(nodes.find((n) => n.kind === "link").href, "https://linkedin.com/in/terry-mathew");
+  assert.equal(nodes.find((n) => n.kind === "link").label, "linkedin.com/in/terry-mathew");
+});
+
+// 2. known portfolio URL
+test("the portfolio URL links in both spellings", () => {
+  assert.deepEqual(hrefs("It is at www.terrymathew.com."), ["https://www.terrymathew.com"]);
+  assert.deepEqual(hrefs("It is at terrymathew.com."), ["https://terrymathew.com"]);
+});
+
+test("every allowlisted address links", () => {
+  for (const url of KNOWN_URLS) {
+    // The allowlist entries are already canonical: `knownUrlHref` must be the
+    // identity on them, so a stale trailing slash cannot hide in the list.
+    assert.equal(knownUrlHref(url), `https://${url}`, `${url} is not canonical`);
+    assert.deepEqual(hrefs(`See ${url} now.`), [`https://${url}`], url);
+  }
+  assert.ok(KNOWN_URLS.length >= 6, "the allowlist should cover the contact document");
+});
+
+test("a trailing slash or period is not left in the href", () => {
+  // A href ending in `mathew.` is broken but looks correct to the reader, and
+  // these are the exact spellings the model produces at the end of a sentence.
+  assert.equal(
+    knownUrlHref("linkedin.com/in/terry-mathew."),
+    "https://linkedin.com/in/terry-mathew",
+  );
+  assert.equal(
+    knownUrlHref("https://www.instagram.com/tedssy/"),
+    "https://www.instagram.com/tedssy",
+  );
+  assert.equal(knownUrlHref("www.terrymathew.com"), "https://www.terrymathew.com");
+});
+
+// 3. unknown domains remain text
+test("an unknown domain is not linked", () => {
+  for (const answer of [
+    "Try example.com or www.elsewhere.org today.",
+    "He wrote about dbt.io and cloudflare.com.",
+    "Visit medium.com/@someone for more.",
+  ]) {
+    assert.deepEqual(hrefs(answer), [], answer);
+    assert.equal(flat(answer), answer, "the text must be untouched");
+  }
+});
+
+test("a domain that merely contains an allowlisted name is not linked", () => {
+  // A suffix match on `linkedin.com` would happily link any host that ended
+  // with it, which is the whole reason this is an exact list.
+  for (const answer of [
+    "https://notlinkedin.com/in/terry-mathew",
+    "https://evil-linkedin.com/in/terry-mathew",
+    "https://linkedin.com.attacker.example/in/terry-mathew",
+    "https://terrymathew.com.evil.example/",
+  ]) {
+    assert.deepEqual(hrefs(answer), [], answer);
+  }
+});
+
+test("a truncated allowlisted path is not a match", () => {
+  // The lookahead stops a match ending mid-path, so a partial arrival while
+  // streaming never becomes a link pointing somewhere truncated.
+  assert.deepEqual(hrefs("linkedin.com/in/terry-mathe is not it."), []);
+  assert.deepEqual(hrefs("linkedin.com/in/terry-mathew.x is not it."), []);
+});
+
+// 4. unsafe schemes remain unlinked
+test("the allowlist does not reopen unsafe schemes", () => {
+  for (const answer of [
+    "[Click me](javascript:alert(1))",
+    "javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "//evil.example/x",
+    "[x](//evil.example/x)",
+  ]) {
+    assert.deepEqual(hrefs(answer), [], answer);
+  }
+  assert.equal(RAW.test(flat("[Click me](javascript:alert(1))")), false);
+});
+
+test("an allowlisted host preceded by an unsafe scheme is not linked", () => {
+  // `javascript:linkedin.com/...` is not a link to LinkedIn.
+  assert.deepEqual(hrefs("javascript:linkedin.com/in/terry-mathew"), []);
+});
+
+// 5. existing Markdown links keep working
+test("Markdown links still work alongside the allowlist", () => {
+  assert.deepEqual(hrefs("[LinkedIn](https://www.linkedin.com/in/terry-mathew)"), [
+    "https://www.linkedin.com/in/terry-mathew",
+  ]);
+  // A Markdown link to something not on the allowlist is unaffected: the
+  // allowlist governs bare URLs only, and the safe-scheme rule governs the rest.
+  assert.deepEqual(hrefs("[docs](https://developers.cloudflare.com/workers)"), [
+    "https://developers.cloudflare.com/workers",
+  ]);
+  assert.deepEqual(hrefs("[case study](/projects/digital-twin)"), ["/projects/digital-twin"]);
+});
+
+test("an allowlisted URL inside bold is still a link", () => {
+  const nodes = render("**linkedin.com/in/terry-mathew**");
+  const bold = nodes.find((n) => n.kind === "bold");
+  assert.equal(bold.children[0].href, "https://linkedin.com/in/terry-mathew");
+});
+
+test("no prefix of a streamed allowlisted URL leaks raw syntax", () => {
+  const answer = "Find me at linkedin.com/in/terry-mathew or terry.perangat@gmail.com.";
+  for (const prefix of prefixes(answer)) {
+    const shown = flat(prefix, true);
+    assert.equal(RAW.test(shown), false, `prefix "${prefix}" leaked: "${shown}"`);
+  }
 });
 
 // ------------------------------------------------- source-level guards

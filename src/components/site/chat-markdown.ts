@@ -28,6 +28,71 @@
 /** Schemes a link may use. Everything else renders as plain text. */
 export const SAFE_SCHEMES = ["https:", "mailto:", "tel:"] as const;
 
+/**
+ * Terry's own contact URLs, and nothing else.
+ *
+ * The model writes contact details the way a person says them, which means it
+ * writes `linkedin.com/in/terry-mathew` — no scheme, and sometimes no `www`. A
+ * schemeless host has no scheme to validate, so the safe-URL rule refuses it and
+ * the visitor is left with text they cannot click, on the one answer whose job
+ * is to produce a lead.
+ *
+ * This is the escape from that, and it is an exact list rather than a pattern.
+ * Guessing `https://` for any host that looks like a domain would turn a
+ * mention of some other site into a link the model never wrote, and a suffix
+ * match on `linkedin.com` would happily link `evil-linkedin.com`. Neither is
+ * worth the convenience. Both the `www.` and bare spellings are listed because
+ * the model uses both.
+ *
+ * These are Terry's real addresses, taken from `src/content/knowledge/contact.md`.
+ * Adding one is a content decision, not a rendering one.
+ */
+export const KNOWN_URLS = [
+  "linkedin.com/in/terry-mathew",
+  "www.linkedin.com/in/terry-mathew",
+  "terrymathew.com",
+  "www.terrymathew.com",
+  "www.instagram.com/tedssy",
+  "www.youtube.com/@terrymathew-p",
+] as const;
+
+const escapeRe = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * One capturing group for the whole alternation, so adding an allowlisted URL
+ * cannot shift the group numbers the parser destructures.
+ *
+ * The lookbehind stops a longer host from matching its own tail — `notlinkedin.com`
+ * must not link — and a preceding colon, so `javascript:linkedin.com/…` is not
+ * half-matched. The lookahead stops the match from ending mid-path.
+ *
+ * The optional trailing slash and period are the difference between matching and
+ * not matching at all: a contact URL is nearly always at the end of a sentence,
+ * and a lookahead that treats `.` as a URL character means the one time the
+ * visitor most needs the link is the one time it is refused. Both are stripped
+ * again from the label and the href.
+ */
+const KNOWN_URL_PATTERN = `(?<![A-Za-z0-9@._:-])(?:https?:\\/\\/)?(?:${KNOWN_URLS.map(
+  (u) => `${escapeRe(u)}\\/?`,
+).join("|")})\\/?\\.?(?![A-Za-z0-9@._~:/?#-])`;
+
+/**
+ * Reduce a matched allowlisted URL to its canonical form: no scheme, no trailing
+ * slash, no trailing sentence period.
+ *
+ * The trailing period matters as much as the scheme. The match has to swallow
+ * it so the lookahead can succeed, and a link ending in `…mathew.` would be a
+ * broken URL that still looks right to the reader.
+ */
+export function canonicalKnownUrl(matched: string): string {
+  return matched.replace(/^https?:\/\//i, "").replace(/[./]+$/, "");
+}
+
+/** The link target for an allowlisted URL, always https and never re-derived. */
+export function knownUrlHref(matched: string): string {
+  return `https://${canonicalKnownUrl(matched)}`;
+}
+
 export type ChatNode =
   | { kind: "text"; value: string }
   /** Bold wraps parsed children, so `**a@b.com**` is still a mailto link. */
@@ -97,6 +162,8 @@ const PATTERN_SOURCE = [
   "\\[([^\\]\\n]*)\\]\\([^)\\s]*$",
   "\\[([^\\]\\n]*)\\]",
   "\\[([^\\]\\n]*)$",
+  // A contact URL the model wrote without a scheme, from the exact allowlist.
+  `(${KNOWN_URL_PATTERN})`,
   // Bare address.
   "([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})",
 ].join("|");
@@ -171,6 +238,7 @@ export function parseChatMarkdown(input: string, options: ParseOptions = {}): Ch
       partialLink,
       partialBracket,
       openBracket,
+      knownUrl,
       mail,
     ] = match;
 
@@ -207,6 +275,17 @@ export function parseChatMarkdown(input: string, options: ParseOptions = {}): Ch
     } else if (openBracket !== undefined) {
       // An opening bracket and nothing else yet.
       nodes.push({ kind: "text", value: openBracket });
+    } else if (knownUrl !== undefined) {
+      // Scheme stripped from the label so a link reads the same whether or not
+      // the model wrote it out in full. The href is built from the allowlist
+      // entry, never from anything the text could have appended.
+      const bare = canonicalKnownUrl(knownUrl);
+      nodes.push({ kind: "link", label: bare, href: `https://${bare}` });
+      // The match has to swallow a trailing slash or period to satisfy the
+      // lookahead, and it is not part of the URL. Put it back as text —
+      // otherwise the sentence it ends loses its full stop.
+      const trailing = knownUrl.replace(/^https?:\/\//i, "").slice(bare.length);
+      if (trailing) nodes.push({ kind: "text", value: trailing });
     } else if (mail !== undefined) {
       nodes.push({ kind: "email", label: mail, href: `mailto:${mail}` });
     }

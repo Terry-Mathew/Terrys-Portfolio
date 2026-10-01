@@ -226,12 +226,35 @@ export async function retrieveVector(
     if (match.score > (best.get(pid) ?? -1)) best.set(pid, match.score);
   }
 
+  // Documents with no stored passages still have to answer. A partially
+  // migrated index — passages not yet written for a document — would otherwise
+  // silently drop that document from the vector path entirely, which is how a
+  // "hybrid" retrieval ends up running on one method.
+  const missingPassages = [...best.keys()].filter((pid) => !byDoc.has(pid));
+  if (missingPassages.length > 0) {
+    console.warn(
+      `[retrieval] ${missingPassages.length} vector match(es) have no stored passage — ` +
+        `falling back to full document text. Run the ingest to store passages.`,
+    );
+    const { results: fallbackDocs } = await env.DB.prepare(
+      `SELECT id, category, title, content FROM documents WHERE id IN (${missingPassages
+        .map(() => "?")
+        .join(",")})`,
+    )
+      .bind(...missingPassages)
+      .all<{ id: string; category: string | null; title: string; content: string }>();
+    for (const doc of fallbackDocs) {
+      byDoc.set(doc.id, {
+        category: doc.category,
+        title: doc.title,
+        passages: [doc.content],
+      });
+    }
+  }
+
   const results: RetrievalResult[] = [...best.entries()]
     .map(([pid, score]): RetrievalResult | null => {
       const entry = byDoc.get(pid);
-      // No passage rows means this document predates passage storage. Fall
-      // back to the full text rather than dropping it, so a partially migrated
-      // index degrades to the old behaviour instead of losing documents.
       if (!entry) return null;
       return {
         id: pid,

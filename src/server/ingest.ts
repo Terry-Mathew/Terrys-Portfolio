@@ -265,6 +265,26 @@ export async function ingestKnowledge(
       .run();
   }
 
+  // Keyword index.
+  //
+  // documents_fts is queried on every retrieval at knowledge.ts, and nothing in
+  // this file used to write to it. The table held a frozen snapshot from an
+  // early ingest: rows for a file that had since been deleted, no row for a
+  // file added since, and document text up to thirteen times out of date. BM25
+  // was answering confidently from months-old content and nothing reported it,
+  // because retrievalMode was set from the call succeeding rather than from
+  // anything contributing.
+  //
+  // Written alongside `documents` in the same loop so the two cannot drift.
+  // FTS5 has no UPSERT, so the row is replaced rather than updated.
+  for (const { id } of pending) {
+    const source = SOURCES.find((s) => s.id === id)!;
+    await bindings.DB.prepare("DELETE FROM documents_fts WHERE id = ?").bind(id).run();
+    await bindings.DB.prepare("INSERT INTO documents_fts (content, id) VALUES (?, ?)")
+      .bind(source.body, id)
+      .run();
+  }
+
   // Passage text, so retrieval can return the chunk that matched instead of the
   // whole document it came from.
   for (const { id } of pending) {
@@ -344,6 +364,9 @@ async function reconcile(
     }
     await bindings.DB.prepare("DELETE FROM chunks WHERE doc_id = ?").bind(row.id).run();
     await bindings.DB.prepare("DELETE FROM documents WHERE id = ?").bind(row.id).run();
+    // The keyword index is a separate table with its own copy of the text.
+    // Leaving a row here is how a deleted project kept answering questions.
+    await bindings.DB.prepare("DELETE FROM documents_fts WHERE id = ?").bind(row.id).run();
     removedDocs++;
     removedVectors += ids.length;
   }

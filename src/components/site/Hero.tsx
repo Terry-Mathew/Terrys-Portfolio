@@ -1,8 +1,30 @@
 import { useEffect, useState } from "react";
 import portraitSide from "@/assets/portrait-side.png";
+import portraitAvif640 from "@/assets/portrait-side-640w.avif";
+import portraitAvif1024 from "@/assets/portrait-side-1024w.avif";
+import portraitAvif1672 from "@/assets/portrait-side-1672w.avif";
+import portraitWebp640 from "@/assets/portrait-side-640w.webp";
+import portraitWebp1024 from "@/assets/portrait-side-1024w.webp";
+import portraitWebp1672 from "@/assets/portrait-side-1672w.webp";
 import mountains from "@/assets/hero-mountains.jpg";
+import mountainsAvif from "@/assets/hero-mountains-704w.avif";
+import mountainsWebp from "@/assets/hero-mountains-704w.webp";
 import { profile } from "@/content/site";
 import { useSmoothPointer } from "@/lib/motion-hooks";
+import { Picture } from "./Picture";
+
+// The portrait is 1672x941 with real transparency (59% of the frame), and it is
+// the LCP image. On desktop it is sized by height, not width — the wrapper is
+// h-[64svh] and the image is w-auto — so the rendered width is
+// 64svh x (1672/941) = 113.7svh. vh units are valid in `sizes`, so this can be
+// stated exactly instead of guessed at.
+const PORTRAIT_AVIF = `${portraitAvif640} 640w, ${portraitAvif1024} 1024w, ${portraitAvif1672} 1672w`;
+const PORTRAIT_WEBP = `${portraitWebp640} 640w, ${portraitWebp1024} 1024w, ${portraitWebp1672} 1672w`;
+const PORTRAIT_SIZES = "(min-width: 64rem) 114vh, (min-width: 48rem) 24rem, 92vw";
+
+const MOUNTAINS_AVIF = `${mountainsAvif} 704w`;
+const MOUNTAINS_WEBP = `${mountainsWebp} 704w`;
+const MOUNTAINS_SIZES = "(min-width: 64rem) 40vw, (min-width: 48rem) 62vw, 85vw";
 
 export function Hero() {
   const p = useSmoothPointer();
@@ -50,11 +72,14 @@ export function Hero() {
         className="pointer-events-none absolute top-0 right-0 z-0 hidden h-full w-[40vw] max-w-[640px] lg:block 2xl:w-[36vw] 2xl:max-w-[760px] min-[1920px]:max-w-[820px]"
         style={layer(5, 4, -50)}
       >
-        <img
-          src={mountains}
+        <Picture
+          avif={MOUNTAINS_AVIF}
+          webp={MOUNTAINS_WEBP}
+          fallback={mountains}
           alt=""
           width={704}
           height={1408}
+          sizes={MOUNTAINS_SIZES}
           className="h-full w-full object-cover opacity-75 2xl:opacity-65 min-[1920px]:opacity-55"
           style={{
             maskImage:
@@ -72,11 +97,14 @@ export function Hero() {
 
       {/* L2 mobile/tablet — faint atmospheric mountains, top-right */}
       <div className="pointer-events-none absolute top-0 right-0 z-0 h-[62svh] w-[85vw] md:h-[72svh] md:w-[62vw] lg:hidden">
-        <img
-          src={mountains}
+        <Picture
+          avif={MOUNTAINS_AVIF}
+          webp={MOUNTAINS_WEBP}
+          fallback={mountains}
           alt=""
           width={704}
           height={1408}
+          sizes={MOUNTAINS_SIZES}
           className="h-full w-full object-cover opacity-30 md:opacity-40"
           style={{
             maskImage:
@@ -98,13 +126,15 @@ export function Hero() {
         className="pointer-events-none absolute bottom-0 left-[calc(50vw-38svh)] z-10 hidden h-[64svh] lg:block"
         style={layer(-15, -12, -30)}
       >
-        <img
-          src={portraitSide}
+        <Picture
+          avif={PORTRAIT_AVIF}
+          webp={PORTRAIT_WEBP}
+          fallback={portraitSide}
           alt="Terry Mathew"
-          fetchPriority="high"
           width={1672}
           height={941}
-          decoding="async"
+          sizes={PORTRAIT_SIZES}
+          fetchPriority="high"
           className="h-full w-auto max-w-none"
         />
       </div>
@@ -151,13 +181,15 @@ export function Hero() {
 
         {/* Mobile portrait, recomposed */}
         <div className="relative -mx-5 mt-8 lg:hidden">
-          <img
-            src={portraitSide}
+          <Picture
+            avif={PORTRAIT_AVIF}
+            webp={PORTRAIT_WEBP}
+            fallback={portraitSide}
             alt="Terry Mathew"
-            loading="lazy"
-            decoding="async"
             width={1672}
             height={941}
+            sizes={PORTRAIT_SIZES}
+            loading="lazy"
             className="mx-auto w-full max-w-md object-contain"
           />
         </div>

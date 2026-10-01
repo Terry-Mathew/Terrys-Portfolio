@@ -28,7 +28,12 @@ export const Route = createFileRoute("/projects/$projectId")({
   },
   component: ProjectDetail,
   notFoundComponent: () => (
-    <main className="film-grain grid min-h-screen place-items-center bg-ink px-5 text-bone">
+    <main
+      id="main"
+      data-skip-target
+      tabIndex={-1}
+      className="film-grain grid min-h-screen place-items-center bg-ink px-5 text-bone"
+    >
       <div className="max-w-md text-center">
         <h1 className="display-xl text-4xl">Project not found.</h1>
         <Link to="/projects" className="link-arrow label-eyebrow mt-8 inline-flex text-bone-dim">
@@ -51,7 +56,7 @@ function ProjectDetail() {
   const next = nextProject(project.id);
 
   return (
-    <main className="bg-paper text-graphite">
+    <main id="main" data-skip-target tabIndex={-1} className="bg-paper text-graphite">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -121,7 +126,9 @@ function ProjectDetail() {
           {sections.map((section, i) => (
             <Reveal key={section.key} delay={i * 60}>
               <div className="grid gap-4 border-t border-graphite/20 py-10 md:grid-cols-[8rem_1fr] md:gap-10">
-                <p className="label-eyebrow pt-1 text-ember">{String(i + 1).padStart(2, "0")}</p>
+                <p className="label-eyebrow pt-1 text-ember-ink">
+                  {String(i + 1).padStart(2, "0")}
+                </p>
                 <div>
                   <h2 className="display-xl text-2xl text-graphite md:text-3xl">{section.label}</h2>
                   <p className="mt-5 whitespace-pre-line text-lg leading-[1.75] text-graphite-dim">
@@ -154,7 +161,7 @@ function ProjectDetail() {
             {prev ? (
               <Link to="/projects/$projectId" params={{ projectId: prev.id }} className="group">
                 <p className="label-eyebrow text-graphite-dim">← Previous</p>
-                <p className="display-xl mt-2 text-2xl text-graphite transition-colors group-hover:text-ember">
+                <p className="display-xl mt-2 text-2xl text-graphite transition-colors group-hover:text-ember-ink">
                   {prev.title}
                 </p>
               </Link>
@@ -168,7 +175,7 @@ function ProjectDetail() {
                 className="group sm:text-right"
               >
                 <p className="label-eyebrow text-graphite-dim">Next →</p>
-                <p className="display-xl mt-2 text-2xl text-graphite transition-colors group-hover:text-ember">
+                <p className="display-xl mt-2 text-2xl text-graphite transition-colors group-hover:text-ember-ink">
                   {next.title}
                 </p>
               </Link>

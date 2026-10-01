@@ -37,7 +37,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="bg-ink">
+    <main id="main" data-skip-target tabIndex={-1} className="bg-ink">
       {/* Placeholder person schema — same data as before, no visual change. */}
       <script
         type="application/ld+json"

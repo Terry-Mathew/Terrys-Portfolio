@@ -15,7 +15,12 @@ import { reportError } from "../lib/error-reporting";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div
+      id="main"
+      data-skip-target
+      tabIndex={-1}
+      className="flex min-h-screen items-center justify-center bg-background px-4"
+    >
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
@@ -43,7 +48,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div
+      id="main"
+      data-skip-target
+      tabIndex={-1}
+      className="flex min-h-screen items-center justify-center bg-background px-4"
+    >
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           This page didn't load
@@ -119,9 +129,31 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/*
+          Must be a parser-blocking inline script in <head>. It sets the class
+          that [data-reveal]'s hidden state in styles.css is gated on, so the
+          hidden state is only ever applied when something can undo it.
+
+          React reorders HeadContent's links ahead of this element, so it is not
+          actually first in <head> — and it does not need to be. Body content is
+          parsed after every head script has run, so no revealed element exists
+          until the class is set, and the stylesheet is render-blocking besides.
+          Without this script the hidden state is never applied at all, which is
+          what keeps the page fully readable with JavaScript unavailable.
+        */}
+        <script
+          dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }}
+        />
         <HeadContent />
       </head>
       <body>
+        <a
+          href="#main"
+          data-skip-link
+          className="label-eyebrow sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-70 focus:rounded-full focus:bg-ember focus:px-5 focus:py-3 focus:text-ink"
+        >
+          Skip to content
+        </a>
         {children}
         <Scripts />
       </body>

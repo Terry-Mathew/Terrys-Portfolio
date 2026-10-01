@@ -53,6 +53,7 @@
 
   /* Accents */
   --color-ember: var(--ember);
+  --color-ember-ink: var(--ember-ink);
   --color-forest: var(--forest);
   --color-slate-blue: var(--slate-blue);
   --color-weathered: var(--weathered);
@@ -66,6 +67,10 @@
 :root {
   --radius: 0.25rem;
 
+  /* The one ease curve the site already used. Named here so the reveal rules
+   * and the hover utilities below share it instead of repeating the numbers. */
+  --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+
   --ink: #090b0b;
   --ink-2: #111413;
   --ink-3: #1a1d1b;
@@ -75,9 +80,17 @@
   --paper: #eee7d8;
   --paper-2: #e6dfcf;
   --graphite: #171717;
-  --graphite-dim: #817c72;
+  /* Was #817c72, which measures 3.13:1 on --paper-2 — below the 4.5:1 WCAG AA
+     threshold for body text, and this token carries most of the body copy on
+     the light sections. Darkened along the same warm axis. */
+  --graphite-dim: #615e56;
 
   --ember: #e56c2e;
+  /* --ember is a light, saturated rust: 6.12:1 on --ink (fine) but only
+     2.43:1 on --paper-2, so it cannot carry small text on paper. --ember-ink
+     is the same hue darkened for that job; graphics, dots, rules and glows
+     stay on --ember so the accent reads identically everywhere. */
+  --ember-ink: #9c491f;
   --forest: oklch(0.44 0.062 152);
   --slate-blue: oklch(0.52 0.05 250);
   --weathered: oklch(0.6 0.008 90);
@@ -119,7 +132,46 @@
     background-color: var(--color-ember);
     color: var(--color-ink);
   }
+}
 
+/* --- Scroll reveal ----------------------------------------------------
+ *
+ * The hidden state lives here rather than in an inline style on each Reveal
+ * element. An inline `opacity: 0` is present in the SSR HTML, so with
+ * JavaScript disabled every revealed block stayed invisible forever.
+ *
+ * Gating on `html.js` — a class added by a synchronous inline script in
+ * <head>, before the stylesheet applies — means the server response is always
+ * complete and readable, and the content is hidden only when scripting can
+ * actually bring it back. No flash either way: the script runs before first
+ * paint, and the stylesheet is render-blocking.
+ *
+ * `@media (scripting: none)` is the belt-and-braces path for anyone who
+ * blocks that script.
+ *
+ * Duration defaults to the 900ms the original inline transition used, so this
+ * is a no-op visually.
+ */
+@layer base {
+  html.js [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, var(--reveal-y, 28px), 0);
+    transition:
+      opacity var(--reveal-duration, 900ms) var(--ease-out-soft) var(--reveal-delay, 0ms),
+      transform var(--reveal-duration, 900ms) var(--ease-out-soft) var(--reveal-delay, 0ms);
+  }
+
+  html.js [data-reveal][data-reveal-in] {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (scripting: none) {
+    [data-reveal] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
 }
 
 /* --- Texture utilities ------------------------------------------------ */
@@ -217,7 +269,29 @@
     background: inherit;
     pointer-events: none;
     z-index: 5;
-    clip-path: polygon(0 60%, 4% 30%, 9% 55%, 14% 20%, 20% 50%, 26% 25%, 31% 60%, 37% 30%, 43% 55%, 49% 15%, 55% 45%, 61% 25%, 67% 60%, 73% 30%, 79% 50%, 85% 20%, 91% 55%, 96% 30%, 100% 50%, 100% 100%, 0 100%);
+    clip-path: polygon(
+      0 60%,
+      4% 30%,
+      9% 55%,
+      14% 20%,
+      20% 50%,
+      26% 25%,
+      31% 60%,
+      37% 30%,
+      43% 55%,
+      49% 15%,
+      55% 45%,
+      61% 25%,
+      67% 60%,
+      73% 30%,
+      79% 50%,
+      85% 20%,
+      91% 55%,
+      96% 30%,
+      100% 50%,
+      100% 100%,
+      0 100%
+    );
   }
 }
 
@@ -229,7 +303,11 @@
 }
 
 @utility sprockets {
-  background-image: repeating-linear-gradient(to bottom, transparent 0 18px, var(--color-bone) 18px 32px);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 18px,
+    var(--color-bone) 18px 32px
+  );
   mask-image: linear-gradient(to right, transparent 30%, black 30% 70%, transparent 70%);
   opacity: 0.85;
 }
@@ -259,6 +337,43 @@
   }
   &:hover img {
     scale: 1.025;
+  }
+}
+
+/* Content that was previously reachable only by hovering a non-interactive
+ * paragraph. Keyboard users could not focus it and touch devices cannot hover
+ * it, so the line was invisible to both. It is focusable, reveals on focus,
+ * and is simply always shown on devices with no hover. Opacity never affects
+ * the accessibility tree, so screen readers were already reading it.
+ *
+ * `:focus` rather than `:focus-visible`: this element exists only to be
+ * revealed, and the focus-visible heuristic does not match programmatic
+ * focus, so the stricter pseudo-class could leave it hidden. */
+@utility reveal-on-hover {
+  opacity: 0;
+  transition: opacity 500ms cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  &:hover,
+  &:focus {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    opacity: 1;
+  }
+}
+
+/* Fixed corner control. `env()` insets are applied here rather than as a
+ * Tailwind arbitrary value because nested calc() inside w-[]/h-[] is dropped
+ * by the compiler — the same reason experience-print lives in this file.
+ * The 20px/40px steps match the inset the widget used before. */
+@utility safe-fab {
+  right: calc(1.25rem + env(safe-area-inset-right, 0px));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+
+  @media (min-width: 48rem) {
+    right: calc(2.5rem + env(safe-area-inset-right, 0px));
+    bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -295,9 +410,19 @@
 @layer base {
   a:focus-visible,
   button:focus-visible,
-  [tabindex]:focus-visible {
+  [tabindex]:focus-visible,
+  input:focus-visible,
+  summary:focus-visible {
     outline: 2px solid var(--ember);
     outline-offset: 4px;
-    border-radius: 4px;
+  }
+
+  /* The skip link moves focus to the page container, so it matches
+   * [tabindex]:focus-visible and would paint a ring around the whole
+   * document. Focus is only there because the user asked for it, and the
+   * ring is noise, so it is not painted — the link itself still shows one. */
+  [data-skip-target]:focus,
+  [data-skip-target]:focus-visible {
+    outline: none;
   }
 }

@@ -35,6 +35,25 @@ export function ChatWidget() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
+  // The contact section already carries the email address, the social links and
+  // the footer, so the floating button is redundant there — and it was sitting
+  // on top of them. `visibility` rather than a bare opacity change so the
+  // button leaves the tab order and the accessibility tree the moment it
+  // hides, instead of fading out while still focusable.
+  const [overContact, setOverContact] = useState(false);
+  useEffect(() => {
+    const contact = document.getElementById("contact");
+    if (!contact) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setOverContact(entry?.isIntersecting ?? false),
+      { rootMargin: "0px 0px -25% 0px" },
+    );
+    io.observe(contact);
+    return () => io.disconnect();
+  }, []);
+
+  const docked = overContact && !open;
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, busy]);
@@ -151,9 +170,13 @@ export function ChatWidget() {
   }
 
   return (
-    <div className="fixed right-5 bottom-5 z-50 md:right-10 md:bottom-10">
+    <div
+      className={`safe-fab fixed z-40 transition-[opacity,visibility] duration-300 ${
+        docked ? "invisible opacity-0" : "visible opacity-100"
+      }`}
+    >
       {open && (
-        <div className="film-grain mb-4 flex h-[30rem] w-[21rem] flex-col overflow-hidden rounded-xl border border-bone/12 bg-ink-2/95 shadow-2xl backdrop-blur-sm sm:w-[23rem]">
+        <div className="film-grain mb-4 flex h-[min(30rem,70svh)] w-[min(21rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-xl border border-bone/12 bg-ink-2/95 shadow-2xl backdrop-blur-sm sm:w-[23rem]">
           {/* Conversation is the panel. Everything else is a thin control. */}
           <div className="flex items-start gap-3 px-5 pt-4 pb-2">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
@@ -233,13 +256,13 @@ export function ChatWidget() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask, or follow up…"
               aria-label="Ask about Terry's work"
-              className="min-w-0 flex-1 bg-transparent text-sm text-bone placeholder:text-bone-dim/40 focus:outline-none"
+              className="min-w-0 flex-1 rounded-sm bg-transparent py-1 text-sm text-bone placeholder:text-bone-dim/40"
             />
             <button
               type="submit"
               disabled={busy || !input.trim()}
               aria-label="Send"
-              className="shrink-0 text-sm text-bone-dim/50 transition-colors hover:text-ember disabled:opacity-30 disabled:hover:text-bone-dim/50"
+              className="grid size-9 shrink-0 place-items-center rounded-full transition-colors hover:text-ember disabled:opacity-30 disabled:hover:text-bone-dim/50"
             >
               ↵
             </button>
@@ -251,7 +274,8 @@ export function ChatWidget() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="label-eyebrow rounded-full border border-bone/25 bg-ink px-5 py-3 text-bone transition-colors hover:border-ember hover:text-ember"
+        aria-label="Ask about Terry's work"
+        className="label-eyebrow inline-flex min-h-11 items-center rounded-full border border-bone/25 bg-ink px-5 py-3 text-bone transition-colors hover:border-ember hover:text-ember focus-visible:bg-ember/15"
       >
         {open ? "Close" : "Ask about my work"}
       </button>

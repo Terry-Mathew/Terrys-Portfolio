@@ -1,6 +1,13 @@
 import temple from "@/assets/temple.webp";
+import templeAvif320 from "@/assets/temple-320w.avif";
+import templeWebp320 from "@/assets/temple-320w.webp";
 import { beforeOracle, profile, timeline } from "@/content/site";
 import { Reveal, SectionLabel } from "./Reveal";
+import { Picture } from "./Picture";
+
+// The experience-print utility caps the mount at 23rem tall, which is ~20.9rem
+// wide, so 21rem is the widest this can ever render.
+const TEMPLE_SIZES = "(min-width: 64rem) 21rem, 15rem";
 
 export function Experience() {
   return (
@@ -29,7 +36,7 @@ export function Experience() {
                 <div className="mt-9 flex flex-wrap gap-4 short:mt-6">
                   <a
                     href={profile.resume}
-                    className="link-arrow label-eyebrow rounded-full border border-graphite/25 px-5 py-3 transition-colors hover:border-ember hover:text-ember"
+                    className="link-arrow label-eyebrow rounded-full border border-graphite/25 px-5 py-3 transition-colors hover:border-ember-ink hover:text-ember-ink"
                   >
                     Download resume <span className="arrow">↗</span>
                   </a>
@@ -39,9 +46,14 @@ export function Experience() {
               <Reveal delay={180}>
                 <div className="mt-12 lg:mt-10 short:lg:mt-6">
                   <figure className="tape experience-print mx-auto max-w-[15rem] -rotate-1 bg-white p-3 shadow-[0_30px_60px_-30px_oklch(0_0_0/0.4)] lg:mx-0 lg:max-w-none">
-                    <img
-                      src={temple}
+                    <Picture
+                      avif={templeAvif320}
+                      webp={templeWebp320}
+                      fallback={temple}
                       alt="Terry seated before a Buddha statue on landscaped temple grounds"
+                      width={941}
+                      height={1672}
+                      sizes={TEMPLE_SIZES}
                       loading="lazy"
                       className="block h-auto w-full"
                     />
@@ -61,7 +73,7 @@ export function Experience() {
                   <span className="absolute top-2 -left-[2.15rem] size-2 rounded-full bg-ember" />
                   <p className="label-eyebrow text-graphite-dim">{role.period}</p>
                   <h3 className="mt-2 font-editorial text-2xl md:text-3xl">{role.title}</h3>
-                  <p className="label-eyebrow mt-2 text-ember">{role.org}</p>
+                  <p className="label-eyebrow mt-2 text-ember-ink">{role.org}</p>
                   <p className="mt-3 max-w-lg leading-relaxed text-graphite-dim">{role.note}</p>
                 </Reveal>
               ))}
@@ -72,14 +84,14 @@ export function Experience() {
                 <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 font-editorial text-xl">
                   {beforeOracle.map((step, i) => (
                     <span key={step} className="flex items-center gap-3">
-                      {i > 0 && <span className="text-ember">→</span>}
+                      {i > 0 && <span className="text-ember-ink">→</span>}
                       {step}
                     </span>
                   ))}
                 </p>
-                <p className="hand group mt-8 cursor-default text-2xl text-graphite-dim">
+                <p className="hand mt-8 text-2xl text-graphite-dim">
                   There were dashboards, systems, stakeholders… and apparently this.
-                  <span className="mt-2 block max-w-[10rem] text-base opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                  <span tabIndex={0} className="reveal-on-hover mt-2 block max-w-[10rem] text-base">
                     (that story stays offline — ask me in person)
                   </span>
                 </p>

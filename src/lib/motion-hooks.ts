@@ -65,37 +65,3 @@ export function useSmoothPointer() {
 
   return pos;
 }
-
-/** Scroll progress 0..1 across the given element's travel through the viewport.
- *  Currently unused — kept as a placeholder for the future chat/RAG scroll UI.
- *  Delete if still unused after the chat widget lands. */
-export function useScrollProgress<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const rect = el.getBoundingClientRect();
-      const total = rect.height + window.innerHeight;
-      const seen = window.innerHeight - rect.top;
-      setProgress(Math.min(1, Math.max(0, seen / total)));
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  return { ref, progress };
-}

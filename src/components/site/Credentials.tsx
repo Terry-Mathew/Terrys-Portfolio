@@ -45,7 +45,7 @@ export function Credentials() {
                 type="button"
                 onClick={() => scrollBy(-1)}
                 aria-label="Scroll credentials left"
-                className="grid size-11 place-items-center rounded-full border border-graphite/25 text-graphite transition-colors hover:border-ember hover:text-ember"
+                className="grid size-11 place-items-center rounded-full border border-graphite/25 text-graphite transition-colors hover:border-ember-ink hover:text-ember-ink"
               >
                 <ArrowLeft className="size-4" />
               </button>
@@ -53,7 +53,7 @@ export function Credentials() {
                 type="button"
                 onClick={() => scrollBy(1)}
                 aria-label="Scroll credentials right"
-                className="grid size-11 place-items-center rounded-full border border-graphite/25 text-graphite transition-colors hover:border-ember hover:text-ember"
+                className="grid size-11 place-items-center rounded-full border border-graphite/25 text-graphite transition-colors hover:border-ember-ink hover:text-ember-ink"
               >
                 <ArrowRight className="size-4" />
               </button>
@@ -79,12 +79,12 @@ export function Credentials() {
                 href={cert.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex h-full flex-col border border-graphite/15 bg-paper-2 p-7 transition-colors hover:border-ember/50"
+                className="group flex h-full flex-col border border-graphite/15 bg-paper-2 p-7 transition-colors hover:border-ember-ink/50"
               >
                 <div className="flex items-center gap-4">
                   <span
                     aria-hidden
-                    className="grid size-11 shrink-0 place-items-center rounded-full border border-ember/40 text-lg text-ember"
+                    className="grid size-11 shrink-0 place-items-center rounded-full border border-ember-ink/40 text-lg text-ember-ink"
                   >
                     {cert.mark}
                   </span>
@@ -96,7 +96,7 @@ export function Credentials() {
                 <p className="mt-6 font-editorial text-xl leading-snug text-graphite">
                   {cert.name}
                 </p>
-                <span className="link-arrow label-eyebrow mt-auto inline-flex pt-6 text-graphite-dim transition-colors group-hover:text-ember">
+                <span className="link-arrow label-eyebrow mt-auto inline-flex pt-6 text-graphite-dim transition-colors group-hover:text-ember-ink">
                   Verify <span className="arrow">↗</span>
                 </span>
               </a>
@@ -109,7 +109,7 @@ export function Credentials() {
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              className="link-arrow label-eyebrow mt-10 inline-flex rounded-full border border-graphite/25 px-5 py-3 text-graphite transition-colors hover:border-ember hover:text-ember"
+              className="link-arrow label-eyebrow mt-10 inline-flex rounded-full border border-graphite/25 px-5 py-3 text-graphite transition-colors hover:border-ember-ink hover:text-ember-ink"
             >
               {showAll ? "Show fewer" : `View all ${certifications.length} credentials`}
               <span className="arrow">→</span>

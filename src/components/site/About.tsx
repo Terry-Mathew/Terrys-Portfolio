@@ -1,5 +1,15 @@
 import iguana from "@/assets/iguana.webp";
+import iguanaAvif384 from "@/assets/iguana-384w.avif";
+import iguanaAvif768 from "@/assets/iguana-768w.avif";
+import iguanaWebp384 from "@/assets/iguana-384w.webp";
+import iguanaWebp768 from "@/assets/iguana-768w.webp";
 import { Reveal, SectionLabel } from "./Reveal";
+import { Picture } from "./Picture";
+
+const IGUANA_AVIF = `${iguanaAvif384} 384w, ${iguanaAvif768} 768w`;
+const IGUANA_WEBP = `${iguanaWebp384} 384w, ${iguanaWebp768} 768w`;
+// Capped at max-w-sm (24rem) on every breakpoint, so 24rem is the real slot.
+const IGUANA_SIZES = "(min-width: 64rem) 24rem, 92vw";
 
 export function About() {
   return (
@@ -45,7 +55,7 @@ export function About() {
             <Reveal delay={220}>
               <a
                 href="#experiments"
-                className="link-arrow label-eyebrow mt-10 inline-flex text-graphite-dim transition-colors hover:text-ember"
+                className="link-arrow label-eyebrow mt-10 inline-flex text-graphite-dim transition-colors hover:text-ember-ink"
               >
                 See what I&rsquo;m building <span className="arrow">→</span>
               </a>
@@ -55,9 +65,14 @@ export function About() {
           <div className="lg:col-span-5">
             <Reveal delay={120}>
               <figure className="tape relative mx-auto max-w-sm -rotate-2 bg-white p-3 shadow-[0_28px_60px_-28px_oklch(0_0_0/0.35)]">
-                <img
-                  src={iguana}
+                <Picture
+                  avif={IGUANA_AVIF}
+                  webp={IGUANA_WEBP}
+                  fallback={iguana}
                   alt="Terry crouching beside an iguana in a landscaped enclosure"
+                  width={1254}
+                  height={1254}
+                  sizes={IGUANA_SIZES}
                   loading="lazy"
                   className="w-full object-cover"
                 />

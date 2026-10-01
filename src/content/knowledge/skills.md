@@ -1,84 +1,79 @@
-# Skills
+---
+title: Terry Mathew — Skills
+type: skills
+priority: 85
+updated: 2026-10
+aliases:
+  - skills
+  - tools
+  - technologies
+  - SQL
+  - product management
+  - analytics
+  - AI
+  - revenue operations
+  - GTM
+---
 
-Terry works across product, data, and AI, but the through-line is turning
-commercially messy problems into logic someone else can trust.
+# Terry Mathew — Skills
 
-## Product and delivery
+Terry works across product management, analytics, commercial systems, and applied AI.
 
-Roadmaps, PRDs and functional specs, user discovery, backlog prioritisation,
-user acceptance testing, Jira, KPI definition, and cross-functional alignment
-across business, finance, and engineering. He has run UAT directly with finance
-and sales operations rather than handing off a finished report.
+His strongest professional experience comes from combining business-process knowledge with product requirements and data logic.
+
+## Product management and delivery
+
+Terry has professional experience with product requirements, functional specifications, backlog prioritisation, sprint planning, user acceptance testing, KPI definition, stakeholder discovery, and cross-functional delivery.
+
+He has worked directly with Finance, Engineering, Sales Operations, Revenue Operations, Sales, Legal, and other business stakeholders.
+
+He has used Jira for delivery and backlog management.
+
+His product-management experience has primarily involved internal data products, commercial systems, operational workflows, analytics, and reporting products.
 
 ## Data and analytics
 
-Advanced SQL, data modelling and reconciliation, Oracle Analytics Cloud, Power
-BI, Tableau, and Oracle APEX.
+Terry has hands-on professional experience with SQL, data reconciliation, metric definition, dashboard development, reporting logic, and data-quality investigation.
 
-The reporting he has built is not dashboard work for its own sake. The partner
-analytics dashboards at Oracle served 60+ users and recorded 50,000+ queries per
-quarter, which meant the metric definitions had to be right before anything else
-was optimised.
+His professional tools have included Oracle Analytics Cloud, Power BI, Tableau, Oracle APEX, and SQL.
 
-He is also developing practical working knowledge of Snowflake, dbt,
-dimensional modelling, data-grain design, facts and dimensions, and analytics
-layer design. Those newer areas are active learning and portfolio practice
-rather than equivalent to his production analytics experience at Oracle.
+He has worked with analytics covering bookings, pipeline, deal registration, cloud consumption, partner incentives, operational performance, and commercial transactions.
 
-## AI and developer tooling
+Terry has also been developing deeper practical knowledge of modern analytics engineering, including Snowflake, dbt, dimensional modelling, data-grain design, facts and dimensions, and analytics-layer design.
 
-Cursor, Claude Code, AI-assisted programming, LLM evaluation loops, agentic
-workflows, prompt engineering, retrieval-augmented generation, embeddings,
-hybrid retrieval, and the OpenAI Agents SDK. Also OCI Generative AI.
+These newer areas should be treated as active learning and portfolio practice rather than as equivalent to his eight years of Oracle production experience.
 
-His AI work is applied product development rather than machine-learning research
-or model training.
+## Applied AI and developer tooling
 
-The personal projects are the practical test of this: a sales outreach agent, a
-multi-agent product discovery assistant, this digital twin, a deep research
-agent, and a work intelligence assistant that classifies Slack, Outlook, and
-Jira requests.
+Terry uses AI-assisted development for his independent projects.
 
-## Revenue operations and GTM
+Tools and areas he has worked with include Cursor, Claude Code, prompt engineering, agentic workflows, retrieval-augmented generation, LLM evaluation, hybrid retrieval, embeddings, and the OpenAI Agents SDK.
 
-Quote-to-cash, configure-price-quote, pipeline and bookings governance, and
-cloud consumption analytics. He defined the qualified-booking logic that
-underpinned tracking of USD 1.5M+ in qualified bookings across 86+ partners, and
-the eligibility logic that determined incentive payouts across 300+ partners and
-1.2B consumed credits.
+He has also worked with OCI Generative AI.
+
+His AI work is primarily applied product development rather than machine-learning research or model training.
+
+## Commercial systems and revenue operations
+
+Terry has substantial experience with commercial and revenue-operations processes.
+
+This includes quote-to-cash, Configure Price Quote processes, pipeline and bookings governance, partner programs, deal registration, cloud transactions, pricing, approvals, and commercial exceptions.
+
+He has worked directly inside these operational processes as well as on the analytics and products used to monitor them.
 
 ## Leadership and cross-functional work
 
-Terry led a 20-person EMEA operations team handling more than 20,000 tickets per
-quarter. His broader work has required coordination across business, Finance,
-Sales, Sales Operations, Revenue Operations, Legal, Engineering, Deal
-Management, and leadership teams.
+Terry previously led a 20-person EMEA operations team handling more than 20,000 tickets per quarter.
 
-## What he is good at
-
-Turning incentive and credit policies into auditable system logic, so a number
-someone argues about in a review can be traced back to a rule instead of a
-spreadsheet. He has translated credit policy into Oracle APEX specifications
-covering 300+ partners, and designed eligibility logic across agreement
-histories and partner hierarchies to replace manual review.
+His broader work has required coordination across business, Finance, Sales, Sales Operations, Legal, Engineering, Revenue Operations, and leadership teams.
 
 ## Certifications
 
+Terry has completed certifications and learning programs including:
+
 - OCI Generative AI Professional
 - Oracle Fusion AI Agent Studio
-- AI Engineer Agentic Track, covering agents and MCP
+- AI Engineer Agentic Track covering agents and MCP
 - OCI AI Foundations Associate
 - Google Responsible AI
 - Oracle APEX Developer
-
-## Tools
-
-SQL, Oracle Analytics Cloud, Power BI, Tableau, Oracle APEX, Snowflake, dbt,
-Jira, Cursor, Claude Code, OCI Generative AI.
-
-## Editing this file
-
-Write in full sentences. The chatbot reads the text as written, so prose
-retrieves far better than a bare list of keywords. If you add a tool, say what
-you used it for, and mark newer tools as learning rather than as production
-experience.

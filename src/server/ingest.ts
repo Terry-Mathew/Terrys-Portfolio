@@ -17,6 +17,7 @@
 
 import { CHAT_CONFIG } from "@/server/chat.config";
 import type { CloudflareEnvShape } from "@/server/env";
+import { parseFrontmatter } from "@/server/frontmatter";
 
 /** Bindings ingestion actually requires. */
 const REQUIRED = ["VECTORIZE", "DB", "CACHE", "AI"] as const;
@@ -104,13 +105,23 @@ const humanize = (name: string) =>
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
 const SOURCES = Object.entries(rawModules)
-  .map(([path, body]) => {
+  .map(([path, raw]) => {
     const file = path.split("/").pop() ?? path;
+    // Frontmatter is parsed here and then deliberately not carried forward.
+    // `body` is what gets hashed, chunked, embedded, and written to D1 and the
+    // FTS index, so keeping the metadata out of it means a title edit costs
+    // nothing and the metadata never pollutes keyword or vector search. The
+    // source file is untouched — this only changes what is read out of it.
+    const { frontmatter, body } = parseFrontmatter(raw);
     return {
       file,
       id: file.replace(/\.md$/, ""),
       category: CATEGORY[file] ?? "knowledge",
-      title: /^#\s+(.+)$/m.exec(body)?.[1]?.trim() ?? humanize(file),
+      // The frontmatter title wins over the first heading. It is authored
+      // deliberately, it is the label a visitor sees on a source link, and in
+      // the supplied bundle the two differ — the projects document is titled
+      // "Terry Mathew — Projects" and headed "Terry Mathew — Personal Projects".
+      title: frontmatter.title ?? /^#\s+(.+)$/m.exec(body)?.[1]?.trim() ?? humanize(file),
       body,
     };
   })

@@ -110,6 +110,16 @@ converts the PDF résumé into Markdown using `pdftotext`, so the résumé is
 searchable rather than just downloadable. At build time, `import.meta.glob`
 discovers every `.md` file in the folder — adding a file requires no code change.
 
+A file may open with a YAML frontmatter block carrying a title, a type, a
+priority, an updated date, and a list of alternative phrasings a visitor might
+use. It is read from the file, the title becomes the label on a source link, and
+the block is then kept out of everything that indexes or compares text: the
+chunks, the embeddings, the keyword index, and the content hash. That last one is
+the reason it is separated rather than simply ignored — the hash decides whether
+a document is re-embedded, so if metadata counted, editing a title would cost a
+re-embed of a document whose prose had not changed by a character. The
+alternative phrasings are deliberately not used for anything yet.
+
 `POST /api/ingest` then chunks each document, embeds every chunk, writes the
 vectors to Vectorize, stores the passage text in D1, and records the document
 text and a content hash. Content hashes make it idempotent: running it twice

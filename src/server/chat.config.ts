@@ -117,7 +117,17 @@ export const CHAT_CONFIG = {
   // without this the chatbot keeps serving the pre-edit biography for up to
   // cacheTTL — which is how a question about Terry's current employer could
   // return an answer that is a month out of date.
-  corpusVersion: 6,
+  // 6 → 7: the knowledge corpus was replaced from the supplied canonical bundle.
+  // Every one of the eight documents changed in its *body* — the text that is
+  // chunked, embedded, written to D1 and matched by BM25 — with frontmatter
+  // excluded, so this is a content bump and not a metadata-only one. Verified
+  // by comparing the parsed body of each file against HEAD rather than assuming
+  // it, because the whole point of excluding frontmatter from the hash is that
+  // adding a title must not cost a re-embed. Here the prose did change: the
+  // Oracle role is described as current employment with a planned final working
+  // day of 14 October 2026, and the Digital Twin architecture was corrected to
+  // match the implementation.
+  corpusVersion: 7,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,

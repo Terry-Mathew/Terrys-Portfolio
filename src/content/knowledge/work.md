@@ -1,79 +1,108 @@
-# Selected Work
+---
+title: Terry Mathew — Selected Work
+type: case_studies
+priority: 90
+updated: 2026-10
+aliases:
+  - selected work
+  - case studies
+  - PCMS
+  - Partner Credit Management System
+  - assessment analytics
+  - deal registration
+  - partner analytics
+---
 
-Four pieces of work where the problem was that two teams disagreed about a
-number, or that a business policy had no representation anywhere a person could
-check it against.
+# Terry Mathew — Selected Work
 
 ## Partner Credit Management System (PCMS)
 
-**The problem.** Partner-credit rules, balances, approvals, transactions, and
-reporting needed to be represented consistently in an operational system used by
-more than one business team. The rules involved Finance, Sales Operations,
-partner structures, credit policies, and operational exceptions.
+### Problem
 
-**What Terry did.** Translated the credit policies and reporting requirements
-into product requirements, functional specifications, and Oracle APEX logic.
-Worked with the lead developer on backlog and delivery priorities. Led user
-acceptance testing with Finance and Sales Operations. Also built reporting and
-SQL queries used by stakeholders across Finance, Sales Operations, and the
-Strategic Partner Group.
+Partner-credit rules, balances, approvals, transactions, and reporting needed to be represented consistently in an operational system used by multiple business teams.
 
-**Scope.** More than 300 partners and approximately 1.2 billion consumed credits.
-Capabilities included balance visibility, approval workflows, transaction
-history, and reporting.
+The rules involved Finance, Sales Operations, partner structures, credit policies, and operational exceptions.
 
-**What changed.** Partner-credit information became traceable from business
-policy through system behaviour to reporting, instead of living in someone's
-head.
+### Terry's role
+
+Terry translated business and credit policies into product requirements, functional specifications, reporting requirements, and Oracle APEX logic.
+
+He worked with the lead developer on backlog and delivery priorities.
+
+He led user acceptance testing with Finance and Sales Operations.
+
+He also built reporting and SQL queries used by stakeholders across Finance, Sales Operations, and the Strategic Partner Group.
+
+### Scope
+
+The work covered more than 300 partners and approximately 1.2 billion consumed credits.
+
+Capabilities included balance visibility, approval workflows, transaction history, and reporting.
+
+### Why the work mattered
+
+The goal was to make partner-credit information easier to trace from business policy through system behaviour and reporting.
 
 ## Business and Technical Assessment Analytics
 
-**The problem.** Leadership needed a consistent view of partner opportunities
-moving through assessment, approval, and Proof of Performance stages. Different
-stages and approval conditions had to be combined into a usable funnel.
+### Problem
 
-**What Terry did.** Built the leadership view and defined the business logic
-used to classify opportunity status. Combined assessment approvals, Proof of
-Performance approvals, and opportunity status into the qualified-booking logic.
-Corrected funnel logic and introduced reason-coded data-quality flags.
+Leadership needed a consistent view of partner opportunities moving through assessment, approval, and Proof of Performance stages.
 
-**Scope.** The reporting tracked more than 220 submitted opportunities. The
-resulting logic supported tracking of more than USD 1.5 million in qualified
-bookings across more than 86 partners.
+Different stages and approval conditions had to be combined into a usable funnel.
 
-**What changed.** Leadership could see where opportunities were in the process,
-and why an individual record was or was not counted.
+### Terry's role
+
+Terry built the leadership analytics view and defined the business logic used to classify opportunity status.
+
+He combined assessment approvals, Proof of Performance approvals, and opportunity status into qualified-booking logic.
+
+He also corrected funnel logic and introduced reason-coded data-quality flags.
+
+### Scope
+
+The reporting tracked more than 220 submitted opportunities.
+
+The resulting logic supported tracking of more than USD 1.5 million in qualified bookings across more than 86 partners.
+
+### Why the work mattered
+
+The work gave leadership a clearer way to understand where opportunities were in the process and why individual records were or were not counted.
 
 ## Deal Registration and Partner Analytics
 
-**The problem.** Partner reporting covered registrations, pipeline, bookings,
-operations, and cloud consumption, but every metric meant something slightly
-different depending on who asked.
+### Problem
 
-**What Terry did.** Worked with stakeholders and data engineers to define the
-metrics and the reporting logic. Validated an early version before it went to
-production, then carried it through adoption.
+Partner reporting covered areas such as registrations, pipeline, bookings, operations, and cloud consumption.
 
-**Scope.** The analytics served more than 60 users and recorded more than 50,000
-queries per quarter.
+Metrics needed consistent definitions before the dashboards could be used reliably across teams.
 
-**What changed.** One shared model and vocabulary that reviews and planning
-could rely on. The arguments about the numbers stopped.
+### Terry's role
+
+Terry worked with stakeholders and data engineers to define metrics and reporting logic.
+
+He validated early designs, built and maintained dashboards, and supported production adoption.
+
+### Scope
+
+The analytics served more than 60 users and recorded more than 50,000 queries per quarter.
+
+### Why the work mattered
+
+The objective was to give stakeholders a common set of metrics for recurring operational and leadership questions.
 
 ## GSI Development and Test Reporting
 
-**The problem.** Recurring reporting for Global Systems Integrator development
-and test activity took roughly two weeks to produce.
+### Problem
 
-**What Terry did.** Redesigned the reporting workflow using AI-assisted tooling.
+Recurring reporting for Global Systems Integrator development and test activity took approximately two weeks to produce.
 
-**Outcome.** Production time fell from roughly two weeks to two or three days,
-without removing the analyst from validation and interpretation.
+### Terry's role
 
-## What these have in common
+Terry redesigned the reporting workflow using AI-assisted tooling.
 
-None of them were primarily technical problems. Each was a disagreement about
-what something meant, held by people with reasonable positions. The data work
-was what made the disagreement resolvable.
+### Outcome
 
-Enterprise-specific detail is deliberately limited. Ask Terry directly.
+The production cycle was reduced from approximately two weeks to two or three days.
+
+The work demonstrated where automation could remove repetitive preparation without removing the analyst from validation and interpretation.

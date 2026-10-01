@@ -110,13 +110,53 @@ That was removed for two reasons:
    `default` fetch handler. A Durable Object class has to be exported from the
    module entrypoint to be addressable at runtime. The config would have declared
    `IngestionProcessor` while nothing exported it.
-2. **It was not needed.** The corpus is five small Markdown files that change a
+2. **It was not needed.** The corpus is a handful of small Markdown files that change a
    few times a year and always under human control. A durable pipeline adds
    delivery semantics, batch config, a migration tag and a second failure mode
    for a job that runs in about a second.
 
 `POST /api/ingest` does the same work with less machinery, inside the Worker where
 the bindings already exist, guarded by the `INGEST_KEY` secret.
+
+### Knowledge files and frontmatter
+
+Knowledge lives in `src/content/knowledge/` as Markdown, bundled at build time
+by `import.meta.glob`. A file may open with a YAML frontmatter block:
+
+```markdown
+---
+title: Terry Mathew — Canonical Facts
+type: canonical_facts
+priority: 100
+updated: 2026-10
+aliases:
+  - Terry Mathew
+  - current role
+---
+```
+
+`src/server/frontmatter.ts` parses it. The `title` becomes the document title
+shown on a source link, falling back to the first heading. Everything else is
+deliberately dropped before the text is used: the chunks, the embeddings, the D1
+content and FTS rows, and the content hash all see the body alone.
+
+The reason it is parsed rather than left inline is the hash. The hash is what
+decides whether a document is re-embedded, so metadata inside the body would
+mean a title edit forces a re-embed of a document whose prose had not changed by
+a character. It would also put an identical run of metadata tokens into every
+document's embedding, and let a question containing the word "priority" match
+every document at once through BM25.
+
+The parser is purpose-built for those five keys rather than a general YAML
+implementation — about ninety lines, no dependencies, and it cannot throw. A
+construct it does not understand is ignored, and a file that does not open with a
+fence is returned untouched, so the cost of unparseable metadata is that the
+metadata goes unused rather than that content is lost. `priority` is parsed but
+not used for ranking; no column was added for it, because ranking is a separate
+decision from storing a number someone typed.
+
+No schema change was needed. `documents.title` already existed and was already
+written on every upsert, so the frontmatter title feeds an existing column.
 
 ### What the ingest key actually protects
 
@@ -290,7 +330,7 @@ export const CHAT_CONFIG = {
   rerankTopK: 4, // chunks out to the LLM
   chunkSize: 900, // characters per chunk
   chunkOverlap: 120, // overlap between chunks
-  corpusVersion: 6, // bump on any knowledge file or source-anchor change
+  corpusVersion: 7, // bump on any knowledge file or source-anchor change
   rateLimitPerMinPerIp: 20, // anti-abuse
   cacheTTL: 86400, // 24 hours retrieval cache
   promptVersion: 2, // bump on any system prompt change
@@ -412,12 +452,13 @@ If someone asks "Tell me about your RAG architecture":
 | `src/server/chat.ts`                 | Main server function: receives questions, calls retrieval + LLM |
 | `src/server/knowledge.ts`            | Retrieval logic: vector, BM25, static, RRF fusion               |
 | `src/server/chat-status.ts`          | The degraded-status flag behind the panel's availability dot    |
+| `src/server/frontmatter.ts`          | Parses and strips leading YAML frontmatter from knowledge files |
 | `src/server/chat-tools.ts`           | Lead-capture tool definitions and their guards                  |
 | `src/server/history.ts`              | Server-side clamp on the client-supplied conversation           |
 | `src/server/ingest.ts`               | Chunks, embeds and upserts the knowledge base                   |
 | `src/server/env.ts`                  | Resolves Cloudflare bindings under either Nitro preset          |
 | `src/routes/api.chat.ts`             | `POST /api/chat` (SSE) and `GET /api/chat` (health)             |
-| `src/routes/api.ingest.ts`           | `POST /api/ingest` — the ingestion trigger                      |
+| `src/routes/api.ingest.ts`           | `POST /api/ingest` and the authenticated `GET ?check=1` probe   |
 | `src/routes/api.retrieve.ts`         | `POST /api/retrieve` — retrieval only, for diagnosis            |
 | `src/components/site/ChatWidget.tsx` | Frontend chat UI                                                |
 | `scripts/eval.mjs`                   | Golden-set evaluator; classifies failures and gates the deploy  |

@@ -1,78 +1,149 @@
-# Experience
+---
+title: Terry Mathew — Professional Experience
+type: professional_experience
+priority: 95
+updated: 2026-10
+aliases:
+  - work experience
+  - Oracle experience
+  - previous jobs
+  - career history
+  - professional background
+  - team lead experience
+---
 
-Terry is currently employed at Oracle, where he has worked since May 2018,
-moving from processing transactions to owning partner analytics. His planned
-final working day at Oracle is 14 October 2026. Before Oracle he worked in
-technology support, retail, hospitality and HR shared services, which is where
-he learned how a process behaves when it meets a case nobody planned for.
+# Terry Mathew — Professional Experience
 
-## Senior Data Product Manager, Partner Analytics (March 2024 to present)
+## Oracle Corporation
 
-Terry currently holds this role at Oracle. He owns several partner analytics and
-operational data workstreams, including business and technical assessment, PCMS
-reporting, and partner incentive analytics. He sets requirements, sprint
-roadmaps and delivery priorities with engineering, finance and global revenue
-operations.
+Terry is currently employed at Oracle in Bengaluru, where he has worked since May 2018. His planned final working day is 14 October 2026.
 
-He built a leadership dashboard that tracks assessment and proof of performance
-progress across more than 220 submitted opportunities. He defined the logic for
-what counts as a qualified booking, using assessment approvals, proof of
-performance approvals and opportunity status. That logic supports tracking of
-more than USD 1.5 million in qualified bookings across more than 86 partners.
+Across more than eight years at Oracle, he moved through business operations, team leadership, analytics, and data product management.
 
-He rebuilt partner program data flows, corrected the funnel logic, and added
-reason-coded data quality flags so a reported number either carries an
-explanation or does not appear at all.
+## Senior Data Product Manager, Partner Analytics
 
-## Insights Analyst II, Partner Insights and Revenue Operations (March 2023 to March 2024)
+### March 2024 to present
 
-Terry built and maintained partner analytics dashboards serving more than 60
-users and recording more than 50,000 queries per quarter, covering deal
-registration, pipeline, bookings and operations.
+Terry currently holds this role. He owns several partner analytics and operational-data workstreams.
 
-He re-engineered recurring development and test reporting for global systems
-integrator partners using AI-assisted tooling, which reduced production time
-from two weeks to two or three days. He forecasted transaction workload ahead of
-a partner program transition so staffing and service level coverage could be
-planned rather than guessed.
+These included Business and Technical Assessment analytics, Partner Credit Management System reporting, partner incentive analytics, and related partner-program reporting.
 
-## Business Operations Team Lead, EMEA Operations (February 2022 to March 2023)
+He worked with Engineering, Finance, Sales Operations, Revenue Operations, and partner-program stakeholders to define requirements and delivery priorities.
 
-Terry led a team of twenty people handling more than 20,000 tickets per quarter,
-with responsibility for workload allocation, quality checks, service level
-monitoring and leadership reviews.
+For Business and Technical Assessment analytics, Terry built a leadership view tracking assessment and Proof of Performance progress across more than 220 submitted opportunities.
 
-He closed eight of eleven complex CSP aggregate buying deals that sat outside
-the standard quoting path, doing so on the final day of the quarter by
-coordinating sales, legal, deal management and approvers. He then documented
-the process as a team standard operating procedure so the next person did not
-have to rediscover it.
+He defined the logic used to identify qualified bookings by combining assessment approval, Proof of Performance approval, and opportunity status.
 
-## Business Operations Specialist (July 2021 to February 2022)
+The resulting reporting supported tracking of more than USD 1.5 million in qualified bookings across more than 86 partners.
 
-Terry advised sales teams as the cloud subject matter expert on deal structures,
-pricing, quote configuration, contract requirements and approval paths. He
-resolved non-standard transactions with legal and deal management, and authored
-standard procedures and pricing escalation guidance for recurring exceptions.
+He also rebuilt partner-program data flows, corrected funnel logic, and introduced reason-coded data-quality flags so that reporting issues could be traced to specific causes.
 
-## Business Operations Analyst (May 2018 to July 2021)
+For the Partner Credit Management System, Terry translated partner-credit policies and reporting requirements into functional specifications and Oracle APEX logic.
 
-Terry processed EMEA partner deal registrations and prepared quotes, checking
-eligibility, pricing and commercial documentation, and coordinated approvals
-through the quote to order process.
+The work covered more than 300 partners and approximately 1.2 billion consumed credits.
 
-## Before Oracle
+He worked with the lead developer on backlog and delivery decisions and led user acceptance testing with Finance and Sales Operations.
 
-- Senior Associate, HR Shared Services, Amazon Development Center India, September 2016 to December 2017. Owned employee lifecycle workflows and led Kaizen and Gemba process improvement work.
-- Technical Support Representative, IBM India, May 2015 to September 2016. Delivered enterprise technical support and earned the team's top customer satisfaction rating.
-- Lead Demonstration Specialist and Store In-Charge, Bose, May 2013 to March 2014. Managed store profitability, inventory and margin reporting.
-- Food and Beverage Associate, Four Seasons Hotel Mumbai, October 2009 to September 2011. Coordinated floor operations in a high-volume hospitality environment.
+He prioritised capabilities including balance tracking, approval workflows, transaction history, and reporting.
 
-## Things worth asking
+Terry also built an Oracle APEX reporting module and SQL queries used by stakeholders across Finance, Sales Operations, and the Strategic Partner Group.
 
-- "how long has he worked at Oracle"
-- "what is his current role at Oracle"
-- "what was his first job there"
-- "what did he do before Oracle"
-- "how many people did he lead"
-- "what is he doing now"
+For partner incentives, he designed eligibility logic across agreement histories and partner hierarchies to reduce reliance on manual review and create more traceable reporting.
+
+## Insights Analyst II, Partner Insights and Revenue Operations
+
+### March 2023 to March 2024
+
+Terry built and maintained partner analytics used across deal registration, pipeline, bookings, cloud consumption, and operational reporting.
+
+The dashboards served more than 60 users and recorded more than 50,000 queries per quarter.
+
+For deal-registration analytics, he worked with stakeholders and data engineers to define metrics, validate the initial design, and move the reporting into production.
+
+He produced commercial and revenue-operations analysis used in leadership reviews and investigated changes in transaction volumes and operational performance.
+
+Terry also redesigned recurring development and test reporting for Global Systems Integrator partners using AI-assisted tooling.
+
+That reduced production time from roughly two weeks to approximately two or three days.
+
+Ahead of a partner-program transition, he produced transaction-workload forecasts to help the team plan staffing and service-level coverage.
+
+He also delivered cloud-consumption and bookings analysis for Finance and the Strategic Partner Group.
+
+## Business Operations Team Lead
+
+### February 2022 to March 2023
+
+Terry led a 20-person EMEA revenue-operations team handling more than 20,000 tickets per quarter.
+
+His responsibilities included workload allocation, quality checks, service-level monitoring, operational reviews, training, and escalation management.
+
+One of the team's more complex situations involved CSP Aggregate Buying deals that could not follow the normal quoting process.
+
+On the final day of the quarter, Terry coordinated Sales, Legal, Deal Management, and approvers to close eight of eleven outstanding complex deals.
+
+He later documented the process as a standard operating procedure.
+
+He also worked with territory leadership to improve ownership and monitoring of approved opportunities that were waiting for sales-representative assignment.
+
+## Business Operations Specialist
+
+### July 2021 to February 2022
+
+Terry worked as a cloud subject-matter expert supporting Sales on commercial transactions.
+
+His work included deal structures, pricing, quote configuration, contract requirements, approval paths, and non-standard transaction scenarios.
+
+He worked with Legal and Deal Management on exceptions and documented procedures and escalation guidance for recurring commercial issues.
+
+## Business Operations Analyst
+
+### May 2018 to July 2021
+
+Terry supported EMEA partner transactions.
+
+His work included partner deal registration, quote preparation, partner eligibility, pricing checks, commercial documentation, approvals, and contract reviews.
+
+He worked with Sales, Legal, and related teams to move transactions through the quote-to-order process.
+
+## Amazon Development Center India
+
+### Senior Associate, HR Shared Services
+
+### September 2016 to December 2017
+
+Terry worked on employee-lifecycle processes in HR shared services.
+
+He also participated in Kaizen and Gemba process-improvement work aimed at improving shared-services operations.
+
+## IBM India
+
+### Technical Support Representative
+
+### May 2015 to September 2016
+
+Terry provided Level 1 enterprise technical support.
+
+The environment included banking systems, Siebel, VMware, and Active Directory.
+
+He received the team's top customer-satisfaction rating during his time there.
+
+## Bose Corporation
+
+### Lead Demonstration Specialist / Store In-Charge
+
+### May 2013 to March 2014
+
+Terry worked in retail operations and sales.
+
+His responsibilities included store profitability, inventory controls, margin reporting, product demonstrations, and supporting the sales team.
+
+## Four Seasons Hotel Mumbai
+
+### Food and Beverage Associate
+
+### October 2009 to September 2011
+
+Terry started his career in hospitality.
+
+He worked in day-to-day food and beverage operations in a high-volume luxury-hotel environment, coordinating service, floor operations, and shift handoffs.

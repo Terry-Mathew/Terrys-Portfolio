@@ -2,11 +2,12 @@
 
 ## The short version
 
-This chatbot is a Retrieval-Augmented Generation system running entirely on
-Cloudflare's free tier. When you ask a question, it converts your question into
-numbers, finds the passages in Terry's knowledge base that sit closest to those
-numbers, and hands them to a language model along with instructions about who
-Terry is. The model writes the answer using only what it was handed.
+This chatbot is a Retrieval-Augmented Generation system running on Cloudflare.
+When you ask a question, it converts your question into numbers, finds the
+passages in Terry's knowledge base that sit closest to those numbers, and hands
+them to a language model along with instructions about who Terry is. The model
+writes the answer using only what it was handed, and the text streams back as it
+is written.
 
 Five Cloudflare services do the storage and search work. **Vectorize** stores
 number-vectors for meaning-based search. **D1** stores the passage text and
@@ -15,16 +16,26 @@ answers. **Workers AI** turns text into vectors. **Workers** runs the code that
 ties them together. There is no database server and no container.
 
 Generation is a different matter, and it is the part that changed most. A model
-provider writes the replies: **OpenRouter** first, **Groq** as a fallback, both
-keyed as Worker secrets. The reason is arithmetic rather than taste. Workers AI
-has a free allowance of 10,000 units a day, and one generated answer costs
-orders of magnitude more of that allowance than one embedding does. Serving
-traffic from it meant the corpus rebuild — which needs embeddings — could not
-run. Generation moved to a paid provider, and Workers AI now does embeddings
-and nothing else. The trade is a per-token cost on a site that would otherwise
-be free, against a knowledge base that can actually be updated.
+provider writes the replies: **OpenRouter** first, with a pinned Claude Sonnet 4.5,
+and **Groq** as the fallback for both generation and tool calling, both keyed as
+Worker secrets. A smaller model, Claude Haiku 4.5, handles the follow-up
+rewriting, because that is a short rewrite against a short transcript and the
+larger model buys nothing there.
 
-Search is hybrid: meaning *and* keywords, fused together. That matters because
+The models are pinned to specific identifiers rather than a routing alias,
+because the same identifier also governs tool calling. A routing alias lets the
+provider decide which model answers, and that decision can change without notice —
+which means lead capture changes without anyone changing the code.
+
+The reason generation is not on Workers AI is arithmetic rather than taste.
+Workers AI has a free allowance of 10,000 units a day, and one generated answer
+costs orders of magnitude more of that allowance than one embedding does. Serving
+traffic from it meant the corpus rebuild — which needs embeddings — could not
+run. Generation moved to a paid provider, and Workers AI now does embeddings and
+nothing else. The trade is a per-token cost on a site whose storage is otherwise
+free, against a knowledge base that can actually be updated.
+
+Search is hybrid: meaning _and_ keywords, fused together. That matters because
 each method fails differently. Asking "what did he do before Oracle" finds the
 right passage with no shared vocabulary, through vectors alone. Asking "1.2B
 credits" needs exact keyword matching, because a vector model has no reason to
@@ -33,17 +44,20 @@ cases.
 
 ## The stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Runtime | Cloudflare Workers | No server to manage, free tier covers it |
-| Framework | TanStack Start + Nitro | SSR React with server functions |
-| Vectors | Cloudflare Vectorize, 768 dimensions | Free, fast, good at short text |
-| Passages + search | D1 with SQLite FTS5 | Passage text for retrieval, BM25 for keywords |
-| Fusion | Reciprocal Rank Fusion, K=60 | Merges rankings without needing comparable scores |
-| Generation | OpenRouter, then Groq | Paid tier that is available when free tiers are spent |
-| Embeddings | Workers AI | One model, and the only thing drawing on its daily allowance |
-| Caching | Cloudflare KV | Retrieval per question, whole answers for first turns |
-| Streaming | Server-sent events | Answer text arrives over an open connection |
+| Layer                        | Choice                                      | Why                                                                  |
+| ---------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| Runtime                      | Cloudflare Workers                          | No server to manage, free tier covers it                             |
+| Application                  | TanStack Start, React 19, Vite              | Server-rendered React with server functions                          |
+| Vectors                      | Cloudflare Vectorize, 768 dimensions        | Free, fast, good at short text                                       |
+| Passages + search            | D1 with SQLite FTS5                         | Passage text for retrieval, BM25 for keywords                        |
+| Fusion                       | Reciprocal Rank Fusion, K=60                | Merges rankings without needing comparable scores                    |
+| Generation                   | OpenRouter, pinned Claude Sonnet 4.5        | Paid tier that is available when free tiers are spent                |
+| Follow-up rewriting          | Claude Haiku 4.5 on OpenRouter              | A short rewrite does not need the larger model                       |
+| Generation and tool fallback | Groq                                        | Keeps answering if OpenRouter is unavailable                         |
+| Embeddings                   | Workers AI, 768 dimensions only             | The only thing drawing on its daily allowance                        |
+| Caching                      | Cloudflare KV                               | Retrieval per question, whole answers for self-contained first turns |
+| Streaming                    | Server-sent events                          | Answer text arrives over an open connection                          |
+| Evaluation                   | Golden set scored against the deployed site | Measures the release rather than the intention                       |
 
 ## How a question is processed
 
@@ -62,7 +76,7 @@ cases.
    768-dimension vector.
 5. **Hybrid retrieval.** Three searches run: vector similarity, BM25 keyword
    search, and a static trigger table. Their rankings are merged with Reciprocal
-   Rank Fusion, which scores each result as `weight / (60 + rank)` and *adds*
+   Rank Fusion, which scores each result as `weight / (60 + rank)` and _adds_
    that across every list the result appears in. The accumulation is the entire
    point — a document that all three methods rank highly is corroborated and
    should outrank one that only a single method found.
@@ -238,25 +252,67 @@ conversation. The route the site actually used cast the browser's array
 straight through, so the limits were configuration that did nothing. Three
 overlapping settings for one control is how that happened.
 
-**A truthful metric that broke a measurement.** Cache hits were reported as
-`retrievalMode: static, generation: none`, because that is literally what
-happens — no model ran. It also made the evaluation suite score healthy cache
-reads as provider outages, and the sources list was not replayed, so the
-interface lost them. Reporting the cache as a degraded retrieval was the least
-honest possible way to describe a fast, correct answer.
+**A truthful metric that broke a measurement.** The report field that says which
+retrieval methods contributed was built by excluding anything that came from the
+cache — so a cached retrieval reported that _nothing_ had contributed, and the
+status that turns that into "degraded" fired on a perfectly healthy index. The
+same question returned the right answer twice in a row, minutes apart, and the
+second one was reported as a static fallback while the first was not. It was
+found during a deployment check, by asking the live site the same question twice.
+
+The cause was that the cache overwrote each result's recorded origin with
+"cache", destroying the fact that the result came from the vector index — which
+meant the only way to tell a fast correct answer from an outage was that the
+first was slow. Origin and cache provenance are now separate, so a replayed
+result reports what produced it and still says whether it was re-derived.
+
+Two related changes fell out of it. An answer-cache replay no longer reports
+itself as a retrieval-cache hit, because those are different things and
+conflating them meant a deployment check could not tell a warm cache from a
+served reply. And an out-of-scope question, where nothing matches and the model
+correctly deflects, is no longer counted as a fault by the evaluation — it was
+producing a "the vector index is probably empty" warning on healthy runs.
 
 ## How it is tested
 
 Correctness here has meant checking that a claim is true before making it, not
 after. The retrieval probe embeds a question that deliberately shares no
 vocabulary with the source text and confirms the right document comes back —
-that distinguishes genuine semantic retrieval from keyword matching. The health
-check endpoint reports retrieval mode, dimensions, and match count so a degraded
-path is visible. The ingestion endpoint can force a full rebuild.
+that distinguishes genuine semantic retrieval from keyword matching. A check
+endpoint confirms the embedding dimensions, that the vector index returns
+matches at all, and that the stores agree; a separate authenticated retrieval
+endpoint reports which methods contributed to a specific question. The golden
+set scores the deployed chatbot end to end after every release.
 
 The pattern that caught nearly every bug: a system reporting success is not
 evidence that it worked. Three of the failures above returned `"ok": true` with
 correct-looking numbers.
+
+## Tools, ingestion and evaluation
+
+Two tools are available to the model, and both are guarded rather than exposed
+directly. One records a visitor's name and email so Terry can follow up, and one
+records a question the knowledge base could not answer. Both validate their input
+before anything is stored or sent, and both are rate-limited per address.
+
+Ingestion is a single authenticated HTTP endpoint. It chunks each Markdown file,
+embeds every chunk, writes the vectors, stores the passage text in D1, and then
+records the document hash — the hashes go last, so a run that dies partway is
+repeated rather than skipped. It also reconciles: a document that was deleted
+has its row and vectors removed, and a document that shrank loses the passages
+past its new end. Without that step, both kinds of debris stay retrievable while
+being absent from the site.
+
+A golden set of real questions is scored against the deployed chatbot after every
+release, covering both retrieval and conversation behaviour. Each failure is
+classified: an answer that was missing or wrong is a warning, while a turn that
+could not be answered at all blocks the release. That distinction exists because
+content lags a deploy by design while a chatbot that cannot answer is a
+regression nobody should ship.
+
+Retrieval can be queried on its own through an authenticated endpoint that
+reports which methods contributed and what each result's source was, which is
+what separates "the answer was bad" from "the corpus does not contain it".
 
 ## Why it is built this way
 

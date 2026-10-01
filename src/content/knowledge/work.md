@@ -1,45 +1,74 @@
 # Selected Work
 
-Three pieces of work where the problem was that two teams disagreed about a
-number, and the disagreement itself was the problem.
+Four pieces of work where the problem was that two teams disagreed about a
+number, or that a business policy had no representation anywhere a person could
+check it against.
 
-## Global Partner Systems
+## Partner Credit Management System (PCMS)
 
-**The problem.** Information lived in different systems, teams and regions. Each
-group had a version, and no version was authoritative.
+**The problem.** Partner-credit rules, balances, approvals, transactions, and
+reporting needed to be represented consistently in an operational system used by
+more than one business team. The rules involved Finance, Sales Operations,
+partner structures, credit policies, and operational exceptions.
 
-**What Terry did.** Defined the product: what the system should do, which
-workflows it should support, and what a correct answer looks like. He made the
-workflow decisions, owned the reporting, ran user acceptance testing, and
-aligned the stakeholders who had to live with the result.
+**What Terry did.** Translated the credit policies and reporting requirements
+into product requirements, functional specifications, and Oracle APEX logic.
+Worked with the lead developer on backlog and delivery priorities. Led user
+acceptance testing with Finance and Sales Operations. Also built reporting and
+SQL queries used by stakeholders across Finance, Sales Operations, and the
+Strategic Partner Group.
 
-**What changed.** Operational structures that people could actually use, and
-decisions made against information rather than against whoever was in the room.
+**Scope.** More than 300 partners and approximately 1.2 billion consumed credits.
+Capabilities included balance visibility, approval workflows, transaction
+history, and reporting.
 
-## Trusted Partner Analytics
+**What changed.** Partner-credit information became traceable from business
+policy through system behaviour to reporting, instead of living in someone's
+head.
 
-**The problem.** Competing definitions of every metric meant that every review
-began with an argument about the data rather than about the decision.
+## Business and Technical Assessment Analytics
 
-**What Terry did.** Metric design and data modelling decisions, worked through
-with data engineers and stakeholders. He defined deal registration metrics
-alongside them, validated an early version before it went to production, and
-carried it through adoption across regions.
+**The problem.** Leadership needed a consistent view of partner opportunities
+moving through assessment, approval, and Proof of Performance stages. Different
+stages and approval conditions had to be combined into a usable funnel.
 
-**What changed.** One shared model and vocabulary that reviews and planning could
-rely on. The arguments about the numbers stopped.
+**What Terry did.** Built the leadership view and defined the business logic
+used to classify opportunity status. Combined assessment approvals, Proof of
+Performance approvals, and opportunity status into the qualified-booking logic.
+Corrected funnel logic and introduced reason-coded data-quality flags.
 
-## From Reports to Decisions
+**Scope.** The reporting tracked more than 220 submitted opportunities. The
+resulting logic supported tracking of more than USD 1.5 million in qualified
+bookings across more than 86 partners.
 
-**The problem.** Teams waited on manual reports to answer recurring questions.
-The questions were predictable, but answering them consumed the analyst.
+**What changed.** Leadership could see where opportunities were in the process,
+and why an individual record was or was not counted.
 
-**What Terry did.** Discovery, prioritisation, prototype direction and rollout
-with business owners. The work was choosing which questions deserved a tool
-rather than a request, and building those first.
+## Deal Registration and Partner Analytics
 
-**What changed.** Self-serve answers for common questions, and more time
-available for the questions that were not predictable.
+**The problem.** Partner reporting covered registrations, pipeline, bookings,
+operations, and cloud consumption, but every metric meant something slightly
+different depending on who asked.
+
+**What Terry did.** Worked with stakeholders and data engineers to define the
+metrics and the reporting logic. Validated an early version before it went to
+production, then carried it through adoption.
+
+**Scope.** The analytics served more than 60 users and recorded more than 50,000
+queries per quarter.
+
+**What changed.** One shared model and vocabulary that reviews and planning
+could rely on. The arguments about the numbers stopped.
+
+## GSI Development and Test Reporting
+
+**The problem.** Recurring reporting for Global Systems Integrator development
+and test activity took roughly two weeks to produce.
+
+**What Terry did.** Redesigned the reporting workflow using AI-assisted tooling.
+
+**Outcome.** Production time fell from roughly two weeks to two or three days,
+without removing the analyst from validation and interpretation.
 
 ## What these have in common
 

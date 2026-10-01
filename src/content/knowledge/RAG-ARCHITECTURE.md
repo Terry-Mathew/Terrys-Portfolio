@@ -43,8 +43,11 @@ Visitor asks a question
         ▼
 ┌──────────────────────────────────────────┐
 │  Step 3: Write the answer                 │
-│  - Anthropic Claude (best quality)        │
-│  - Fallback: Workers AI Llama (cheaper)   │
+│  - OpenRouter, pinned Claude Sonnet 4.5   │
+│  - Follow-up rewriting: Claude Haiku 4.5  │
+│  - Fallback for both: Groq                │
+│  - Workers AI: embeddings only, never     │
+│    generation (see §5b)                   │
 └──────────────────────────────────────────┘
         │
         ▼
@@ -55,15 +58,19 @@ Visitor sees the answer + source links
 
 ## 3. The Parts (What Each Piece Does)
 
-| Part                       | What It Does                         | Why We Use It                                |
-| -------------------------- | ------------------------------------ | -------------------------------------------- |
-| **Cloudflare Workers**     | Runs the backend code                | Fast, cheap, no server to manage             |
-| **Vectorize**              | Stores vector embeddings             | Finds information by meaning, not just words |
-| **D1 (SQLite)**            | Stores full text + keyword index     | Finds information by exact words (BM25)      |
-| **KV**                     | Caches answers to repeated questions | Makes repeat questions instant and free      |
-| **Workers AI**             | Embeddings + fast generation         | Free tier, no external API cost              |
-| **Anthropic Claude**       | High-quality answer writing          | Best at following persona instructions       |
-| **`/api/ingest` endpoint** | Re-embeds the knowledge base         | Manual, idempotent, runs inside the Worker   |
+| Part                          | What It Does                          | Why We Use It                                        |
+| ----------------------------- | ------------------------------------- | ---------------------------------------------------- |
+| **Cloudflare Workers**        | Runs the backend code                 | Fast, cheap, no server to manage                     |
+| **TanStack Start (React 19)** | SSR application, React 19 and Vite    | One codebase for the site and the API routes         |
+| **Vectorize**                 | Stores vector embeddings              | Finds information by meaning, not just words         |
+| **D1 (SQLite)**               | Stores full text + FTS5 keyword index | Finds information by exact words (BM25)              |
+| **KV**                        | Caches retrieval results and answers  | Makes repeat questions instant and cheap             |
+| **Workers AI**                | Embeddings only (768 dimensions)      | Free allowance; never writes an answer — see §5b     |
+| **OpenRouter**                | Generation and tool calling           | Pinned Claude Sonnet 4.5; paid tier, still available |
+| **Claude Haiku 4.5**          | Follow-up question rewriting          | A short rewrite does not need the larger model       |
+| **Groq**                      | Generation and tool-calling fallback  | Keeps answering when OpenRouter is unavailable       |
+| **`/api/ingest` endpoint**    | Re-embeds the knowledge base          | Authenticated, idempotent, runs inside the Worker    |
+| **Golden-set evaluation**     | Scores the deployed chatbot           | Measures the release, not the intention              |
 
 ---
 
@@ -155,7 +162,8 @@ The retrieved chunks are sent to an LLM with a **system prompt** (the persona). 
    that can be handed a tool. Bounded at 3 iterations; if no tier produces an answer it
    returns null and the turn falls through to plain generation, which costs lead capture
    and nothing else.
-2. **Plain pass** — Anthropic (off by default), OpenRouter, Groq, and optionally Workers AI.
+2. **Plain pass** — Anthropic (off by default), OpenRouter, Groq. Workers AI is
+   deliberately absent; see the note below.
 
 > **Models are pinned to specific ids.** `openrouter/free` was used here for a while. It is
 > a _routing alias_, not a model — OpenRouter chooses what backs it and can change that
@@ -282,7 +290,7 @@ export const CHAT_CONFIG = {
   rerankTopK: 4, // chunks out to the LLM
   chunkSize: 900, // characters per chunk
   chunkOverlap: 120, // overlap between chunks
-  corpusVersion: 5, // bump on any knowledge file or source-anchor change
+  corpusVersion: 6, // bump on any knowledge file or source-anchor change
   rateLimitPerMinPerIp: 20, // anti-abuse
   cacheTTL: 86400, // 24 hours retrieval cache
   promptVersion: 2, // bump on any system prompt change

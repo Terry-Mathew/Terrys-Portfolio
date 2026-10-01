@@ -109,17 +109,15 @@ export const CHAT_CONFIG = {
   // HOW: increase the number, then rebuild, deploy, and re-run /api/ingest.
   // Without the bump, a question asked yesterday returns yesterday's answer.
   //
-  // 4 → 5: two source anchors that pointed at nothing. `off-the-clock.md`
-  // claimed an id no element carries (the section is `beyond-work`), and
-  // `how-this-works.md` claimed an id that exists nowhere on the site at all.
-  //
-  // A category is part of what retrieval *returns* — it becomes the source
-  // link on the answer — so correcting one is a change to the index, not to the
-  // corpus text. The ingest-side hash catches the D1 row, but the retrieval and
-  // answer caches are keyed here, and both store the anchor. Without this bump
-  // the fixed links would have been correct in the index and dead in every
-  // cached answer for the next 24 hours.
-  corpusVersion: 5,
+  // 5 → 6: the knowledge corpus changed. `facts.md` was added as the canonical
+  // facts layer and bio, experience, work, skills, experiments and the
+  // architecture docs were rewritten against it. The document hashes already
+  // force a re-embed of every edited file, but the retrieval and answer caches
+  // are keyed on the corpus version and store the text that was retrieved, so
+  // without this the chatbot keeps serving the pre-edit biography for up to
+  // cacheTTL — which is how a question about Terry's current employer could
+  // return an answer that is a month out of date.
+  corpusVersion: 6,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,

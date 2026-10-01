@@ -1,16 +1,18 @@
 # Experience
 
-Terry has worked at Oracle for eight and a half years, moving from processing
-transactions to owning partner analytics. Before Oracle he worked in
+Terry is currently employed at Oracle, where he has worked since May 2018,
+moving from processing transactions to owning partner analytics. His planned
+final working day at Oracle is 14 October 2026. Before Oracle he worked in
 technology support, retail, hospitality and HR shared services, which is where
 he learned how a process behaves when it meets a case nobody planned for.
 
 ## Senior Data Product Manager, Partner Analytics (March 2024 to present)
 
-Terry owns several partner analytics and operational data workstreams,
-including business and technical assessment, PCMS reporting, and partner
-incentive analytics. He sets requirements, sprint roadmaps and delivery
-priorities with engineering, finance and global revenue operations.
+Terry currently holds this role at Oracle. He owns several partner analytics and
+operational data workstreams, including business and technical assessment, PCMS
+reporting, and partner incentive analytics. He sets requirements, sprint
+roadmaps and delivery priorities with engineering, finance and global revenue
+operations.
 
 He built a leadership dashboard that tracks assessment and proof of performance
 progress across more than 220 submitted opportunities. He defined the logic for
@@ -61,7 +63,7 @@ through the quote to order process.
 
 ## Before Oracle
 
-- Senior Associate, HR Shared Services, Amazon Development Center India, September 2016 to December 2017. Owned employee lifecycle workflows and led process improvement work.
+- Senior Associate, HR Shared Services, Amazon Development Center India, September 2016 to December 2017. Owned employee lifecycle workflows and led Kaizen and Gemba process improvement work.
 - Technical Support Representative, IBM India, May 2015 to September 2016. Delivered enterprise technical support and earned the team's top customer satisfaction rating.
 - Lead Demonstration Specialist and Store In-Charge, Bose, May 2013 to March 2014. Managed store profitability, inventory and margin reporting.
 - Food and Beverage Associate, Four Seasons Hotel Mumbai, October 2009 to September 2011. Coordinated floor operations in a high-volume hospitality environment.
@@ -69,6 +71,7 @@ through the quote to order process.
 ## Things worth asking
 
 - "how long has he worked at Oracle"
+- "what is his current role at Oracle"
 - "what was his first job there"
 - "what did he do before Oracle"
 - "how many people did he lead"

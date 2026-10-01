@@ -73,6 +73,14 @@ const SKIP = new Set(["README.md", "RAG-ARCHITECTURE.md"]);
  */
 const CATEGORY: Record<string, string> = {
   "bio.md": "about",
+  // The canonical facts layer. Anchored to #about because it is where a
+  // visitor asking "who is Terry" should end up, and because it restates the
+  // biography rather than replacing it — two documents answering the same
+  // question is the duplication that `experiments.md` was trimmed to avoid.
+  // Without an entry here this would fall back to `#knowledge`, which exists
+  // nowhere, and every citation drawn from the facts layer would be a dead
+  // link — which is exactly what happened twice before the anchor test.
+  "facts.md": "about",
   "experience.md": "experience",
   // "work" is chatbot context only — the Selected Work section was removed, so
   // anchoring to #selected-work would emit a dead source link.

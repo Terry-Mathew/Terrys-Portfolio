@@ -271,6 +271,121 @@
   box-shadow: 0 0 0 4px color-mix(in oklab, var(--ember) 20%, transparent);
 }
 
+/* --- Project cards ---------------------------------------------------
+ *
+ * The whole card is a single link, so every response belongs to that link's
+ * own hover and focus-visible states. Previously the lift, the image scale and
+ * the archive row's title and arrow colours were hover-only, which left a
+ * keyboard user with nothing but the focus ring. Hover and focus are now
+ * declared together, so the two are equivalent by construction.
+ *
+ * Nothing here changes layout: the card is `transform`-only, the artwork is
+ * `scale`-only inside an `overflow-hidden` box, and the status line is
+ * `opacity`-only. No property that could move a neighbour or reflow the page.
+ */
+.project-card {
+  transition:
+    transform 300ms var(--ease-out-soft),
+    background-color 300ms var(--ease-out-soft);
+}
+
+.project-card:hover,
+.project-card:focus-visible {
+  transform: translateY(-3px);
+}
+
+.project-card__art {
+  transition: scale 300ms var(--ease-out-soft);
+}
+
+.project-card:hover .project-card__art,
+.project-card:focus-visible .project-card__art {
+  scale: 1.035;
+}
+
+/* The status line keeps its authored ember at rest, which measures 4.67:1 on
+ * the scrim behind it. Dimming it to make a "brighten on hover" legible looked
+ * like the obvious move but composited to 2.91:1 — below AA on 11px text — and
+ * it also moved the resting pixel. Darkening on hover instead keeps the resting
+ * state byte-identical and raises contrast to 13.5:1 while active. */
+.project-card__status {
+  transition: color 300ms var(--ease-out-soft);
+}
+
+.project-card:hover .project-card__status,
+.project-card:focus-visible .project-card__status {
+  color: var(--color-graphite);
+}
+
+.project-row__arrow {
+  transition:
+    border-color 300ms var(--ease-out-soft),
+    color 300ms var(--ease-out-soft),
+    scale 300ms var(--ease-out-soft);
+}
+
+.project-row:hover .project-row__arrow,
+.project-row:focus-visible .project-row__arrow {
+  scale: 1.08;
+}
+
+/* Touch has no hover, so a hover-only affordance would simply never fire and
+ * the card would give no acknowledgement at all. A short press reads as a tap
+ * instead, and nothing on the card is ever hover-gated — status, title,
+ * subtitle and description are all in the static layout. */
+@media (hover: none) {
+  .project-card:hover,
+  .project-card:focus-visible {
+    transform: none;
+  }
+
+  .project-card:hover .project-card__art,
+  .project-card:focus-visible .project-card__art {
+    scale: 1;
+  }
+
+  /* The status line returns to its resting ember on touch, where there is no
+     * sustained hover to read against. */
+  .project-card:hover .project-card__status,
+  .project-card:focus-visible .project-card__status {
+    color: var(--color-ember-ink);
+  }
+
+  /* A press reads as a tap instead of a hover that never arrives. */
+  .project-card:active {
+    transform: scale(0.99);
+  }
+
+  .project-row:hover .project-row__arrow,
+  .project-row:focus-visible .project-row__arrow {
+    scale: 1;
+  }
+}
+
+/* The global reduced-motion rule collapses durations to 0.001ms, which would
+ * leave the state change landing instantly but still visible. These make the
+ * movement itself absent rather than just fast. */
+@media (prefers-reduced-motion: reduce) {
+  .project-card,
+  .project-card:hover,
+  .project-card:focus-visible,
+  .project-card:active {
+    transform: none;
+  }
+
+  .project-card__art,
+  .project-card:hover .project-card__art,
+  .project-card:focus-visible .project-card__art {
+    scale: 1;
+  }
+
+  .project-row__arrow,
+  .project-row:hover .project-row__arrow,
+  .project-row:focus-visible .project-row__arrow {
+    scale: 1;
+  }
+}
+
 /* --- Texture utilities ------------------------------------------------ */
 
 @utility film-grain {

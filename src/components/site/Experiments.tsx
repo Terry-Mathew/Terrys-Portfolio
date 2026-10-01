@@ -60,7 +60,7 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
     <Reveal as="article" key={project.id} delay={index * 100}>
       <a
         href={`/projects/${project.id}`}
-        className="photo-zoom group relative block h-full overflow-hidden bg-paper-2 transition-transform duration-500 hover:-translate-y-1.5"
+        className="project-card photo-zoom group relative block h-full overflow-hidden bg-paper-2"
       >
         <Picture
           avif={art.avif}
@@ -71,11 +71,11 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
           height={768}
           sizes={ART_SIZES}
           loading="lazy"
-          className="h-[24rem] w-full object-cover opacity-85"
+          className="project-card__art h-[24rem] w-full object-cover opacity-85"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-paper-2 via-paper-2/50 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-7">
-          <p className="label-eyebrow text-ember-ink">
+          <p className="project-card__status label-eyebrow text-ember-ink">
             0{index + 1} · {project.status}
           </p>
           <h3 className="display-xl mt-3 text-3xl text-graphite">{project.title}</h3>

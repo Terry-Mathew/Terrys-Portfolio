@@ -90,14 +90,14 @@ function ProjectsIndex() {
                 <Link
                   to="/projects/$projectId"
                   params={{ projectId: p.id }}
-                  className="group grid gap-6 border-t border-graphite/20 py-10 transition-colors hover:bg-paper-2/50 lg:grid-cols-12 lg:gap-10"
+                  className="project-row group grid gap-6 border-t border-graphite/20 py-10 transition-colors hover:bg-paper-2/50 focus-visible:bg-paper-2/50 lg:grid-cols-12 lg:gap-10"
                 >
                   <div className="flex items-start gap-6 lg:col-span-3">
                     <span className="label-eyebrow mt-1 text-ember-ink">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
-                      <h2 className="display-xl text-[clamp(1.6rem,3vw,2.4rem)] text-graphite transition-colors group-hover:text-ember-ink">
+                      <h2 className="display-xl text-[clamp(1.6rem,3vw,2.4rem)] text-graphite transition-colors group-hover:text-ember-ink group-focus-visible:text-ember-ink">
                         {p.title}
                       </h2>
                       <p className="label-eyebrow mt-3 text-graphite-dim">
@@ -133,7 +133,7 @@ function ProjectsIndex() {
                   </div>
 
                   <span className="hidden place-items-center self-center lg:col-span-12 lg:justify-end">
-                    <span className="grid size-11 place-items-center rounded-full border border-graphite/25 text-graphite transition-colors group-hover:border-ember-ink group-hover:text-ember-ink">
+                    <span className="project-row__arrow grid size-11 place-items-center rounded-full border border-graphite/25 text-graphite transition-colors group-hover:border-ember-ink group-hover:text-ember-ink group-focus-visible:border-ember-ink group-focus-visible:text-ember-ink">
                       <ArrowUpRight className="size-4" />
                     </span>
                   </span>

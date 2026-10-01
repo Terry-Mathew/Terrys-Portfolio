@@ -251,5 +251,11 @@ export const CHAT_CONFIG = {
     enabled: true,
     ttlSeconds: 86400,
   },
-  promptVersion: 2,
+  // 2 → 3: the answer-format contract changed. The prompt now forbids Markdown
+  // emphasis, link syntax, backticks and code fences, and the widget renders
+  // safe links and addresses itself. Without a bump, every answer cached under
+  // the old instructions would keep serving the Markdown version — and the
+  // answer cache outlives a deploy, so the fix would look like it had not
+  // landed at all.
+  promptVersion: 3,
 } as const;

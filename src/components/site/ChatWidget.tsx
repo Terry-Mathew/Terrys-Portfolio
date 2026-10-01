@@ -1,6 +1,89 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
 
+import { parseChatMarkdown, type ChatNode } from "@/components/site/chat-markdown";
+
+/**
+ * Render one answer.
+ *
+ * The model writes Markdown and this is a text panel, so before this existed a
+ * visitor asking how to get in touch was shown `**terry.perangat@gmail.com**`
+ * and `[LinkedIn](https://…)` with the syntax intact — on the one answer that
+ * is supposed to produce a lead.
+ *
+ * The parse is a pure function of the text received so far, and an
+ * unterminated construct is emitted as plain text with its marker removed. That
+ * is what makes it safe during streaming: at the instant the accumulated text
+ * is `**bo` or `[LinkedIn](https://ex`, the visitor sees `bo` and `LinkedIn`,
+ * and never a raw delimiter. No buffering, no waiting for the answer to end,
+ * and no `dangerouslySetInnerHTML` — the parser returns data and this maps it
+ * to elements, so the model cannot inject markup of any kind.
+ *
+ * `streaming` only drops a marker left dangling at the very end; once the
+ * answer is complete a trailing asterisk is the author's and is kept.
+ */
+export function RichText({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  const nodes = parseChatMarkdown(text, { streaming });
+  return (
+    <>
+      {nodes.map((node, i) => (
+        <TextNode key={i} node={node} />
+      ))}
+    </>
+  );
+}
+
+function TextNode({ node }: { node: ChatNode }) {
+  switch (node.kind) {
+    case "bold":
+      return (
+        <strong className="font-medium text-bone">
+          {node.children.map((child, i) => (
+            <TextNode key={i} node={child} />
+          ))}
+        </strong>
+      );
+
+    case "code":
+      return (
+        <code className="rounded-sm bg-bone/10 px-1 py-0.5 font-mono text-[0.8125rem] text-bone/90">
+          {node.value}
+        </code>
+      );
+
+    case "link":
+      // A link whose target failed validation keeps its label as plain text.
+      // The content is still shown; only the ability to navigate is withheld.
+      return node.href ? (
+        <a
+          href={node.href}
+          target={node.href.startsWith("http") ? "_blank" : undefined}
+          rel={node.href.startsWith("http") ? "noreferrer noopener" : undefined}
+          className="text-bone underline decoration-ember/60 underline-offset-2 transition-colors hover:decoration-ember"
+        >
+          {node.label}
+        </a>
+      ) : (
+        <>{node.label}</>
+      );
+
+    case "email":
+      return (
+        <a
+          href={node.href}
+          className="text-bone underline decoration-ember/60 underline-offset-2 transition-colors hover:decoration-ember"
+        >
+          {node.label}
+        </a>
+      );
+
+    default:
+      // React escapes this. It is the only path by which model-authored text
+      // reaches the DOM, and it cannot produce an element.
+      return <>{node.value}</>;
+  }
+}
+
 /**
  * Remove inline citation markers, scoped to the documents that were retrieved.
  * Leaving a partially-arrived marker in place until it completes is deliberate —
@@ -656,16 +739,16 @@ export function ChatWidget() {
                     key={m.id}
                     className="font-editorial text-[0.9375rem] leading-snug text-bone/90"
                   >
-                    {m.text}
+                    <RichText text={m.text} />
                   </p>
                 ) : (
                   <div key={m.id}>
-                    <p className="max-w-[40ch] font-editorial text-[0.9375rem] leading-relaxed text-bone-dim">
-                      {m.text}
+                    <div className="max-w-[40ch] font-editorial text-[0.9375rem] leading-relaxed text-bone-dim">
+                      <RichText text={m.text} streaming={m.pending === true} />
                       {m.pending && (
                         <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-ember/60" />
                       )}
-                    </p>
+                    </div>
                     {m.failed && (
                       <p className="mt-2 text-xs text-bone-dim/50">
                         <button

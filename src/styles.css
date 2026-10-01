@@ -386,6 +386,49 @@
   }
 }
 
+/* --- Contact entrance -------------------------------------------------
+ *
+ * Same `html.js` gate as the hero and About, and for the same reason: the
+ * server sends the section painted, so nothing flashes, and without JavaScript
+ * the class is never added so nothing can be left hidden.
+ *
+ * `[data-contact-failed]` is the fail-open escape. If the timeline cannot be
+ * built, Contact.tsx stamps it and this restores every target, so the worst
+ * case is a closing section that appears without animating rather than one that
+ * never appears.
+ */
+@layer base {
+  html.js [data-contact-reveal] {
+    opacity: 0;
+  }
+
+  [data-contact-failed] [data-contact-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Reduced motion, stated explicitly. The global rule collapses transition
+   * durations but says nothing about opacity, so it cannot cover this. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-contact-reveal] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+}
+
+/* The email link's arrow nudges on hover and on focus alike. Declared in one
+ * selector list so the two stay equivalent without being kept in sync. */
+.contact-email__arrow {
+  display: inline-block;
+  transition: transform 300ms var(--ease-out-soft);
+}
+
+.contact-email:hover .contact-email__arrow,
+.contact-email:focus-visible .contact-email__arrow {
+  transform: translateX(3px);
+}
+
 /* --- Texture utilities ------------------------------------------------ */
 
 @utility film-grain {

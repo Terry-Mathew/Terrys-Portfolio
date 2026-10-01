@@ -126,8 +126,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // `suppressHydrationWarning` on the <html> below is required, not cosmetic.
+  // The inline script in <head> adds `class="js"` to that element while the
+  // document is still parsing, so by the time React hydrates, the DOM attribute
+  // no longer matches what JSX declared, and React logs "some attributes of the
+  // server rendered HTML didn't match" on every page load. The attribute is
+  // correct — it is what gates the reveal stylesheet — so the warning is
+  // reporting an intentional mutation whose cause it cannot see. It is scoped to
+  // that single element; everything below it is still checked.
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/*
           Must be a parser-blocking inline script in <head>. It sets the class

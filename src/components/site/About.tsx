@@ -19,30 +19,43 @@ const IGUANA_SIZES = "(min-width: 64rem) 24rem, 92vw";
  * lead; the three supporting paragraphs are the only staggered group, because
  * `Reveal` wrapped all three in a single element and structurally could not
  * stagger them. The image and its caption resolve last.
+ *
+ * The gaps between groups are deliberate. Everything between the tagline and
+ * the paragraphs shares one beat, and the link and caption wait until that has
+ * largely resolved, so the section reads in four phrases rather than as one
+ * undifferentiated fade.
  */
 const ENTRANCE = {
   label: 0,
-  tagline: 0.08,
-  thesis: 0.16,
-  paragraph1: 0.28,
-  paragraph: 0.07,
-  column: 0.22,
-  link: 0.52,
-  caption: 0.62,
+  tagline: 0.12,
+  thesis: 0.26,
+  column: 0.3,
+  paragraph1: 0.54,
+  /** Doubled from 0.07: at the old gap the three paragraphs overlapped almost
+   *  completely and read as a single block rather than a sequence. */
+  paragraph: 0.14,
+  link: 1.12,
+  caption: 1.24,
 } as const;
 
-/** How far each element rises as it arrives. Small on purpose. */
+/** How far each element rises as it arrives. */
 const RISE = {
-  label: 10,
-  heading: 20,
-  body: 14,
-  column: 28,
-  link: 12,
-  caption: 8,
+  label: 14,
+  /** Proportionally smaller than the hero's 20px despite being larger, because
+   *  the headline here is a fraction of the hero's 12rem name, and this motion
+   *  arrives into an eye that has already settled rather than leading the page. */
+  heading: 30,
+  body: 20,
+  column: 44,
+  link: 16,
+  caption: 12,
 } as const;
 
-/** The card's transient tilt on the way in, in degrees. Settles to 0. */
-const COLUMN_TILT = 0.8;
+/**
+ * The card's transient tilt on the way in, in degrees. Settles to 0 so the
+ * figure's authored `-rotate-2` is the only tilt at rest.
+ */
+const COLUMN_TILT = 1.6;
 
 /**
  * Fail open. The stylesheet hides About's content behind `html.js`, so if the

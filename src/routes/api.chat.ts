@@ -154,7 +154,8 @@ export const Route = createFileRoute("/api/chat")({
               }
               console.info(
                 `[rag] ${mode} | ${reply.metadata?.chunksUsed} chunks | ` +
-                  `${Date.now() - startedAt}ms | cached=${reply.metadata?.cached}`,
+                  `${Date.now() - startedAt}ms | retrievalCached=${reply.metadata?.cached} ` +
+                  `answerCached=${reply.metadata?.answerCached ?? false}`,
               );
               // `answer` is repeated here because streamed deltas are the normal
               // path, but a rate-limited or extractive response has none. The

@@ -46,8 +46,20 @@ export type ChatReply = {
   metadata?: {
     retrievalMode: "static" | "vector" | "hybrid";
     chunksUsed: number;
+    /**
+     * This turn was served from the KV *retrieval* cache — the index was not
+     * re-queried, but the results are the same ones it would have returned.
+     * Distinct from `answerCached`, which means the whole turn was replayed.
+     *
+     * These used to share one flag, and the deployment check that caught the
+     * cache-hit misclassification could not tell them apart: a warm retrieval
+     * cache and a served-from-answer-cache turn looked identical, which is part
+     * of why a healthy index reported itself as a static fallback.
+     */
     cached: boolean;
     turn: number;
+    /** True when the entire reply was replayed from the KV answer cache. */
+    answerCached?: boolean;
     rateLimited?: boolean;
     /**
      * Whether this turn was served by a fallback rather than the real pipeline —
@@ -1152,7 +1164,12 @@ export async function runChat(
           metadata: {
             retrievalMode: c.retrievalMode ?? "static",
             chunksUsed: 0,
-            cached: true,
+            // Not a retrieval-cache hit: the retrieval that produced this
+            // answer happened on an earlier turn, and this one never ran. The
+            // replayed mode travels with the answer instead, which is why it is
+            // read back from the stored value rather than re-derived.
+            cached: false,
+            answerCached: true,
             turn: 0,
             generation: c.generation ?? "none",
             degraded: (c.generation ?? "none") === "none" || c.retrievalMode === "static",
@@ -1188,18 +1205,33 @@ export async function runChat(
   if (CHAT_CONFIG.mode === "vector" && bindingsPresent) {
     try {
       results = await retrieveHybrid(searchQuery, env!, CHAT_CONFIG);
-      cached = results.some((r) => r.source === "cache");
-      // Report what actually contributed, not that the call succeeded.
-      // retrieveHybrid never throws for an empty path — it catches internally
-      // and returns whatever it has — so setting this to "hybrid"
-      // unconditionally labelled a run as hybrid while a single hand-written
-      // keyword table did all the work. That is how a dead vector path and a
-      // stale keyword index both read as healthy.
-      const live = new Set(results.filter((r) => r.source !== "cache").map((r) => r.source));
-      if (live.size === 0) retrievalMode = "static";
-      else if (live.size === 1 && live.has("static")) retrievalMode = "static";
-      else if (live.size === 1) retrievalMode = "vector";
-      else retrievalMode = "hybrid";
+      cached = results.some((r) => r.fromCache === true);
+      // Report the provenance of the results, not whether this turn re-queried
+      // the index.
+      //
+      // This used to build its set from results whose source was not "cache",
+      // which meant a retrieval-cache hit reported no live source at all. The
+      // same question on the same healthy build then read `static` when warm
+      // and `vector` when cold — and the visitor's availability dot followed it
+      // into "Limited mode" on a fully working index. A cached result is a
+      // result; excluding it from the evidence is what invented the fallback.
+      //
+      // retrieveHybrid still never throws for an empty path — it catches
+      // internally and returns whatever it has — so an unconditional "hybrid"
+      // would still mislabel a run where one hand-written keyword table did all
+      // the work. Which is why this reports the set of sources present.
+      const methods = new Set(results.map((r) => r.source));
+      if (methods.size === 0) retrievalMode = "static";
+      else if (methods.size === 1) {
+        // "vector" means an index answered, not the keyword table. BM25-only
+        // lands here too: the mode describes the retrieval system rather than
+        // the specific store, and the alternative is a fourth value rippling
+        // through the route, the widget, the eval scorer and the CI probe's
+        // `[a-z]+` regex for no gain in what anyone can act on.
+        retrievalMode = methods.has("static") ? "static" : "vector";
+      } else {
+        retrievalMode = "hybrid";
+      }
     } catch (e) {
       console.error("Vector retrieval failed, falling back to static:", e);
       results = retrieveStatic(qTrimmed, CHAT_CONFIG.topK);
@@ -1287,6 +1319,7 @@ export async function runChat(
       retrievalMode,
       chunksUsed: results.length,
       cached,
+      answerCached: false,
       turn: history.length,
       generation: generated.provider,
       resolvedQuery: searchQuery !== qTrimmed ? searchQuery : undefined,

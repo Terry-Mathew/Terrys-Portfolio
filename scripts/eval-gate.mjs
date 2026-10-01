@@ -61,19 +61,21 @@ export function scoreCase(c, result) {
   // as if it did produced a "the vector index is probably empty" warning on
   // healthy runs. Two cases where static is the correct answer:
   //
-  //  - An out-of-scope question. "Are you single" should match nothing, so no
-  //    live method contributes and the run is reported as static. The model
-  //    then deflects from NO_CONTEXT, which is the intended behaviour.
-  //  - A KV retrieval-cache hit. `retrieveVector` returns early on a cache hit
-  //    and never calls Vectorize at all, so a cached question has no live
-  //    vector or BM25 contribution to report even though the index is
-  //    perfectly healthy.
+  //  - An out-of-scope question. "Are you single" should match nothing, so
+  //    no method contributes and the run is reported as static. The model then
+  //    deflects from NO_CONTEXT, which is the intended behaviour.
+  //  - A cache hit. A replayed answer says where the result came from last
+  //    time, not what this turn's index is doing, so it is no evidence either
+  //    way. This was the case that actually fired: the server reported
+  //    `static/openrouter` on a fully working index, twice on one question
+  //    minutes apart, and the availability dot said "Limited mode".
   //
-  // So this only flags a retrieval case that ran live and still found nothing
-  // outside the hand-written keyword table — which is the actual fault.
+  // So this only flags a retrieval case that ran live, found nothing outside
+  // the hand-written keyword table, and was not replayed — the actual fault.
   const expectsRetrieval =
     (c.category ?? (c.requires?.length ? "retrieval" : "behaviour")) === "retrieval";
-  if (result.meta?.retrievalMode === "static" && expectsRetrieval && !result.meta?.cached) {
+  const servedFromCache = result.meta?.cached || result.meta?.answerCached;
+  if (result.meta?.retrievalMode === "static" && expectsRetrieval && !servedFromCache) {
     problems.push(content("DEGRADED: static fallback, not vector retrieval"));
   }
 

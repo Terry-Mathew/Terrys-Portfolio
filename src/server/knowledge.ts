@@ -17,7 +17,26 @@ export type RetrievalResult = {
   title: string;
   content: string;
   score: number;
-  source: "static" | "vector" | "cache" | "bm25";
+  /**
+   * Where this result came from, and it is not a synonym for "was it a cache
+   * hit".
+   *
+   * A retrieval-cache hit is still a vector result — the query was run, by an
+   * earlier turn, against the same index. Overwriting the source with "cache"
+   * destroyed that fact, and the only way a consumer could then tell a healthy
+   * cached retrieval from a genuine fallback to the keyword table was that the
+   * first was fast. So a deployment check reading `static` on a fully working
+   * index was indistinguishable from a real outage, and the availability dot
+   * said "Limited mode" while answers were perfectly good.
+   *
+   * Cache provenance belongs in `fromCache`, where it can be reported without
+   * erasing what produced the result. The two are now independent: any
+   * combination of source and fromCache is meaningful.
+   */
+  source: "static" | "vector" | "bm25";
+  /** True when this result was replayed from the KV retrieval cache rather
+   *  than re-queried this turn. False or absent means it was computed live. */
+  fromCache?: boolean;
 };
 
 type Env = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">>;
@@ -175,9 +194,24 @@ export async function retrieveVector(
   const cacheKey = `rag:v${config.corpusVersion}:${hashString(question.toLowerCase().trim())}`;
 
   // 1. Check semantic cache (KV)
-  const cached = (await env.CACHE.get(cacheKey, "json")) as RetrievalResult[] | null;
+  //
+  // `fromCache: true` records where the result came from; `source` keeps the
+  // provenance of the query that produced it, which is always vector for this
+  // function. The normalisation matters: entries written before `fromCache`
+  // existed have `source: "cache"` on disk for up to `cacheTTL`, and reading
+  // one verbatim would put a value back into `source` that is no longer a
+  // member of the union — silently reintroducing exactly the bug this removes.
+  const cached = (await env.CACHE.get(cacheKey, "json")) as
+    | (RetrievalResult & {
+        source?: string;
+      })[]
+    | null;
   if (cached) {
-    return cached.map((r) => ({ ...r, source: "cache" }));
+    return cached.map((r) => ({
+      ...r,
+      source: "vector" as const,
+      fromCache: true,
+    }));
   }
 
   // 2. Generate query embedding via Workers AI

@@ -14,12 +14,13 @@
     "verify:models": "node scripts/verify-models.mjs",
     "test:notify": "node --test scripts/notify-test.mjs",
     "test:history": "node --test scripts/history-test.mjs",
-    "test": "npm run test:notify && npm run test:history && npm run test:retrieval && npm run test:cache && npm run test:gate && npm run test:pipeline",
+    "test": "npm run test:notify && npm run test:history && npm run test:retrieval && npm run test:cache && npm run test:gate && npm run test:provenance && npm run test:pipeline",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test:retrieval": "node --test scripts/retrieval-test.mjs",
     "test:cache": "node --test scripts/cache-test.mjs",
     "test:gate": "node --test scripts/eval-gate-test.mjs",
+    "test:provenance": "node --test scripts/retrieval-provenance-test.mjs",
     "test:pipeline": "node --test scripts/pipeline-test.mjs"
   },
   "overrides": {

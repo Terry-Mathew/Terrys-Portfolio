@@ -12,10 +12,12 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import ts from "typescript";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const esbuild = join(root, "node_modules/.bin/esbuild");
@@ -23,6 +25,7 @@ const outDir = mkdtempSync(join(tmpdir(), "notify-"));
 
 let guard;
 let tools;
+let chat;
 
 before(() => {
   // Stubs so chat-tools loads without dragging in the Worker bindings and
@@ -69,6 +72,7 @@ before(() => {
   globalThis.__notifyPaths = {
     guard: build("contact-guard.ts", "contact-guard.mjs"),
     tools: build("chat-tools.ts", "chat-tools.mjs"),
+    chat: join(outDir, "chat-promise.mjs"),
   };
 });
 
@@ -79,6 +83,25 @@ test("modules transpile and load", async () => {
   assert.equal(typeof guard.validateContactEmail, "function");
   assert.equal(typeof guard.validateContactPhone, "function");
   assert.equal(typeof tools.runToolCall, "function");
+});
+
+// The detector is a pure predicate with no dependencies, so it is lifted out of
+// chat.ts rather than bundling the whole server to reach it.
+test("the handoff detector is a pure function of the answer", async () => {
+  const src = readFileSync(join(root, "src", "server", "chat.ts"), "utf8");
+  const start = src.indexOf("const HANDOFF_CLAIM");
+  const end = src.indexOf("export const isChatCancelled");
+  assert.ok(start > -1 && end > start, "HANDOFF_CLAIM not found in chat.ts");
+  const snippet = src.slice(start, end);
+  // Still TypeScript — it carries a parameter type — so it goes through the
+  // compiler rather than being written out as JavaScript.
+  const { outputText } = ts.transpileModule(snippet, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  });
+  const file = join(outDir, "chat-promise.mjs");
+  writeFileSync(file, outputText);
+  chat = await import(pathToFileURL(file).href);
+  assert.equal(typeof chat.promisesHandoff, "function");
 });
 
 const corpus = (content) => guard.buildUserCorpus([{ role: "user", content }]);
@@ -483,4 +506,55 @@ test("two numbers for one person are two leads, not a duplicate", async () => {
     "hi, jane@realco.io, my number is 7022446269",
   );
   assert.equal(two.pushed, true, "a different number is a different lead");
+});
+
+// --- a promised handoff with nothing behind it --------------------------------
+//
+// The first real lead was lost here. The visitor gave a name, a number, a role
+// and an address, the chatbot said "Done. Terry will reach out.", and no
+// notification ever arrived. The model had written that sentence as ordinary
+// text without calling the tool, and nothing in the pipeline checked.
+
+test("the detector recognises the promises the model actually makes", () => {
+  const claims = [
+    "Done. Terry will reach out.",
+    "I'll let Terry know you'd like him to call.",
+    "I'll pass that along to Terry.",
+    "Terry will get in touch.",
+    "I'll forward your details.",
+    "I've noted it and Terry will be in touch.",
+    "He'll call you back.",
+    "Got it — Terry will call you.",
+  ];
+  for (const answer of claims) {
+    assert.equal(chat.promisesHandoff(answer), true, answer);
+  }
+});
+
+test("the detector does not fire on ordinary answers", () => {
+  const plain = [
+    "Terry is currently Senior Data Product Manager for Partner Analytics at Oracle.",
+    "I'm currently Senior Data Product Manager for Partner Analytics at Oracle.",
+    "He led a 20-person EMEA operations team handling 20,000 tickets a quarter.",
+    "You can reach him at terry.perangat@gmail.com.",
+    "I can't call anyone, but I can pass a message along if you give me an email.",
+    "That's outside what this portfolio chatbot covers.",
+    "",
+  ];
+  for (const answer of plain) {
+    assert.equal(chat.promisesHandoff(answer), false, answer);
+  }
+});
+
+test("the detector ignores the answer a capture failure produces", () => {
+  // A refusal must not read as a promise. If it did, every guarded rejection
+  // would log as a lost lead and bury the real ones.
+  for (const answer of [
+    "Contact recorded.",
+    "Contact noted.",
+    "Contact already recorded.",
+    "The phone number was rejected. Ask the visitor to type it themselves.",
+  ]) {
+    assert.equal(chat.promisesHandoff(answer), false, answer);
+  }
 });

@@ -79,6 +79,13 @@ export type ChatReply = {
      * search. Present so that nothing downstream has to guess.
      */
     retrieval?: RetrievalHealth;
+    /** True when a contact was recorded and the notice went out. */
+    contactCaptured?: boolean;
+    /**
+     * The answer told the visitor their details were passed on, and no tool call
+     * backs that. A lead was promised and lost.
+     */
+    handoffBroken?: boolean;
     /** Which provider actually produced the reply: "workers-ai", "groq",
      *  "anthropic", or "none" when generation was unavailable. */
     generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
@@ -107,6 +114,20 @@ export class ChatCancelled extends Error {
     super("chat cancelled");
     this.name = "ChatCancelled";
   }
+}
+
+/**
+ * Does an answer tell the visitor their details were passed on?
+ *
+ * Only used to detect a promise with nothing behind it, so it leans towards
+ * matching too much rather than too little: a false positive costs one warning
+ * line, a false negative costs a lead.
+ */
+const HANDOFF_CLAIM =
+  /\b(?:terry\s+(?:will|can)['’]?ll?\s+(?:reach|get|come|be in touch)|will\s+(?:reach\s+out|get\s+in\s+touch|be\s+in\s+touch)|reach(?:es)?\s+out\s+to\s+you|get\s+back\s+to\s+you|he['’]?ll\s+(?:get\s+in\s+touch|reach\s+out|call)|i['’]?ll\s+(?:pass|let|forward|relay|note|flag)|pass(?:ed|ing)?\s+(?:that|this|it)\s+(?:on|along|through)|will\s+call\s+you|give\s+you\s+a\s+call)/i;
+
+export function promisesHandoff(answer: string): boolean {
+  return HANDOFF_CLAIM.test(answer);
 }
 
 export const isChatCancelled = (e: unknown): e is ChatCancelled =>
@@ -515,7 +536,13 @@ async function generateWithTools(
   ip: string,
   onDelta?: (text: string) => void,
   signal?: AbortSignal,
-): Promise<{ text: string; provider: "openrouter" | "groq" | "none" } | null> {
+): Promise<{
+  text: string;
+  provider: "openrouter" | "groq" | "none";
+  /** True only when a contact was recorded AND the notice went out. */
+  contactCaptured: boolean;
+} | null> {
+  let contactCaptured = false;
   if (!CHAT_CONFIG.useTools || !CHAT_CONFIG.notifications.enabled) return null;
 
   // A list, not a single pick. The previous version used a ternary, so an
@@ -606,7 +633,7 @@ async function generateWithTools(
         // Tools are off this path, so any deltas were already flushed by the
         // streaming path; emit the whole answer for consistency.
         onDelta?.(content);
-        return { text: content, provider: tier.provider };
+        return { text: content, provider: tier.provider, contactCaptured };
       }
 
       messages.push({
@@ -620,7 +647,17 @@ async function generateWithTools(
       });
 
       for (const call of calls) {
-        const { output } = await runToolCall(call, messages, env, ip);
+        const { output, pushed } = await runToolCall(call, messages, env, ip);
+        // Previously the result was thrown away unread. That is why a lead
+        // capture could fail with nothing in the log to say so: the tool ran,
+        // the guard refused, and the only symptom was the visitor being told
+        // Terry had been notified. Never log the arguments — they carry the
+        // visitor's contact details.
+        console.info(
+          `[tools] ${call.name} ok=${output["success"] === true} pushed=${pushed}` +
+            (output["error"] ? ` (${String(output["error"]).slice(0, 120)})` : ""),
+        );
+        if (call.name === "record_user_details" && pushed) contactCaptured = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(output) });
       }
     }
@@ -1193,6 +1230,13 @@ export async function runChat(
           docIds?: string[];
           retrievalMode?: "static" | "vector" | "hybrid";
           retrieval?: RetrievalHealth;
+          /** True when a contact was recorded and the notice went out. */
+          contactCaptured?: boolean;
+          /**
+           * The answer told the visitor their details were passed on, and no tool call
+           * backs that. A lead was promised and lost.
+           */
+          handoffBroken?: boolean;
           generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
         };
         // Replay the real metadata and sources. Reporting a hit as
@@ -1330,6 +1374,7 @@ export async function runChat(
   let generated: {
     text: string;
     provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
+    contactCaptured?: boolean;
   } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta, signal);
   if (!generated) {
     generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta, signal);
@@ -1345,6 +1390,27 @@ export async function runChat(
   // rather than a dead chatbot. Extractive rather than generated, and labelled,
   // so it is never mistaken for something the model wrote.
   const finalAnswer = unanswered ? extractiveAnswer(results, searchQuery) : generated.text;
+
+  // A promised handoff that never happened.
+  //
+  // The model can write "Done. Terry will reach out." as ordinary text without
+  // ever calling record_user_details. Nothing checked. The visitor believes
+  // their details were passed on, walks away, and Terry is never told — the
+  // failure is invisible from the inside too, because a successful push logs
+  // nothing and the tool result was previously discarded unread.
+  //
+  // This cannot be prevented at generation time, only detected. So it is
+  // detected, logged, and reported on the reply, which is what lets the eval
+  // count it and the deploy notice stay honest.
+  const promisedHandoff = promisesHandoff(finalAnswer);
+  const handoffBroken = promisedHandoff && !generated.contactCaptured;
+  if (handoffBroken) {
+    console.warn(
+      "[tools] the answer promises a callback but no contact was captured — " +
+        "the model announced a handoff it did not perform. Answer: " +
+        finalAnswer.slice(0, 160),
+    );
+  }
 
   // Only a real generation is worth remembering. Storing the extractive
   // fallback would pin one bad minute — every tier rate-limited, say — into
@@ -1387,6 +1453,10 @@ export async function runChat(
       // still a real answer. Both are reported rather than thrown.
       degraded: generated.provider === "none" || !retrieval.healthy,
       retrieval,
+      /** True when a contact was recorded and the notice went out. */
+      contactCaptured: generated.contactCaptured === true,
+      /** The answer promised a callback that no tool call backs. */
+      handoffBroken,
       timings: {
         retrievalMs,
         generationMs,

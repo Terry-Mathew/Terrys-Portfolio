@@ -311,6 +311,16 @@ export async function runToolCall(
         )
       : false;
 
+    // Logged on success as well as failure. `sendPush` only ever logged its
+    // failures, so a working capture and a capture that never happened looked
+    // identical in the Worker log — which is exactly what made this hard to
+    // diagnose. The arguments are never logged: they are the visitor's details.
+    console.info(
+      pushed
+        ? "[push] contact notification sent"
+        : "[push] contact recorded but NOT notified — sendPush did not confirm",
+    );
+
     return {
       output: pushed
         ? { success: true, message: "Contact recorded and Terry has been notified." }

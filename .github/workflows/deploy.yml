@@ -153,11 +153,23 @@ jobs:
           sleep 10
           # Update this list when the stream contract changes, or every future
           # deploy will fail here.
-          MARKERS='"type":"started" "type":"phase" "type":"sources" "type":"done" "timings" "provider"'
+          MARKERS='"type":"started" "type":"phase" "type":"sources" "type":"delta" "type":"done" "timings" "provider"'
           for i in 1 2 3 4 5; do
+            # The run id makes the question unique, so the answer cache cannot
+            # already hold it.
+            #
+            # This is not a micro-optimisation. An answer-cache hit returns
+            # before `runChat` emits any phase, so a cached reply carries
+            # `started`, `sources` and `done` but no `phase` and no `delta`.
+            # This check first shipped asking the fixed question "ping", which
+            # was cached by an earlier run, so it failed a perfectly healthy
+            # deploy and blocked the four verification steps behind it. Asking a
+            # question that cannot be cached exercises the live path, which is
+            # the path whose contract actually needs proving.
             body=$(curl -sS -X POST https://terrymathew.com/api/chat \
               -H 'content-type: application/json' \
-              -d '{"q":"ping","history":[]}' --max-time 30 || true)
+              -d "{\"q\":\"deploy contract check ${GITHUB_RUN_ID}\",\"history\":[]}" \
+              --max-time 30 || true)
             missing=""
             for m in $MARKERS; do
               echo "$body" | grep -qF -- "$m" || missing="$missing $m"

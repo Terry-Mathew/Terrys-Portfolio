@@ -55,26 +55,40 @@ test("the live-version check accepts more than the string 'type'", () => {
   );
 });
 
-test("the live-version check requires the current stream contract", () => {
-  // These are the markers the version-5 build added. An older build fails the
-  // first four and cannot get through.
+test("the check names the markers it is looking for in one place", () => {
+  // Six markers copied across the file drift. One variable with a comment
+  // saying to update it is the cheapest way to keep them honest.
+  assert.match(verify, /MARKERS=/, "the markers should be declared once");
+  assert.match(verify, /Update this list when the stream contract changes/);
+});
+
+test("the contract check asks a question that cannot already be cached", () => {
+  // An answer-cache hit returns before runChat emits any phase, so a cached
+  // reply has no `phase` and no `delta`. This check first shipped asking the
+  // fixed question "ping", which an earlier run had already cached, so it
+  // failed a healthy deploy and skipped the ingest, probe and eval behind it.
+  assert.match(
+    verify,
+    /GITHUB_RUN_ID/,
+    "the question must be unique per run so the answer cache cannot serve it",
+  );
+  assert.match(verify, /history/);
+});
+
+test("the contract check requires the markers a live streamed reply always has", () => {
+  // `phase` and `delta` are only safe to require because the question above
+  // cannot be a cache hit. If that ever changes, these two must move out.
   for (const marker of [
     '"type":"started"',
     '"type":"phase"',
     '"type":"sources"',
+    '"type":"delta"',
     '"type":"done"',
     '"timings"',
     '"provider"',
   ]) {
     assert.ok(verify.includes(marker), `the contract check is missing ${marker}`);
   }
-});
-
-test("the check names the markers it is looking for in one place", () => {
-  // Six markers copied across the file drift. One variable with a comment
-  // saying to update it is the cheapest way to keep them honest.
-  assert.match(verify, /MARKERS=/, "the markers should be declared once");
-  assert.match(verify, /Update this list when the stream contract changes/);
 });
 
 test("a contract mismatch fails the deploy", () => {

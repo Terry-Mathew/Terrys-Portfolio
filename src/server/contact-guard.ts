@@ -161,10 +161,87 @@ const PHONE_RUN_RE = /\+?\d[\d\s().-]{5,}\d/g;
 /** Five or more of the same digit in a row is a placeholder, not a number. */
 const REPEATED_DIGITS_RE = /(\d)\1{4,}/;
 
+/**
+ * Do two digit strings describe the same number?
+ *
+ * Exact equality is not good enough, and the first version used it. Models
+ * normalise what visitors type, and the normalisations are real and common:
+ *
+ *   +91 70224 46269   ->  +917022446269      (spaces dropped)
+ *   07700 900123       ->  +44 7700 900123   (country code added)
+ *   07700900123        ->  447700900123      (trunk zero became a country code)
+ *   7022446269 ext 214 ->  7022446269        (extension dropped)
+ *
+ * Every one of those is the visitor's number, and every one was refused under
+ * exact matching. The cost of being wrong is the whole reason the guard exists:
+ * a lead that is thrown away is a lead that never arrives.
+ *
+ * So the rule allows a short difference at either end, up to three digits —
+ * the length of a country code — and requires at least nine shared digits, so
+ * a genuinely different number still fails.
+ *
+ * The asymmetry is deliberate and is the safety margin:
+ *
+ *   - Extra digits the VISITOR wrote may be at either end. The model may
+ *     reasonably record the shorter form.
+ *   - Extra digits the MODEL wrote may only be at the front, and only three of
+ *     them, because that is where a country code goes. Anything the model bolts
+ *     on at the end is invented digits, and Terry dials what the model says.
+ *
+ * The trade this leaves: a model that adds a *wrong* country code to a local
+ * number is indistinguishable from one that adds the right one. A visitor who
+ * types a local number and gets it dropped would lose the lead outright, so the
+ * lenient reading wins.
+ */
+const digitsOf = (value: string): string => value.replace(/\D/g, "");
+
+const MIN_AGREEING_DIGITS = 9;
+const MAX_EXTRA_DIGITS = 3;
+
+/** How many digits two numbers share, counting back from the end. */
+function commonSuffix(a: string, b: string): number {
+  let n = 0;
+  while (n < a.length && n < b.length && a[a.length - 1 - n] === b[b.length - 1 - n]) n++;
+  return n;
+}
+
+function numbersAgree(candidate: string, seen: string): boolean {
+  if (candidate === seen) return true;
+
+  // The visitor wrote more than the model recorded — a country code or an
+  // extension may have been dropped. Either end is fine, but the result still
+  // has to be a length a person can dial: a model that truncates 7022446269 to
+  // 70224462 has made a different number, and it looks like a dropped
+  // extension only because extensions are also short.
+  if (seen.length > candidate.length && seen.length - candidate.length <= MAX_EXTRA_DIGITS) {
+    if (
+      candidate.length >= MIN_AGREEING_DIGITS &&
+      (seen.startsWith(candidate) || seen.endsWith(candidate))
+    ) {
+      return true;
+    }
+  }
+
+  // The model wrote more than the visitor did: only a country code at the front.
+  if (
+    candidate.length > seen.length &&
+    candidate.length - seen.length <= MAX_EXTRA_DIGITS &&
+    candidate.endsWith(seen)
+  ) {
+    return true;
+  }
+
+  // A trunk zero and a country code line up at neither end — "07700900123"
+  // against "447700900123" agree on ten digits and differ only at the front.
+  // That is where they have to be compared.
+  if (commonSuffix(candidate, seen) >= MIN_AGREEING_DIGITS) return true;
+
+  return false;
+}
+
+/** Adding one moves up the keypad; adding nine moves down. */
 const KEYPAD_ASCENDING_STEP = 1;
 const KEYPAD_DESCENDING_STEP = 9;
-
-const digitsOf = (value: string): string => value.replace(/\D/g, "");
 
 function isPlaceholderNumber(digits: string): boolean {
   if (REPEATED_DIGITS_RE.test(digits)) return true;
@@ -231,7 +308,7 @@ export function validateContactPhone(phone: unknown, userCorpus: string): GuardR
   if (isPlaceholderNumber(digits)) {
     return { ok: false, reason: "phone looks like a placeholder number" };
   }
-  if (!corpusPhoneNumbers(userCorpus).has(digits)) {
+  if (![...corpusPhoneNumbers(userCorpus)].some((seen) => numbersAgree(digits, seen))) {
     return { ok: false, reason: "phone was not provided by the visitor in this conversation" };
   }
 

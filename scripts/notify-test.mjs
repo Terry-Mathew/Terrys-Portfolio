@@ -128,6 +128,58 @@ test("rejects a number invented for a visitor who gave none", () => {
   );
 });
 
+// --- how models rewrite what people type -------------------------------------
+//
+// The first version compared digit strings for equality, and every one of these
+// was the visitor's own number being refused. A model does not copy a number
+// out of a sentence; it normalises it. Refusing the normalisations loses the
+// lead, which is the exact failure this guard was written to avoid.
+
+test("a country code the model added is accepted", () => {
+  // The visitor gave a local number. The model supplied the country.
+  const c = corpus("my number is 7022446269");
+  assert.equal(guard.validateContactPhone("+91 7022446269", c).ok, true);
+});
+
+test("a trunk zero and a country code still count as the same number", () => {
+  // They line up at neither end, only where they agree.
+  const c = corpus("07700 900123");
+  assert.equal(guard.validateContactPhone("+44 7700 900123", c).ok, true);
+});
+
+test("an extension the model dropped is accepted", () => {
+  const c = corpus("7022446269 ext 214");
+  assert.equal(guard.validateContactPhone("7022446269", c).ok, true);
+});
+
+test("grouping the model introduced is accepted", () => {
+  const c = corpus("7022446269");
+  for (const form of ["(91) 702-244-6269", "+91.702.244.6269", "91 702 244 6269"]) {
+    assert.equal(guard.validateContactPhone(form, c).ok, true, form);
+  }
+});
+
+test("digits the model invented at the end are refused", () => {
+  // The asymmetry that keeps this safe: a country code goes at the front, so
+  // anything appended at the end is the model making digits up, and Terry dials
+  // what it says.
+  const c = corpus("7022446269");
+  assert.equal(guard.validateContactPhone("7022446269999", c).ok, false);
+});
+
+test("a wholly different number is still refused", () => {
+  const c = corpus("7022446269");
+  for (const bad of ["9876504321", "5551234567", "70224462"]) {
+    assert.equal(guard.validateContactPhone(bad, c).ok, false, bad);
+  }
+});
+
+test("a number sharing only a few digits is refused", () => {
+  // Nine digits have to agree. Eight is a coincidence, not an identity.
+  const c = corpus("7022446269");
+  assert.equal(guard.validateContactPhone("9917022446", c).ok, false);
+});
+
 test("phone is optional", () => {
   // Most visitors give an email and nothing else. Rejecting those would throw
   // away the leads that already work.

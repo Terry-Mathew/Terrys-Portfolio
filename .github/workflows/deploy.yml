@@ -97,48 +97,85 @@ jobs:
 
       - name: Notify (deploy succeeded)
         # Only reached when every step above passed, including the live
-        # /api/chat check. GitHub `secrets` and `wrangler secret` are different
-        # stores, so the Worker needs these set separately via
-        # `wrangler secret put PUSHOVER_TOKEN` / `PUSHOVER_USER`.
+        # /api/chat contract check.
         #
-        # A push failure here must not fail the deploy — the site is already
-        # live by this point.
+        # A push failure must not fail the deploy — the site is already live by
+        # this point. But it must not be invisible either.
+        #
+        # This used to run `set +e`, curl, and print the response without ever
+        # reading it. A wrong token produced `{"token":"invalid"}` in the log, a
+        # green step, and no notification — so deploys have been finishing
+        # silently for some time and nothing in the run said so. Pushover
+        # answers `{"status":1,...}` on success and `{"status":0,...}` with an
+        # `errors` array otherwise; reading that one field is the whole fix.
         if: always() && success()
         run: |
           set +e
-          curl -sS -X POST https://api.pushover.net/1/messages.json \
-            --data-urlencode "token=${{ secrets.PUSHOVER_TOKEN }}" \
-            --data-urlencode "user=${{ secrets.PUSHOVER_USER }}" \
+          if [ -z "$PUSHOVER_TOKEN" ] || [ -z "$PUSHOVER_USER" ]; then
+            echo "::warning::PUSHOVER_TOKEN or PUSHOVER_USER is not set as a GitHub environment secret, so this deploy produced no notification. Set it with: gh secret set PUSHOVER_TOKEN --env production"
+            exit 0
+          fi
+          resp=$(curl -sS -X POST https://api.pushover.net/1/messages.json \
+            --data-urlencode "token=$PUSHOVER_TOKEN" \
+            --data-urlencode "user=$PUSHOVER_USER" \
             --data-urlencode "title=Deploy succeeded" \
             --data-urlencode "message=terrymathew.com — commit ${GITHUB_SHA:0:7} is live. Workflow: ${GITHUB_RUN_ID}" \
             --data-urlencode "url=https://github.com/Terry-Mathew/Terrys-Portfolio/commit/${GITHUB_SHA}" \
             --data-urlencode "url_title=View commit" \
-            --max-time 10
-          echo ""
+            --max-time 10)
+          echo "pushover: $resp"
+          if echo "$resp" | grep -qF '"status":1'; then
+            echo "::notice::Deploy notification sent."
+          else
+            echo "::warning::Deploy succeeded, but NO notification was sent. Pushover answered: $resp"
+          fi
         env:
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
 
       - name: Verify the deployed version is live
-        # Proves the code that was just pushed is the code serving traffic.
-        # Without this, an unpromoted upload is indistinguishable from success.
+        # Proves the code that was just pushed is the code serving traffic, and
+        # that it is the CURRENT code.
+        #
+        # Without the first half, an unpromoted upload is indistinguishable from
+        # success. Without the second, a stale Worker version passes while the
+        # previous release serves traffic — which is what happened: this step
+        # used to accept any response containing the string `"type"`, and every
+        # build of this endpoint has emitted that since the route existed. It
+        # reported success while the old build was live, and the fingerprint had
+        # to be checked by hand from a terminal.
+        #
+        # The markers are the current stream contract: the four SSE event names
+        # and the two fields the widget reads off `done`. An older build fails
+        # the first four and cannot get through.
         run: |
           set -euo pipefail
           sleep 10
+          # Update this list when the stream contract changes, or every future
+          # deploy will fail here.
+          MARKERS='"type":"started" "type":"phase" "type":"sources" "type":"done" "timings" "provider"'
           for i in 1 2 3 4 5; do
             body=$(curl -sS -X POST https://terrymathew.com/api/chat \
               -H 'content-type: application/json' \
               -d '{"q":"ping","history":[]}' --max-time 30 || true)
-            if echo "$body" | grep -q '"type"'; then
-              echo "Live endpoint responding."
+            missing=""
+            for m in $MARKERS; do
+              echo "$body" | grep -qF -- "$m" || missing="$missing $m"
+            done
+            if [ -z "$missing" ]; then
+              echo "Live endpoint serving the current build."
               echo "$body" | head -c 200
               exit 0
             fi
-            echo "Attempt $i: no response, retrying in 10s…"
+            if [ "$i" = 5 ]; then
+              echo "::error::The live endpoint responded but does not match the current stream contract. Missing:$missing"
+              echo "::error::This means the upload was not promoted, or a previous Worker version is still serving traffic."
+              echo "$body" | head -c 400
+              exit 1
+            fi
+            echo "Attempt $i: contract mismatch (missing:$missing), retrying in 10s…"
             sleep 10
           done
-          echo "::error::Deployed site is not responding to /api/chat."
-          exit 1
 
       - name: Ingest the knowledge corpus
         # The corpus is bundled at build time, so it can only be loaded AFTER
@@ -179,13 +216,17 @@ jobs:
         run: |
           mode=""
           gen=""
+          deg=""
+          health=""
           for i in 1 2 3; do
             body=$(curl -sS -X POST https://terrymathew.com/api/chat \
               -H 'content-type: application/json' \
               -d '{"q":"what is settle","history":[]}' --max-time 45 || true)
-            if echo "$body" | grep -q '"type"'; then
+            if echo "$body" | grep -qF '"type":"done"'; then
               mode=$(echo "$body" | grep -oE '"retrievalMode":"[a-z]+"' | head -1 | cut -d'"' -f4 || true)
               gen=$(echo "$body" | grep -oE '"generation":"[a-z-]+"' | head -1 | cut -d'"' -f4 || true)
+              deg=$(echo "$body" | grep -oE '"degraded":(true|false)' | head -1 | cut -d: -f2 || true)
+              health=$(echo "$body" | grep -oE '"health":\{[^}]*\}' | head -1 || true)
               [ -n "$mode" ] && break
             fi
             echo "attempt $i: no usable response, retrying in 10s"
@@ -195,9 +236,18 @@ jobs:
             echo "::error::No response from /api/chat after 3 attempts. Cannot confirm retrieval."
             exit 1
           fi
-          echo "retrieval=${mode} generation=${gen:-none}"
+          echo "retrieval=${mode} generation=${gen:-none} degraded=${deg:-unknown}"
+          [ -n "$health" ] && echo "retrieval health: $health"
           if [ "$mode" = "static" ]; then
             echo "::error::Retrieval fell back to static — the vector index is not serving. Ingestion is the usual cause."
+            exit 1
+          fi
+          # The probe runs immediately after ingestion, so a degraded answer here
+          # is a deployment fault rather than an unlucky visitor. Blocking it is
+          # what stops a broken release reaching people quietly — previously
+          # this step passed on a run where the chatbot was already degraded.
+          if [ "$deg" = "true" ]; then
+            echo "::error::The deployed chatbot answered the probe from a fallback: a retrieval method failed, or no model answered. See the retrieval health line above."
             exit 1
           fi
 

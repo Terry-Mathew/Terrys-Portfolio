@@ -5,6 +5,8 @@ import {
   hashString,
   retrieveStatic,
   retrieveHybrid,
+  unrunRetrievalHealth,
+  type RetrievalHealth,
   type RetrievalResult,
 } from "@/server/knowledge";
 import { TOOLS, parseToolCallFromText, runToolCall, type ToolCall } from "@/server/chat-tools";
@@ -46,16 +48,96 @@ export type ChatReply = {
   metadata?: {
     retrievalMode: "static" | "vector" | "hybrid";
     chunksUsed: number;
+    /**
+     * This turn was served from the KV *retrieval* cache — the index was not
+     * re-queried, but the results are the same ones it would have returned.
+     * Distinct from `answerCached`, which means the whole turn was replayed.
+     *
+     * These used to share one flag, and the deployment check that caught the
+     * cache-hit misclassification could not tell them apart: a warm retrieval
+     * cache and a served-from-answer-cache turn looked identical, which is part
+     * of why a healthy index reported itself as a static fallback.
+     */
     cached: boolean;
     turn: number;
+    /** True when the entire reply was replayed from the KV answer cache. */
+    answerCached?: boolean;
     rateLimited?: boolean;
+    /**
+     * Whether this turn was served by a fallback rather than the real pipeline.
+     *
+     * Derived from `retrieval.healthy` and whether a model answered — never from
+     * how many results came back. A question the corpus does not cover returns
+     * nothing, and nothing is the correct answer to it; treating an empty
+     * result set as a fault is what made a healthy chatbot show "Limited mode"
+     * because somebody asked it an out-of-scope question.
+     */
+    degraded?: boolean;
+    /**
+     * Explicit retrieval health for this turn: which live methods ran, which
+     * failed, and whether the empty result was a correct miss or a broken
+     * search. Present so that nothing downstream has to guess.
+     */
+    retrieval?: RetrievalHealth;
     /** Which provider actually produced the reply: "workers-ai", "groq",
      *  "anthropic", or "none" when generation was unavailable. */
     generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
     /** The standalone question retrieval actually ran on, when it was rewritten. */
     resolvedQuery?: string | undefined;
+    /** Wall-clock split of the turn, for the eval harness and Worker logs. */
+    timings?: { retrievalMs: number; generationMs: number; latencyMs: number };
   };
 };
+
+/**
+ * The visitor walked away from this turn.
+ *
+ * This is a distinct outcome from "a provider failed", and the distinction is
+ * load-bearing. Both arrive at the same `catch` inside the provider calls, and
+ * that catch used to return null — which the chain read as "this tier did not
+ * answer, try the next one". So cancelling mid-stream fired a full failover:
+ * the visitor closed the panel, and OpenRouter's aborted request was followed
+ * by a brand new Groq request, billed, that nobody would ever read.
+ *
+ * Throwing this instead unwinds the whole chain, so nothing new starts after
+ * the visitor has left.
+ */
+export class ChatCancelled extends Error {
+  constructor() {
+    super("chat cancelled");
+    this.name = "ChatCancelled";
+  }
+}
+
+export const isChatCancelled = (e: unknown): e is ChatCancelled =>
+  e instanceof ChatCancelled || (e instanceof Error && e.name === "ChatCancelled");
+
+/**
+ * One signal that fires when any input fires.
+ *
+ * Each provider tier already bounds itself with `AbortSignal.timeout`; the
+ * visitor's cancellation has to reach the same fetches without replacing those
+ * bounds. `AbortSignal.any` is used where the runtime provides it and a
+ * hand-rolled controller otherwise — the combination is the only thing that
+ * stops a failover chain, so it must not rest on one runtime feature being
+ * present.
+ */
+export function combineSignals(...signals: (AbortSignal | undefined | null)[]): AbortSignal | null {
+  const live = signals.filter((s): s is AbortSignal => Boolean(s));
+  if (live.length === 0) return null;
+  if (live.length === 1) return live[0]!;
+  if (typeof AbortSignal.any === "function") return AbortSignal.any(live);
+
+  const controller = new AbortController();
+  for (const s of live) {
+    if (s.aborted) {
+      controller.abort(s.reason);
+      break;
+    }
+    s.addEventListener("abort", () => controller.abort(s.reason), { once: true });
+  }
+  return controller.signal;
+}
 
 type RagEnv = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">> & {
   ANTHROPIC_API_KEY?: string;
@@ -171,6 +253,19 @@ HOW TO ANSWER WORK QUESTIONS:
   "I'm excited to" or "It's great that".
 - If the context genuinely does not cover it, say so plainly in one line.
 
+OUTPUT FORMAT — PLAIN CONVERSATIONAL TEXT:
+- Write plain conversational text. Do not use Markdown emphasis: never **bold**,
+  _italic_ or __underline__. The interface renders answers as text, so the
+  markers reach the reader as literal characters.
+- Do not use Markdown link syntax. Never write [label](url). Write the address
+  itself and the interface makes it clickable.
+- No backticks and no code fences.
+- Write contact details naturally, the way a person says them out loud:
+  "terry.perangat@gmail.com" or "linkedin.com/in/terry-mathew". Not as a
+  formatted list, and not wrapped in anything.
+- Do not emit citation markers. See CITATIONS below.
+- Everything else is ordinary prose. Full stops, commas and normal spacing.
+
 CITATIONS:
 - Do NOT write inline markers like [bio] or [experience] in your answer. The
   interface already shows which sections were used, underneath. Repeating it
@@ -285,6 +380,7 @@ async function generateAnswer(
   env: RagEnv | undefined,
   history: Turn[],
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<{
   text: string;
   provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
@@ -319,16 +415,19 @@ async function generateAnswer(
             },
           ],
         }),
-        signal: AbortSignal.timeout(15000),
+        signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.generationTimeoutMs)),
       });
 
       if (response.ok) {
         const data = (await response.json()) as { content: { text: string }[] };
         return { text: data.content[0]?.text || GENERATION_FAILED, provider: "anthropic" };
       }
-      console.warn("Anthropic returned", response.status, "- trying Workers AI.");
+      console.warn("Anthropic returned", response.status, "- trying the next tier.");
     } catch (e) {
-      console.warn("Anthropic API failed, falling back to Workers AI:", e);
+      // A cancelled turn is not an Anthropic outage. Swallowing it here would
+      // start the whole provider chain over for a visitor who already left.
+      if (isChatCancelled(e) || signal?.aborted) throw new ChatCancelled();
+      console.warn("Anthropic API failed, falling through:", e);
     }
   }
 
@@ -367,10 +466,13 @@ async function generateAnswer(
   // Order changed from Workers-AI-first after both free tiers were observed
   // exhausted on the same evening, which put most visitors on the extractive
   // fallback from late afternoon to midnight.
-  const openRouter = await callOpenRouter(messages, env, onDelta);
+  //
+  // A cancelled turn throws out of the first call rather than falling through
+  // to the second — see ChatCancelled.
+  const openRouter = await callOpenRouter(messages, env, onDelta, signal);
   if (openRouter) return { text: openRouter, provider: "openrouter" };
 
-  const groq = await callGroq(messages, env, onDelta);
+  const groq = await callGroq(messages, env, onDelta, signal);
   if (groq) return { text: groq, provider: "groq" };
 
   if (CHAT_CONFIG.useWorkersAiGeneration) {
@@ -402,6 +504,7 @@ async function generateWithTools(
   history: Turn[],
   ip: string,
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<{ text: string; provider: "openrouter" | "groq" | "none" } | null> {
   if (!CHAT_CONFIG.useTools || !CHAT_CONFIG.notifications.enabled) return null;
 
@@ -438,6 +541,7 @@ async function generateWithTools(
 
   for (const tier of tiers) {
     if (!tier.enabled || !tier.key) continue;
+    if (signal?.aborted) throw new ChatCancelled();
 
     for (let iteration = 0; iteration < CHAT_CONFIG.maxToolIterations; iteration++) {
       let reply: OpenAiToolResponse;
@@ -453,7 +557,7 @@ async function generateWithTools(
             max_tokens: 1024,
             temperature: CHAT_CONFIG.temperature,
           }),
-          signal: AbortSignal.timeout(CHAT_CONFIG.toolTimeoutMs),
+          signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.toolTimeoutMs)),
         });
         if (!res.ok) {
           console.warn(
@@ -463,6 +567,10 @@ async function generateWithTools(
         }
         reply = (await res.json()) as OpenAiToolResponse;
       } catch (e) {
+        // `break` here used to be reached by a cancelled fetch too, which moved
+        // the loop to Groq and started a second billed request for a turn the
+        // visitor had already abandoned.
+        if (isChatCancelled(e) || signal?.aborted) throw new ChatCancelled();
         console.warn(`[tools] ${tier.label} call failed:`, e);
         break;
       }
@@ -661,10 +769,20 @@ async function callOpenAiCompatible(
   messages: ChatMessage[],
   env: RagEnv | undefined,
   onDelta: ((text: string) => void) | undefined,
-  opts: { label: string; url: string; key: string | undefined; model: string; timeoutMs: number },
+  opts: {
+    label: string;
+    url: string;
+    key: string | undefined;
+    model: string;
+    timeoutMs: number;
+    signal?: AbortSignal | undefined;
+  },
 ): Promise<string | null> {
   const { label, url, key, model } = opts;
   if (!key) return null;
+  // Checked before the request rather than only after it fails: the point is to
+  // avoid spending the call at all once the visitor is gone.
+  if (opts.signal?.aborted) throw new ChatCancelled();
 
   const body = {
     model,
@@ -692,7 +810,9 @@ async function callOpenAiCompatible(
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(opts.timeoutMs),
+      // The visitor's cancellation and this tier's own budget, as one signal.
+      // Either one ends the fetch; the caller decides what that means.
+      signal: combineSignals(opts.signal, AbortSignal.timeout(opts.timeoutMs)),
     });
 
     if (!res.ok) {
@@ -719,6 +839,12 @@ async function callOpenAiCompatible(
     }
     return data.choices?.[0]?.message?.content ?? null;
   } catch (e) {
+    // An aborted fetch is indistinguishable from a failed one here, and this
+    // catch used to return null for both — which read as "this tier did not
+    // answer" and started the next provider. Cancelling a turn therefore spent
+    // a full failover, and any text already streamed to the visitor was
+    // replaced by a second, different answer they were no longer reading.
+    if (isChatCancelled(e) || opts.signal?.aborted) throw new ChatCancelled();
     console.warn(`[gen] ${label} failed:`, e);
     return null;
   }
@@ -735,6 +861,7 @@ async function callOpenRouter(
   messages: ChatMessage[],
   env: RagEnv | undefined,
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   if (!CHAT_CONFIG.useOpenRouter || !env?.OPENROUTER_API_KEY) return null;
   return callOpenAiCompatible(messages, env, onDelta, {
@@ -743,6 +870,7 @@ async function callOpenRouter(
     key: env.OPENROUTER_API_KEY,
     model: CHAT_CONFIG.openRouterModel,
     timeoutMs: CHAT_CONFIG.generationTimeoutMs,
+    signal,
   });
 }
 
@@ -750,6 +878,7 @@ async function callGroq(
   messages: ChatMessage[],
   env: RagEnv | undefined,
   onDelta?: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   if (!CHAT_CONFIG.useGroq) return null;
   return callOpenAiCompatible(messages, env, onDelta, {
@@ -758,6 +887,7 @@ async function callGroq(
     key: env?.GROQ_API_KEY,
     model: CHAT_CONFIG.groqModel,
     timeoutMs: CHAT_CONFIG.generationTimeoutMs,
+    signal,
   });
 }
 
@@ -783,6 +913,7 @@ async function condenseQuestion(
   question: string,
   history: Turn[],
   env: RagEnv | undefined,
+  signal?: AbortSignal,
 ): Promise<string> {
   if (history.length === 0) return question;
 
@@ -837,7 +968,7 @@ async function condenseQuestion(
           max_tokens: 64,
           temperature: 0,
         }),
-        signal: AbortSignal.timeout(CHAT_CONFIG.condenseTimeoutMs),
+        signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.condenseTimeoutMs)),
       });
       if (!res.ok) {
         console.warn(`[condense] ${tier.label} returned ${res.status}`);
@@ -847,6 +978,10 @@ async function condenseQuestion(
       const rewritten = accept(data.choices?.[0]?.message?.content);
       if (rewritten) return rewritten;
     } catch (e) {
+      // Condensing is a paid call that exists only to improve retrieval. A
+      // cancelled turn must not fall through to the next tier here either —
+      // retrieval would then run against a question the visitor has abandoned.
+      if (isChatCancelled(e) || signal?.aborted) throw new ChatCancelled();
       console.warn(`[condense] ${tier.label} failed:`, e);
     }
   }
@@ -920,6 +1055,11 @@ export type ChatPhase = { phase: "searching" } | { phase: "retrieved"; count: nu
  * stream tokens, so progress is reported at the boundaries that genuinely
  * exist — before retrieval, and after — rather than faking a token-by-token
  * reveal that never happened.
+ *
+ * `signal` is the visitor's connection. It is threaded into every outbound
+ * provider call, and a cancelled turn throws {@link ChatCancelled} out of the
+ * chain rather than falling through to the next tier. Callers that do not care
+ * (the server function) simply never pass it.
  */
 export async function runChat(
   q: string,
@@ -932,15 +1072,27 @@ export async function runChat(
    *  inline citation markers while tokens stream in — a marker can be split
    *  across deltas, so it cannot be removed after the fact. */
   onSources?: (sources: string[], docIds: string[]) => void,
+  signal?: AbortSignal,
 ): Promise<ChatReply> {
   const qTrimmed = q.trim();
   const ip = request ? clientIp(request, resolved) : "unknown";
+  const startedAt = Date.now();
 
   if (!qTrimmed) {
     return {
       answer: "Ask me about Terry's work, experience, projects or contact.",
       sources: [],
-      metadata: { retrievalMode: "static", chunksUsed: 0, cached: false, turn: history.length },
+      metadata: {
+        retrievalMode: "static",
+        chunksUsed: 0,
+        cached: false,
+        turn: history.length,
+        // These replies are returned before retrieval is attempted, so there is
+        // no retrieval health to report and nothing that could be wrong. The
+        // `retrieval` field is omitted rather than filled in with a
+        // "did not run" object that reads like a failure.
+        degraded: false,
+      },
     };
   }
 
@@ -948,7 +1100,17 @@ export async function runChat(
     return {
       answer: "That's a lot to read in one go — could you ask a shorter question?",
       sources: [],
-      metadata: { retrievalMode: "static", chunksUsed: 0, cached: false, turn: history.length },
+      metadata: {
+        retrievalMode: "static",
+        chunksUsed: 0,
+        cached: false,
+        turn: history.length,
+        // These replies are returned before retrieval is attempted, so there is
+        // no retrieval health to report and nothing that could be wrong. The
+        // `retrieval` field is omitted rather than filled in with a
+        // "did not run" object that reads like a failure.
+        degraded: false,
+      },
     };
   }
 
@@ -962,7 +1124,17 @@ export async function runChat(
     return {
       answer: "I'm here to answer questions about Terry. What can I help you with?",
       sources: [],
-      metadata: { retrievalMode: "static", chunksUsed: 0, cached: false, turn: history.length },
+      metadata: {
+        retrievalMode: "static",
+        chunksUsed: 0,
+        cached: false,
+        turn: history.length,
+        // These replies are returned before retrieval is attempted, so there is
+        // no retrieval health to report and nothing that could be wrong. The
+        // `retrieval` field is omitted rather than filled in with a
+        // "did not run" object that reads like a failure.
+        degraded: false,
+      },
     };
   }
 
@@ -976,6 +1148,7 @@ export async function runChat(
         cached: false,
         turn: history.length,
         rateLimited: true,
+        degraded: false,
       },
     };
   }
@@ -1009,7 +1182,8 @@ export async function runChat(
           sources?: string[];
           docIds?: string[];
           retrievalMode?: "static" | "vector" | "hybrid";
-          generation?: "openrouter" | "workers-ai" | "groq" | "anthropic";
+          retrieval?: RetrievalHealth;
+          generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
         };
         // Replay the real metadata and sources. Reporting a hit as
         // static/none made healthy cache reads look like outages, which is
@@ -1021,9 +1195,26 @@ export async function runChat(
           metadata: {
             retrievalMode: c.retrievalMode ?? "static",
             chunksUsed: 0,
-            cached: true,
+            // Not a retrieval-cache hit: the retrieval that produced this
+            // answer happened on an earlier turn, and this one never ran. The
+            // replayed mode travels with the answer instead, which is why it is
+            // read back from the stored value rather than re-derived.
+            cached: false,
+            answerCached: true,
             turn: 0,
             generation: c.generation ?? "none",
+            // The whole turn was replayed, so health comes from the turn that
+            // produced it. It was not re-measured and must not be re-guessed.
+            degraded: (c.generation ?? "none") === "none" || !(c.retrieval?.healthy ?? false),
+            // Spread rather than assigned directly: an entry written before
+            // this field existed has none, and with exactOptionalPropertyTypes
+            // an explicit undefined is not the same as an absent key.
+            ...(c.retrieval ? { retrieval: c.retrieval } : {}),
+            timings: {
+              retrievalMs: 0,
+              generationMs: 0,
+              latencyMs: Date.now() - startedAt,
+            },
           },
         };
       }
@@ -1037,31 +1228,54 @@ export async function runChat(
   // Retrieval runs on the resolved question, not the raw one.
   const searchQuery =
     history.length > 0 && bindingsPresent
-      ? await condenseQuestion(qTrimmed, history, env)
+      ? await condenseQuestion(qTrimmed, history, env, signal)
       : qTrimmed;
 
-  let results: Awaited<ReturnType<typeof retrieveHybrid>>;
+  // Retrieval itself cannot be cancelled — the D1, Vectorize and AI bindings
+  // take no signal — but nothing after it should start if the visitor has gone.
+  if (signal?.aborted) throw new ChatCancelled();
+
+  let results: RetrievalResult[];
+  let retrieval: RetrievalHealth;
   let retrievalMode: "static" | "vector" | "hybrid" = "static";
   let cached = false;
 
   if (CHAT_CONFIG.mode === "vector" && bindingsPresent) {
     try {
-      results = await retrieveHybrid(searchQuery, env!, CHAT_CONFIG);
-      cached = results.some((r) => r.source === "cache");
-      // Report what actually contributed, not that the call succeeded.
-      // retrieveHybrid never throws for an empty path — it catches internally
-      // and returns whatever it has — so setting this to "hybrid"
-      // unconditionally labelled a run as hybrid while a single hand-written
-      // keyword table did all the work. That is how a dead vector path and a
-      // stale keyword index both read as healthy.
-      const live = new Set(results.filter((r) => r.source !== "cache").map((r) => r.source));
-      if (live.size === 0) retrievalMode = "static";
-      else if (live.size === 1 && live.has("static")) retrievalMode = "static";
-      else if (live.size === 1) retrievalMode = "vector";
-      else retrievalMode = "hybrid";
+      const outcome = await retrieveHybrid(searchQuery, env!, CHAT_CONFIG);
+      results = outcome.results;
+      retrieval = outcome.health;
+      cached = results.some((r) => r.fromCache === true);
+      // Report the provenance of the results, not whether this turn re-queried
+      // the index.
+      //
+      // This used to build its set from results whose source was not "cache",
+      // which meant a retrieval-cache hit reported no live source at all. The
+      // same question on the same healthy build then read `static` when warm
+      // and `vector` when cold — and the visitor's availability dot followed it
+      // into "Limited mode" on a fully working index. A cached result is a
+      // result; excluding it from the evidence is what invented the fallback.
+      //
+      // retrieveHybrid still never throws for an empty path — it catches
+      // internally and returns whatever it has — so an unconditional "hybrid"
+      // would still mislabel a run where one hand-written keyword table did all
+      // the work. Which is why this reports the set of sources present.
+      const methods = new Set(results.map((r) => r.source));
+      if (methods.size === 0) retrievalMode = "static";
+      else if (methods.size === 1) {
+        // "vector" means an index answered, not the keyword table. BM25-only
+        // lands here too: the mode describes the retrieval system rather than
+        // the specific store, and the alternative is a fourth value rippling
+        // through the route, the widget, the eval scorer and the CI probe's
+        // `[a-z]+` regex for no gain in what anyone can act on.
+        retrievalMode = methods.has("static") ? "static" : "vector";
+      } else {
+        retrievalMode = "hybrid";
+      }
     } catch (e) {
       console.error("Vector retrieval failed, falling back to static:", e);
       results = retrieveStatic(qTrimmed, CHAT_CONFIG.topK);
+      retrieval = unrunRetrievalHealth();
       retrievalMode = "static";
     }
   } else {
@@ -1069,10 +1283,15 @@ export async function runChat(
       console.warn("Cloudflare bindings unavailable — serving static retrieval.");
     }
     results = retrieveStatic(searchQuery, CHAT_CONFIG.topK);
+    // No live method was attempted, so there is nothing to call healthy — this
+    // is the keyword table standing in for the index, which is the fallback
+    // worth flagging.
+    retrieval = unrunRetrievalHealth();
     retrievalMode = "static";
   }
 
   onPhase?.({ phase: "retrieved", count: results.length });
+  const retrievalMs = Date.now() - startedAt;
 
   // NOTE: an empty result set does NOT short-circuit to a canned message.
   //
@@ -1101,18 +1320,21 @@ export async function runChat(
   let generated: {
     text: string;
     provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
-  } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta);
+  } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta, signal);
   if (!generated) {
-    generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta);
+    generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta, signal);
   }
-  const degraded = generated.provider === "none";
+  const generationMs = Date.now() - startedAt - retrievalMs;
+  // "no model answered" — narrower than the `degraded` metadata field below,
+  // which also covers retrieval that fell back to the keyword table.
+  const unanswered = generated.provider === "none";
 
   // When generation is unavailable — daily quota exhausted, model retired, API
   // down — answer with the retrieved text itself instead of an error. Retrieval
   // does not depend on the AI binding, so the visitor still gets a real answer
   // rather than a dead chatbot. Extractive rather than generated, and labelled,
   // so it is never mistaken for something the model wrote.
-  const finalAnswer = degraded ? extractiveAnswer(results, searchQuery) : generated.text;
+  const finalAnswer = unanswered ? extractiveAnswer(results, searchQuery) : generated.text;
 
   // Only a real generation is worth remembering. Storing the extractive
   // fallback would pin one bad minute — every tier rate-limited, say — into
@@ -1126,6 +1348,9 @@ export async function runChat(
           sources,
           docIds: results.map((r) => r.id),
           retrievalMode,
+          // Stored so a replay reports the health of the turn that actually ran,
+          // rather than guessing again from a mode that no longer implies it.
+          retrieval,
           generation: generated.provider,
         }),
         { expirationTtl: CHAT_CONFIG.answerCache.ttlSeconds },
@@ -1142,9 +1367,21 @@ export async function runChat(
       retrievalMode,
       chunksUsed: results.length,
       cached,
+      answerCached: false,
       turn: history.length,
       generation: generated.provider,
       resolvedQuery: searchQuery !== qTrimmed ? searchQuery : undefined,
+      // Explicit, and not derived from the result count. Retrieval reports
+      // whether its live methods worked; the empty result of an out-of-scope
+      // question is a correct miss, not a failure, and the extractive answer is
+      // still a real answer. Both are reported rather than thrown.
+      degraded: generated.provider === "none" || !retrieval.healthy,
+      retrieval,
+      timings: {
+        retrievalMs,
+        generationMs,
+        latencyMs: Date.now() - startedAt,
+      },
     },
   };
 }

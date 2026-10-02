@@ -17,7 +17,26 @@ export type RetrievalResult = {
   title: string;
   content: string;
   score: number;
-  source: "static" | "vector" | "cache" | "bm25";
+  /**
+   * Where this result came from, and it is not a synonym for "was it a cache
+   * hit".
+   *
+   * A retrieval-cache hit is still a vector result — the query was run, by an
+   * earlier turn, against the same index. Overwriting the source with "cache"
+   * destroyed that fact, and the only way a consumer could then tell a healthy
+   * cached retrieval from a genuine fallback to the keyword table was that the
+   * first was fast. So a deployment check reading `static` on a fully working
+   * index was indistinguishable from a real outage, and the availability dot
+   * said "Limited mode" while answers were perfectly good.
+   *
+   * Cache provenance belongs in `fromCache`, where it can be reported without
+   * erasing what produced the result. The two are now independent: any
+   * combination of source and fromCache is meaningful.
+   */
+  source: "static" | "vector" | "bm25";
+  /** True when this result was replayed from the KV retrieval cache rather
+   *  than re-queried this turn. False or absent means it was computed live. */
+  fromCache?: boolean;
 };
 
 type Env = Required<Pick<CloudflareEnvShape, "VECTORIZE" | "DB" | "CACHE" | "AI">>;
@@ -142,6 +161,91 @@ export function retrieveStatic(question: string, topK = 3): RetrievalResult[] {
   }));
 }
 
+/**
+ * Turn a stored `documents.category` into a link the widget can render.
+ *
+ * A category is either a section id on the home page ("about") or a path to a
+ * real route ("/projects/digital-twin"). Both shapes are needed: `how-this-works`
+ * documents a project and has no section anywhere, while `bio` has a section and
+ * no page of its own.
+ *
+ * This previously always prefixed `#`, which turned a route into
+ * `#/projects/digital-twin` — a fragment on the current page, not a link to the
+ * case study. Two dead source links shipped that way before anything checked
+ * that a citation pointed at something real.
+ */
+export function anchorFor(category: string | null | undefined): string {
+  const value = category?.trim();
+  if (!value) return "#knowledge";
+  if (value.startsWith("/")) return value;
+  if (value.startsWith("#")) return value;
+  return `#${value}`;
+}
+
+/**
+ * Did retrieval actually work, as distinct from did it find anything.
+ *
+ * These are different questions and conflating them is what made a healthy
+ * chatbot report itself as broken. A visitor asking "are you single" should
+ * match nothing — that is the correct outcome — and the index answering "nothing
+ * here" is the index working. Inferring health from the result count cannot tell
+ * that apart from an index that is down, so the answer was to report the
+ * methods that ran and the methods that failed, and let the caller decide.
+ */
+export type RetrievalHealth = {
+  /** Live, index-backed methods that completed without throwing. */
+  ran: ("vector" | "bm25")[];
+  /** Live methods that were attempted and threw. Empty on a healthy turn. */
+  failed: ("vector" | "bm25")[];
+  /** At least one live method ran and none failed. */
+  healthy: boolean;
+  /** Retrieval ran cleanly and matched nothing. A correct answer, not a fault. */
+  empty: boolean;
+};
+
+export type RetrievalOutcome = {
+  results: RetrievalResult[];
+  health: RetrievalHealth;
+};
+
+/** A retrieval path that never ran: no bindings, or static mode. */
+export function unrunRetrievalHealth(): RetrievalHealth {
+  return { ran: [], failed: [], healthy: false, empty: true };
+}
+
+/**
+ * Decide whether a retrieval turn worked, from what each method did.
+ *
+ * Split out and exported so it can be tested directly. The whole fix is this
+ * distinction, and a test that re-derives the same rule in the test file proves
+ * nothing about whether the server applies it.
+ *
+ * The rule:
+ *   - healthy  = at least one live index ran and none of them threw.
+ *   - empty    = healthy *and* nothing came back, which is a correct miss for a
+ *                question the corpus does not cover.
+ *   - a partial failure is not healthy. The site answered, but from a subset of
+ *     its retrieval, and calling that healthy is the same mistake as calling an
+ *     empty result a failure — in the other direction.
+ */
+export function assessRetrieval(input: {
+  vectorRan: boolean;
+  vectorFailed: boolean;
+  bm25Ran: boolean;
+  bm25Failed: boolean;
+  resultCount: number;
+}): RetrievalHealth {
+  const ran: ("vector" | "bm25")[] = [];
+  const failed: ("vector" | "bm25")[] = [];
+  if (input.vectorRan) ran.push("vector");
+  if (input.bm25Ran) ran.push("bm25");
+  if (input.vectorFailed) failed.push("vector");
+  if (input.bm25Failed) failed.push("bm25");
+
+  const healthy = ran.length > 0 && failed.length === 0;
+  return { ran, failed, healthy, empty: healthy && input.resultCount === 0 };
+}
+
 // Vector retrieval using Cloudflare Vectorize + D1 + KV cache
 export async function retrieveVector(
   question: string,
@@ -154,9 +258,30 @@ export async function retrieveVector(
   const cacheKey = `rag:v${config.corpusVersion}:${hashString(question.toLowerCase().trim())}`;
 
   // 1. Check semantic cache (KV)
-  const cached = (await env.CACHE.get(cacheKey, "json")) as RetrievalResult[] | null;
+  //
+  // `fromCache: true` records where the result came from; `source` keeps the
+  // provenance of the query that produced it, which is always vector for this
+  // function. The normalisation matters: entries written before `fromCache`
+  // existed have `source: "cache"` on disk for up to `cacheTTL`, and reading
+  // one verbatim would put a value back into `source` that is no longer a
+  // member of the union — silently reintroducing exactly the bug this removes.
+  // A cache read failure is not a retrieval failure. The cache is an
+  // optimisation; if it is unavailable the correct response is to query the
+  // index directly, not to report the index as broken. Letting this throw would
+  // mark vector retrieval as failed and flip the availability dot.
+  let cached: (RetrievalResult & { source?: string })[] | null = null;
+  try {
+    const hit: unknown = await env.CACHE.get(cacheKey, "json");
+    cached = Array.isArray(hit) ? (hit as (RetrievalResult & { source?: string })[]) : null;
+  } catch (e) {
+    console.warn("[retrieval] cache read failed, querying the index directly:", e);
+  }
   if (cached) {
-    return cached.map((r) => ({ ...r, source: "cache" }));
+    return cached.map((r) => ({
+      ...r,
+      source: "vector" as const,
+      fromCache: true,
+    }));
   }
 
   // 2. Generate query embedding via Workers AI
@@ -258,7 +383,7 @@ export async function retrieveVector(
       if (!entry) return null;
       return {
         id: pid,
-        anchor: `#${entry.category || "knowledge"}`,
+        anchor: anchorFor(entry.category),
         title: entry.title,
         content: entry.passages.join("\n\n"),
         score,
@@ -307,17 +432,29 @@ export async function retrieveHybrid(
   question: string,
   env: Env,
   config: typeof import("./chat.config").CHAT_CONFIG,
-): Promise<RetrievalResult[]> {
+): Promise<RetrievalOutcome> {
+  // Whether each live method ran, and whether it worked. Recorded by the
+  // promises below rather than derived from the result count afterwards,
+  // because "matched nothing" and "did not run" produce the same array.
+  let vectorRan = false;
+  let vectorFailed = false;
+  let bm25Ran = false;
+  let bm25Failed = false;
+
   // Static results (fast, deterministic)
   const staticResults = retrieveStatic(question, config.topK);
 
   // Vector results (semantic)
-  let vectorResults: RetrievalResult[] = [];
-  try {
-    vectorResults = await retrieveVector(question, env, config);
-  } catch (e) {
-    console.warn("Vector retrieval failed, using static only:", e);
-  }
+  const vectorPromise = retrieveVector(question, env, config)
+    .then((results) => {
+      vectorRan = true;
+      return results;
+    })
+    .catch((e) => {
+      vectorFailed = true;
+      console.warn("Vector retrieval failed, using static only:", e);
+      return [] as RetrievalResult[];
+    });
 
   // BM25 results from D1 FTS5.
   //
@@ -329,10 +466,16 @@ export async function retrieveHybrid(
   //  2. SQLite's bm25() returns NEGATIVE numbers, lower = better match. The
   //     old 1/(1+score) transform divided by ~zero and produced Infinity and
   //     negative similarities. Negate it so higher is better, then normalise.
-  let bm25Results: RetrievalResult[] = [];
-  try {
+  const bm25Promise = (async (): Promise<RetrievalResult[]> => {
+    // A question with no term long enough to index is not a failure. It is a
+    // successful search that had nothing to search for, and counting it as an
+    // error is how "are you single" ended up looking like a broken index.
     const ftsQuery = toFtsQuery(question);
-    if (ftsQuery) {
+    if (!ftsQuery) {
+      bm25Ran = true;
+      return [];
+    }
+    try {
       const { results } = await env.DB.prepare(
         `SELECT d.id, d.source, d.category, d.title, d.content,
                 -bm25(documents_fts) AS score
@@ -353,22 +496,32 @@ export async function retrieveHybrid(
         score: number;
       };
 
+      bm25Ran = true;
       const rows = (results as unknown as Bm25Row[]) || [];
       const best = rows[0]?.score ?? 0;
 
-      bm25Results = rows.map((r) => ({
+      return rows.map((r) => ({
         id: r.id,
-        anchor: `#${r.category || "knowledge"}`,
+        anchor: anchorFor(r.category),
         title: r.title,
         content: r.content,
         // Relative to the top hit, so RRF fusion sees a comparable scale.
         score: best > 0 ? r.score / best : 0,
         source: "bm25" as const,
       }));
+    } catch (e) {
+      bm25Failed = true;
+      console.warn("BM25 retrieval failed:", e);
+      return [];
     }
-  } catch (e) {
-    console.warn("BM25 retrieval failed:", e);
-  }
+  })();
+
+  // Vector and BM25 are independent: one embeds and queries Vectorize, the other
+  // runs an FTS5 MATCH against D1. Awaiting them in sequence made p95 latency
+  // the SUM of both round trips rather than the slower one, and this sits
+  // directly in front of the first token the visitor sees. Neither depends on
+  // the other's result, so there is nothing to sequence.
+  const [vectorResults, bm25Results] = await Promise.all([vectorPromise, bm25Promise]);
 
   // Reciprocal Rank Fusion (RRF) to merge all three rankings.
   //
@@ -407,7 +560,18 @@ export async function retrieveHybrid(
     .slice(0, config.rerankTopK)
     .map((v) => v.result);
 
-  return fused.length > 0 ? fused : staticResults;
+  const results = fused.length > 0 ? fused : staticResults;
+
+  return {
+    results,
+    health: assessRetrieval({
+      vectorRan,
+      vectorFailed,
+      bm25Ran,
+      bm25Failed,
+      resultCount: results.length,
+    }),
+  };
 }
 
 export function hashString(str: string): string {

@@ -35,17 +35,43 @@ export const CHAT_CONFIG = {
 
   // Tier 1. OpenRouter. Secret is OPENROUTER_API_KEY.
   //
-  // "openrouter/free" is a routing alias: OpenRouter decides which free models
-  // back it, and that choice can change without notice. That is a feature here
-  // (it self-heals to whatever is currently good) but it does mean the model
-  // behind the id is not pinned. For deterministic behaviour, replace it with
-  // a specific id and verify tool support at openrouter.ai before relying on it.
+  // PINNED, deliberately. This used to be "openrouter/free", which is a
+  // routing alias rather than a model: OpenRouter picks whatever backs it and
+  // can change that without notice or a release here. Two consequences, both
+  // observed:
+  //   - Persona discipline moved without a commit. The instruction that this
+  //     project cannot bend is "never invent a fact about Terry", and that is
+  //     exactly the instruction a swapped model breaks first.
+  //   - It governs TOOL CALLING too, not just prose. `generateWithTools`
+  //     reuses `openRouterModel`, so the alias decided lead capture as well.
+  //
+  // Claude Sonnet 4.5 for both roles. The reasoning for it is this project's
+  // own record rather than a leaderboard: the comment on `useTools` below says
+  // Gemini Flash, Llama 3.3 and Nemotron all failed or rate-limited on
+  // structured tool calls. Sonnet is the model that does not need a fallback
+  // tier to capture an email address.
+  //
+  // Cost, for the shape a turn actually takes (≈8k input tokens after the
+  // system prompt, retrieved passages and capped history; ≈250 output tokens):
+  // about $0.028 an answer, $0.056 on a turn that captures a lead and so runs
+  // twice. This is the *paid* tier — the whole reason it is first is that it
+  // still answers when both free tiers are spent, which is when visitors most
+  // need a working chatbot.
+  //
+  // Verified against OpenRouter's public /api/v1/models: id exists, declares
+  // tool support, 1M context (the turn needs under 16k), $3/$15 per MTok.
+  // The live tool round trip and p95 latency still need a key — run
+  // `OPENROUTER_API_KEY=… npm run verify:models` before trusting it, and diff
+  // `npm run eval` before and after. See scripts/verify-models.mjs.
   useOpenRouter: true,
-  openRouterModel: "openrouter/free",
-  // A second slot for question condensing, so the same routing alias can be
-  // pointed at a smaller/faster model without touching the chat model. Leave
-  // empty to reuse openRouterModel.
-  openRouterCondenseModel: "",
+  openRouterModel: "anthropic/claude-sonnet-4.5",
+  // A second slot for question condensing, so the chat model can be changed
+  // without touching the rewrite. Pinned to the Haiku sibling rather than
+  // reusing the chat model: condensing is a 20-word rewrite against a short
+  // transcript, so paying Sonnet rates for it buys nothing, and keeping it in
+  // one provider family keeps the failure modes predictable.
+  // Leave empty to reuse openRouterModel.
+  openRouterCondenseModel: "anthropic/claude-haiku-4.5",
 
   // Tier 2. Groq, also OpenAI-compatible, free, no daily neuron cap. Stays the
   // tool-calling backup behind OpenRouter. Free tiers rotate without notice —
@@ -82,7 +108,26 @@ export const CHAT_CONFIG = {
   // src/content/knowledge/ — or replace public/Terry-Mathew-CV.pdf.
   // HOW: increase the number, then rebuild, deploy, and re-run /api/ingest.
   // Without the bump, a question asked yesterday returns yesterday's answer.
-  corpusVersion: 4,
+  //
+  // 5 → 6: the knowledge corpus changed. `facts.md` was added as the canonical
+  // facts layer and bio, experience, work, skills, experiments and the
+  // architecture docs were rewritten against it. The document hashes already
+  // force a re-embed of every edited file, but the retrieval and answer caches
+  // are keyed on the corpus version and store the text that was retrieved, so
+  // without this the chatbot keeps serving the pre-edit biography for up to
+  // cacheTTL — which is how a question about Terry's current employer could
+  // return an answer that is a month out of date.
+  // 6 → 7: the knowledge corpus was replaced from the supplied canonical bundle.
+  // Every one of the eight documents changed in its *body* — the text that is
+  // chunked, embedded, written to D1 and matched by BM25 — with frontmatter
+  // excluded, so this is a content bump and not a metadata-only one. Verified
+  // by comparing the parsed body of each file against HEAD rather than assuming
+  // it, because the whole point of excluding frontmatter from the hash is that
+  // adding a title must not cost a re-embed. Here the prose did change: the
+  // Oracle role is described as current employment with a planned final working
+  // day of 14 October 2026, and the Digital Twin architecture was corrected to
+  // match the implementation.
+  corpusVersion: 7,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,
@@ -206,5 +251,11 @@ export const CHAT_CONFIG = {
     enabled: true,
     ttlSeconds: 86400,
   },
-  promptVersion: 2,
+  // 2 → 3: the answer-format contract changed. The prompt now forbids Markdown
+  // emphasis, link syntax, backticks and code fences, and the widget renders
+  // safe links and addresses itself. Without a bump, every answer cached under
+  // the old instructions would keep serving the Markdown version — and the
+  // answer cache outlives a deploy, so the fix would look like it had not
+  // landed at all.
+  promptVersion: 3,
 } as const;

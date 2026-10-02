@@ -1,5 +1,88 @@
-import { useEffect, useRef, useState } from "react";
-import type { ChatTurn } from "@/server/chat";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowUp } from "lucide-react";
+
+import { parseChatMarkdown, type ChatNode } from "@/components/site/chat-markdown";
+
+/**
+ * Render one answer.
+ *
+ * The model writes Markdown and this is a text panel, so before this existed a
+ * visitor asking how to get in touch was shown `**terry.perangat@gmail.com**`
+ * and `[LinkedIn](https://…)` with the syntax intact — on the one answer that
+ * is supposed to produce a lead.
+ *
+ * The parse is a pure function of the text received so far, and an
+ * unterminated construct is emitted as plain text with its marker removed. That
+ * is what makes it safe during streaming: at the instant the accumulated text
+ * is `**bo` or `[LinkedIn](https://ex`, the visitor sees `bo` and `LinkedIn`,
+ * and never a raw delimiter. No buffering, no waiting for the answer to end,
+ * and no `dangerouslySetInnerHTML` — the parser returns data and this maps it
+ * to elements, so the model cannot inject markup of any kind.
+ *
+ * `streaming` only drops a marker left dangling at the very end; once the
+ * answer is complete a trailing asterisk is the author's and is kept.
+ */
+export function RichText({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  const nodes = parseChatMarkdown(text, { streaming });
+  return (
+    <>
+      {nodes.map((node, i) => (
+        <TextNode key={i} node={node} />
+      ))}
+    </>
+  );
+}
+
+function TextNode({ node }: { node: ChatNode }) {
+  switch (node.kind) {
+    case "bold":
+      return (
+        <strong className="font-medium text-bone">
+          {node.children.map((child, i) => (
+            <TextNode key={i} node={child} />
+          ))}
+        </strong>
+      );
+
+    case "code":
+      return (
+        <code className="rounded-sm bg-bone/10 px-1 py-0.5 font-mono text-[0.8125rem] text-bone/90">
+          {node.value}
+        </code>
+      );
+
+    case "link":
+      // A link whose target failed validation keeps its label as plain text.
+      // The content is still shown; only the ability to navigate is withheld.
+      return node.href ? (
+        <a
+          href={node.href}
+          target={node.href.startsWith("http") ? "_blank" : undefined}
+          rel={node.href.startsWith("http") ? "noreferrer noopener" : undefined}
+          className="text-bone underline decoration-ember/60 underline-offset-2 transition-colors hover:decoration-ember"
+        >
+          {node.label}
+        </a>
+      ) : (
+        <>{node.label}</>
+      );
+
+    case "email":
+      return (
+        <a
+          href={node.href}
+          className="text-bone underline decoration-ember/60 underline-offset-2 transition-colors hover:decoration-ember"
+        >
+          {node.label}
+        </a>
+      );
+
+    default:
+      // React escapes this. It is the only path by which model-authored text
+      // reaches the DOM, and it cannot produce an element.
+      return <>{node.value}</>;
+  }
+}
 
 /**
  * Remove inline citation markers, scoped to the documents that were retrieved.
@@ -19,21 +102,160 @@ function stripCitations(text: string, docIds: string[]): string {
     .replace(/[ \t]{2,}/g, " ");
 }
 
+type Message = {
+  id: string;
+  role: "user" | "bot";
+  text: string;
+  /** Source anchors this answer used. Carried on the message, not in one piece
+   *  of component state, so a completed answer keeps its own citations when a
+   *  later turn replaces the panel's source list. */
+  sources?: string[];
+  /** The turn failed. Kept separate from the text so Retry can be offered and
+   *  a partial answer is not mistaken for a failure. */
+  failed?: boolean;
+  /** Set while a stream is still open for this message. */
+  pending?: boolean;
+};
+
+/**
+ * The turn's internal state machine.
+ *
+ * Ten states, held in a ref and never rendered. The UI shows exactly two
+ * strings, because `searching` → `retrieved` → `generating` arrive tens of
+ * milliseconds apart on a fast network and three flashes of status text read as
+ * a glitch rather than as progress. The granularity is still useful: it is what
+ * distinguishes "still working" from "stuck", and what decides whether an error
+ * is worth showing the visitor at all.
+ */
+type ChatState =
+  | "idle"
+  | "composing"
+  | "sending"
+  | "searching"
+  | "retrieved"
+  | "generating"
+  | "streaming"
+  | "degraded"
+  | "cancelled"
+  | "failed";
+
+/** The only two things the visitor is told while a turn runs. */
+const STATUS_SENDING = "Sending…";
+const STATUS_READING = "Looking through Terry's work…";
+
+/**
+ * Minimum time a status label stays on screen before it may change.
+ *
+ * Without this the two labels swap inside a single frame on a warm connection,
+ * which reads as a flicker. A label that has been up for less than this waits
+ * out the remainder rather than being replaced.
+ */
+const MIN_HOLD_MS = 700;
+
+const BLANK_STATE_CHIPS = [
+  "What did Terry build at Oracle?",
+  "Tell me about Settle.",
+  "How does this chatbot work?",
+];
+
+/** One boundary check on the scroll behaviour, not one per render. */
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const newId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `m${Math.random().toString(36).slice(2)}`;
+
 // RAG chat widget. Streams tokens from POST /api/chat.
 //
-// Retrieval progress is deliberately NOT surfaced. "Found 4 relevant sections"
-// is instrumentation, not conversation — showing it made the bot feel like a
-// status dashboard. The diagnostics still ride in the X-RAG-* response headers
-// for anyone who needs them, and the streaming text itself is the only loading
-// signal a visitor needs.
+// What the visitor sees is deliberately two things: the answer, and whether the
+// assistant is currently able to give one. Everything else the stream reports —
+// chunk counts, retrieval mode, cache state — stays in the console, because
+// "Found 4 relevant sections" is instrumentation, not conversation.
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatTurn[]>([]);
-  const [sources, setSources] = useState<string[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
+  const [degraded, setDegraded] = useState(false);
+  const [statusLabel, setStatusLabel] = useState("");
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+
+  // The state machine lives in a ref, not in state: it is read far more often
+  // than it changes, and re-rendering the whole panel on every transition is
+  // what makes a status line feel like it is flickering.
+  const stateRef = useRef<ChatState>("idle");
+  const setState = useCallback((s: ChatState) => {
+    stateRef.current = s;
+  }, []);
+
+  const statusRef = useRef({ label: "", at: 0 });
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Show a status label, honouring the minimum hold. */
+  const setStatus = useCallback((label: string) => {
+    const cur = statusRef.current;
+    if (cur.label === label) return;
+    if (statusTimer.current) clearTimeout(statusTimer.current);
+    const wait = MIN_HOLD_MS - (Date.now() - cur.at);
+    const apply = () => {
+      statusRef.current = { label, at: Date.now() };
+      setStatusLabel(label);
+    };
+    if (wait <= 0) apply();
+    else statusTimer.current = setTimeout(apply, wait);
+  }, []);
+
+  const clearStatus = useCallback(() => {
+    if (statusTimer.current) {
+      clearTimeout(statusTimer.current);
+      statusTimer.current = null;
+    }
+    statusRef.current = { label: "", at: Date.now() };
+    setStatusLabel("");
+  }, []);
+
+  /**
+   * Scroll to the newest message, but only while the visitor is already at the
+   * bottom.
+   *
+   * Auto-scrolling on every token yanks the page out from under anyone reading
+   * back through the conversation — they scroll up to re-read something, and
+   * the panel slides to the bottom again on the next token. The check is the
+   * difference between "keeps up with the answer" and "argues with you".
+   */
+  const pinnedToBottom = useRef(true);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      pinnedToBottom.current = distance < 48;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [open]);
+
+  useEffect(() => {
+    if (!pinnedToBottom.current) return;
+    endRef.current?.scrollIntoView({
+      // Guarded rather than unconditional: a smooth scroll is an animation the
+      // visitor did not ask for, and the stylesheet already collapses
+      // transition durations under reduced-motion — this is the scroll API, so
+      // it needs its own check.
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [messages, busy, statusLabel]);
 
   // The contact section already carries the email address, the social links and
   // the footer, so the floating button is redundant there — and it was sitting
@@ -54,26 +276,180 @@ export function ChatWidget() {
 
   const docked = overContact && !open;
 
+  // ---- health ----------------------------------------------------------
+  //
+  // Read once per open, not on an interval. The flag is TTL'd at ten minutes
+  // server-side and a live `warning` event flips it mid-turn, so polling would
+  // add a request per panel open to learn something the next turn will tell us.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, busy]);
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/chat", { signal: AbortSignal.timeout(5000) })
+      .then((r) => (r.ok ? (r.json() as Promise<unknown>) : null))
+      .then((raw: unknown) => {
+        const d = raw as { degraded?: boolean } | null;
+        if (!cancelled && d && typeof d.degraded === "boolean") setDegraded(d.degraded);
+      })
+      .catch(() => {
+        // A status check that cannot run must not stop the panel opening. The
+        // server treats a missing flag as "available" for the same reason.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
-  async function send(question?: string) {
+  // ---- a11y: focus, Escape, trap ---------------------------------------
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  /**
+   * Closing stops an in-flight turn.
+   *
+   * Not just tidiness: the request is already being paid for by the time the
+   * visitor closes the panel, and cancelling stops the provider chain before it
+   * spends the failover. Whatever had already streamed stays in the transcript,
+   * so reopening shows the conversation rather than a spinner that will never
+   * resolve.
+   */
+  const close = useCallback(() => {
+    cancel();
+    setOpen(false);
+  }, [cancel]);
+
+  useEffect(() => {
+    if (!open) return;
+    // Captured before focus moves, or the "where was I" target is the composer
+    // we are about to focus. The trigger is copied out for the same reason: a
+    // ref read inside the cleanup would be read after unmount, which is the one
+    // moment it has to be right.
+    const previous = document.activeElement as HTMLElement | null;
+    const trigger = triggerRef.current;
+
+    // Focus moves into the panel on open and back to the trigger on close.
+    // Without the second half, closing the panel drops a keyboard user at the
+    // top of the document with no idea where they were.
+    //
+    // The composer is focused only on a fine pointer. On touch, focusing a
+    // textarea opens the soft keyboard over the answer the visitor just came to
+    // read, which is worse than the extra Tab.
+    if (typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches) {
+      composerRef.current?.focus();
+    } else {
+      panelRef.current?.focus();
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        close();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), textarea, a[href], summary, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !panel.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      // `previous` is usually the composer, which is unmounted by the time this
+      // runs — focusing a detached node is a silent no-op, which left Escape
+      // dropping keyboard users at the top of the document. If it is gone, go
+      // back to the trigger that opened the panel.
+      const target = previous && document.contains(previous) ? previous : trigger;
+      target?.focus?.();
+    };
+  }, [open, close]);
+
+  // ---- sending ---------------------------------------------------------
+
+  /**
+   * @param question     what to ask; defaults to the composer
+   * @param knownHistory conversation to send. Supplied by Retry, which has
+   *   already trimmed the failed turn out of `messages` — reading it from state
+   *   there would resend the error message as if the model had said it.
+   */
+  async function send(question?: string, knownHistory?: { role: "user" | "bot"; text: string }[]) {
     const q = (question ?? input).trim();
     if (!q || busy) return;
-    setBusy(true);
-    setInput("");
-    setSources([]);
 
-    const history = messages.slice(-6);
-    setMessages((m) => [...m, { role: "user", text: q }]);
+    const userId = newId();
+    const botId = newId();
+
+    // Both messages exist before the request starts, and the assistant one
+    // carries the id the stream writes into.
+    //
+    // The previous version decided whether a delta opened a new bubble or
+    // extended the last one by inspecting React state during the updater, with
+    // a mutable flag set before the updater ran. React runs that updater on the
+    // next render, so the first token took the "extend" branch, found a user
+    // message, and appended nothing — the visitor's question rendered and the
+    // answer never did. An id removes the question entirely.
+    const history = knownHistory ?? messages.slice(-6).map(({ role, text }) => ({ role, text }));
+    setMessages((m) => [
+      ...m,
+      { id: userId, role: "user", text: q },
+      { id: botId, role: "bot", text: "", pending: true },
+    ]);
+    setInput("");
+    setBusy(true);
+    setState("sending");
+    pinnedToBottom.current = true;
+    setStatus(STATUS_SENDING);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    // Two deadlines. `timeoutMs` is the request budget; `cancelTimeout` is the
+    // window a *partial* answer gets before the panel stops waiting and offers
+    // Retry, which is a different outcome from "no answer at all".
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    const cancelTimeout = setTimeout(() => controller.abort(), 55000);
+
+    let answer = "";
+    let docIds: string[] = [];
+    let sawDelta = false;
+    /** A terminal error event already set the message text. */
+    let reported = false;
+
+    const patch = (id: string, changes: Partial<Message>) =>
+      setMessages((m) => m.map((msg) => (msg.id === id ? { ...msg, ...changes } : msg)));
+
+    const finish = () => {
+      clearTimeout(timeout);
+      clearTimeout(cancelTimeout);
+      if (abortRef.current === controller) abortRef.current = null;
+      clearStatus();
+      setBusy(false);
+      setState("idle");
+      pinnedToBottom.current = true;
+    };
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ q, history }),
-        signal: AbortSignal.timeout(30000),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -81,71 +457,113 @@ export function ChatWidget() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let answer = "";
-      // Ids of the documents retrieval used, sent before generation so inline
-      // citation markers can be stripped as tokens arrive.
-      let docIds: string[] = [];
 
-      // Streamed deltas all belong to ONE assistant message, appended in place.
-      //
-      // Whether a delta opens a new bubble or extends the last one is decided by
-      // inspecting state, never by a mutable flag. An earlier version used an
-      // `opened` variable set to true right after calling setMessages — but React
-      // runs the updater during the next render, by which point the flag was
-      // already true, so the first token took the "extend" branch, found a user
-      // message rather than a bot one, and appended nothing. The user's message
-      // rendered and the bot's never did.
-      //
-      // The user turn always separates exchanges, so "is the last message a bot
-      // message?" is sufficient and needs no external state.
-      const append = (text: string) => {
-        answer += text;
-        // Strip inline citation markers as they stream. They have to be removed
-        // here rather than server-side because a marker can be split across
-        // deltas ("[", "bio", "]") and is only recognisable once complete.
-        const clean = stripCitations(answer, docIds);
-        setMessages((m) => {
-          const last = m[m.length - 1];
-          if (last?.role === "bot") {
-            return [...m.slice(0, -1), { ...last, text: clean }];
-          }
-          return [...m, { role: "bot", text: clean }];
-        });
-      };
-
-      const flush = (line: string) => {
-        if (!line.startsWith("data:")) return;
+      const flush = (frame: string) => {
+        // `:hb` heartbeat comments keep the connection alive through a slow
+        // provider tier. They are SSE comments, not data frames, and parsing
+        // one as JSON would throw on every heartbeat.
+        const line = frame.split("\n").find((l) => l.startsWith("data:"));
+        if (!line) return;
         let d: {
           type: string;
+          phase?: string;
           text?: string;
           sources?: string[];
           docIds?: string[];
-          message?: string;
           retrievalMode?: string;
           chunksUsed?: number;
           cached?: boolean;
+          generation?: string;
+          provider?: string;
+          message?: string;
           answer?: string;
+          degraded?: boolean;
         };
         try {
           d = JSON.parse(line.slice(5).trim());
         } catch {
           return;
         }
-        if (d.type === "delta" && d.text) append(d.text);
-        else if (d.type === "sources") {
-          if (d.sources) setSources(d.sources);
-          if (d.docIds) docIds = d.docIds;
-        } else if (d.type === "error") append(d.message ?? "Something went wrong.");
-        else if (d.type === "done") {
-          // Diagnostic only — never rendered. Lets a degraded retrieval path be
-          // spotted in devtools without putting instrumentation in the UI.
-          console.info(`[rag] ${d.retrievalMode} | ${d.chunksUsed} chunks | cached=${d.cached}`);
-          // Not every reply streams. Rate-limited and extractive (no model
-          // answered) responses return early and send no deltas — the answer
-          // exists only here. Without this the widget throws "empty response"
-          // and replaces a perfectly good reply with "Something went wrong",
-          // which is what a visitor sees whenever the model tiers are capped.
-          if (!answer && d.answer) append(d.answer);
+
+        switch (d.type) {
+          case "phase":
+            if (d.phase === "searching") setState("searching");
+            else if (d.phase === "retrieved") {
+              setState("retrieved");
+              setStatus(STATUS_READING);
+            }
+            break;
+
+          case "sources":
+            // The last event before generation starts, which is the real
+            // boundary: everything above this line is retrieval.
+            if (d.sources) {
+              setState("generating");
+              patch(botId, { sources: d.sources });
+            }
+            if (d.docIds) docIds = d.docIds;
+            break;
+
+          case "delta": {
+            if (!d.text) return;
+            if (!sawDelta) {
+              sawDelta = true;
+              setState("streaming");
+              // Hold the status for the rest of the minimum window, then drop
+              // it. Clearing on the first token instead is what made the line
+              // strobe on a fast connection.
+              if (statusTimer.current) clearTimeout(statusTimer.current);
+              statusTimer.current = setTimeout(() => {
+                statusRef.current = { label: "", at: Date.now() };
+                setStatusLabel("");
+              }, MIN_HOLD_MS);
+            }
+            answer += d.text;
+            // Strip inline citation markers as they stream. They have to be
+            // removed here rather than server-side because a marker can be
+            // split across deltas ("[", "bio", "]") and is only recognisable
+            // once complete.
+            patch(botId, { text: stripCitations(answer, docIds) });
+            break;
+          }
+
+          case "warning":
+            setDegraded(true);
+            break;
+
+          case "cancelled":
+            setState("cancelled");
+            break;
+
+          case "error":
+            setState("failed");
+            reported = true;
+            patch(botId, {
+              text: d.message ?? "Something went wrong — email terry.perangat@gmail.com instead.",
+              failed: true,
+              pending: false,
+            });
+            break;
+
+          case "done": {
+            console.info(
+              `[rag] ${d.retrievalMode} | ${d.chunksUsed} chunks | cached=${d.cached} | ${d.provider ?? d.generation}`,
+            );
+            // The server decides this. It can tell a fallback answer apart from
+            // a turn that never needed the pipeline; the client cannot.
+            setDegraded(d.degraded === true);
+            setState(d.degraded === true ? "degraded" : "idle");
+            // Not every reply streams. Rate-limited and extractive responses
+            // send no deltas — the answer exists only here. Without this the
+            // widget throws "empty response" and replaces a perfectly good
+            // reply with an error, which is what a visitor sees whenever the
+            // model tiers are capped.
+            if (!answer && d.answer) {
+              answer = d.answer;
+              patch(botId, { text: stripCitations(answer, docIds) });
+            }
+            break;
+          }
         }
       };
 
@@ -158,16 +576,71 @@ export function ChatWidget() {
         for (const f of frames) flush(f);
       }
       if (buffer.trim()) flush(buffer);
-      if (!answer) throw new Error("empty response");
-    } catch {
-      setMessages((m) => [
-        ...m,
-        { role: "bot", text: "Something went wrong — email terry.perangat@gmail.com instead." },
-      ]);
+
+      // `reported` guards the one case the error event already handled: without it,
+      // a terminal `error` set the message and then this threw "empty response"
+      // and replaced it with the generic string.
+      if (!answer && !reported) throw new Error("empty response");
+      patch(botId, { pending: false });
+    } catch (error) {
+      // A cancelled turn and a failed turn used to share one handler, so
+      // hitting Cancel rendered "Something went wrong" — the panel told the
+      // visitor it had failed at the moment they had asked it to stop.
+      const cancelled =
+        controller.signal.aborted || (error instanceof Error && error.name === "AbortError");
+
+      if (cancelled) {
+        setState("cancelled");
+        // Keep whatever already streamed. Half an answer is worth more than
+        // none, and throwing it away to show "Something went wrong" discards
+        // real work the visitor was reading a moment ago.
+        if (answer) patch(botId, { text: stripCitations(answer, docIds), pending: false });
+        else setMessages((m) => m.filter((msg) => msg.id !== botId || msg.role !== "bot"));
+      } else {
+        console.error("[rag] turn failed", error);
+        setState("failed");
+        patch(botId, {
+          text: answer
+            ? stripCitations(answer, docIds)
+            : "Something went wrong — email terry.perangat@gmail.com instead.",
+          // Only mark it failed when there is nothing to read. A partial answer
+          // with an error flag next to it reads as "this is broken" even when
+          // most of it is intact.
+          failed: !answer,
+          pending: false,
+        });
+      }
     } finally {
-      setBusy(false);
+      finish();
     }
   }
+
+  const retry = () => {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) return;
+    // Retry replaces the failed turn rather than stacking a duplicate of the
+    // question below the error it is meant to answer. The trimmed list is also
+    // the history sent, so the error text is never fed back in as if the model
+    // had produced it.
+    const cut = messages.findIndex((m) => m.id === lastUser.id);
+    const kept = messages.slice(0, cut);
+    setMessages(kept);
+    void send(
+      lastUser.text,
+      kept.slice(-6).map(({ role, text }) => ({ role, text })),
+    );
+  };
+
+  const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      // On a phone the soft keyboard's Enter is a newline by platform
+      // convention, and overriding it is hostile — so the send path is also on
+      // the button, and the hint below the composer says which is which.
+      if (e.nativeEvent.isComposing) return;
+      e.preventDefault();
+      void send();
+    }
+  };
 
   return (
     <div
@@ -176,18 +649,39 @@ export function ChatWidget() {
       }`}
     >
       {open && (
-        <div className="film-grain mb-4 flex h-[min(30rem,70svh)] w-[min(21rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-xl border border-bone/12 bg-ink-2/95 shadow-2xl backdrop-blur-sm sm:w-[23rem]">
+        <div
+          ref={panelRef}
+          role="dialog"
+          tabIndex={-1}
+          aria-label="Ask about Terry's work"
+          className={`film-grain chat-sheet md:chat-panel mb-4 flex flex-col overflow-hidden rounded-xl border border-bone/12 bg-ink-2/95 shadow-2xl backdrop-blur-sm`}
+        >
           {/* Conversation is the panel. Everything else is a thin control. */}
           <div className="flex items-start gap-3 px-5 pt-4 pb-2">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-ember" />
-            <p className="flex-1 text-sm text-bone-dim">Ask about Terry's work.</p>
+            <span
+              aria-hidden="true"
+              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${
+                degraded ? "bg-bone-dim/50" : "bg-ember"
+              }`}
+            />
+            <div className="flex-1">
+              <p className="text-sm text-bone-dim">Ask about Terry&rsquo;s work.</p>
+              {/* Diagnostic only. What it buys is the absence of a lie: a chat
+                  that is answering from a keyword table and a model that is
+                  rate-limited still renders, and without this the visitor has
+                  no way to tell a good answer from a fallback one. */}
+              <p className="mt-0.5 text-[0.6875rem] text-bone-dim/50">
+                {degraded ? "● Limited mode" : "● Available"}
+              </p>
+            </div>
             <div className="-mt-0.5 flex shrink-0 items-center gap-3 text-xs text-bone-dim/50">
               {messages.length > 0 && (
                 <button
                   type="button"
                   onClick={() => {
                     setMessages([]);
-                    setSources([]);
+                    setState("idle");
+                    clearStatus();
                   }}
                   className="transition-colors hover:text-ember"
                 >
@@ -196,7 +690,7 @@ export function ChatWidget() {
               )}
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 aria-label="Close chat"
                 className="transition-colors hover:text-ember"
               >
@@ -205,74 +699,165 @@ export function ChatWidget() {
             </div>
           </div>
 
-          <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-5 py-3">
+          {/* role="log" so a screen reader announces answers as they arrive
+              rather than only when the conversation is finished with. */}
+          <div
+            ref={scrollRef}
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-label="Conversation"
+            className="flex-1 space-y-5 overflow-y-auto px-5 py-3"
+          >
             {messages.length === 0 ? (
               <div className="pt-2">
-                <p className="font-editorial text-lg leading-relaxed text-bone">
-                  Hi traveller. I&rsquo;m Terry&rsquo;s digital twin, you can ask me about his work,
-                  his projects, his opinions minus the parts he can tell you in person.
+                <p className="font-editorial text-[0.9375rem] leading-relaxed text-bone">
+                  Hi traveller. I&rsquo;m Terry&rsquo;s digital twin — ask me about the work, the
+                  projects, or the parts he can just tell you in person.
                 </p>
-                <p className="mt-4 font-editorial text-lg leading-relaxed text-bone-dim">
-                  Want him to get back to you? Leave your name and an email or number and I&rsquo;ll
-                  pass it on.
+                <p className="mt-3 text-sm leading-relaxed text-bone-dim">
+                  Want him to get back to you? Leave a name and an email and I&rsquo;ll pass it on.
                 </p>
+                <ul className="mt-5 space-y-2">
+                  {BLANK_STATE_CHIPS.map((chip) => (
+                    <li key={chip}>
+                      <button
+                        type="button"
+                        onClick={() => void send(chip)}
+                        className="w-full rounded-sm border border-bone/12 px-3 py-2 text-left text-sm text-bone-dim transition-colors hover:border-ember/50 hover:text-bone"
+                      >
+                        {chip}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : (
-              messages.map((m, i) => (
-                <div key={i}>
+              messages.map((m) =>
+                m.role === "user" ? (
                   <p
-                    className={
-                      m.role === "user"
-                        ? "font-editorial text-lg leading-snug text-bone/90"
-                        : "font-editorial text-lg leading-relaxed text-bone-dim"
-                    }
+                    key={m.id}
+                    className="font-editorial text-[0.9375rem] leading-snug text-bone/90"
                   >
-                    {m.text}
+                    <RichText text={m.text} />
                   </p>
-                  {m.role === "bot" && i === messages.length - 1 && sources.length > 0 && !busy && (
-                    <p className="mt-2 flex flex-wrap gap-x-3 text-xs text-bone-dim/40">
-                      {sources.map((s) => (
-                        <a key={s} href={s} className="transition-colors hover:text-ember">
-                          {s.replace("#", "")}
-                        </a>
-                      ))}
-                    </p>
-                  )}
-                </div>
-              ))
+                ) : (
+                  <div key={m.id}>
+                    <div className="max-w-[40ch] font-editorial text-[0.9375rem] leading-relaxed text-bone-dim">
+                      <RichText text={m.text} streaming={m.pending === true} />
+                      {m.pending && (
+                        <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-ember/60" />
+                      )}
+                    </div>
+                    {m.failed && (
+                      <p className="mt-2 text-xs text-bone-dim/50">
+                        <button
+                          type="button"
+                          onClick={retry}
+                          className="transition-colors hover:text-ember"
+                        >
+                          Retry
+                        </button>
+                      </p>
+                    )}
+                    {/* Sources belong to the message they came from. As one
+                        piece of component state they were overwritten by the
+                        next turn, so an answer that used four sections lost
+                        them the moment anything was asked again. */}
+                    {m.sources && m.sources.length > 0 && (
+                      <details className="mt-2 group">
+                        <summary className="cursor-pointer list-none text-xs text-bone-dim/40 transition-colors hover:text-ember">
+                          Sources ({m.sources.length})
+                        </summary>
+                        <p className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-bone-dim/40">
+                          {m.sources.map((s) => (
+                            <a key={s} href={s} className="transition-colors hover:text-ember">
+                              {s.replace(/^#/, "").replace(/^\//, "")}
+                            </a>
+                          ))}
+                        </p>
+                      </details>
+                    )}
+                  </div>
+                ),
+              )
             )}
             <div ref={endRef} />
           </div>
+
+          {/* Status line. `aria-live` so the state of the turn is announced, and
+              separate from the conversation log so a screen-reader user is not
+              interrupted by "Sending…" between every pair of messages. */}
+          <p
+            aria-live="polite"
+            aria-atomic="true"
+            className="min-h-5 px-5 text-xs text-bone-dim/60"
+          >
+            {statusLabel}
+          </p>
 
           <form
             onSubmit={(e) => {
               e.preventDefault();
               void send();
             }}
-            className="flex items-center gap-2 border-t border-bone/10 px-4 py-3"
+            className="border-t border-bone/10 px-4 pt-3 pb-3"
           >
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask, or follow up…"
-              aria-label="Ask about Terry's work"
-              className="min-w-0 flex-1 rounded-sm bg-transparent py-1 text-sm text-bone placeholder:text-bone-dim/40"
-            />
-            <button
-              type="submit"
-              disabled={busy || !input.trim()}
-              aria-label="Send"
-              className="grid size-9 shrink-0 place-items-center rounded-full transition-colors hover:text-ember disabled:opacity-30 disabled:hover:text-bone-dim/50"
-            >
-              ↵
-            </button>
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={composerRef}
+                value={input}
+                rows={1}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setState("composing");
+                  // Auto-grow to the content, capped, then scroll. A fixed
+                  // height would hide the tail of a long question behind a
+                  // scrollbar the visitor has to find.
+                  const el = e.target;
+                  el.style.height = "auto";
+                  el.style.height = `${Math.min(el.scrollHeight, 144)}px`;
+                }}
+                onKeyDown={onComposerKeyDown}
+                placeholder="Ask, or follow up…"
+                aria-label="Ask about Terry's work"
+                className="max-h-36 min-h-[2.25rem] flex-1 resize-none overflow-y-auto rounded-sm bg-transparent py-1.5 text-sm text-bone placeholder:text-bone-dim/40"
+              />
+              {busy ? (
+                <button
+                  type="button"
+                  onClick={cancel}
+                  aria-label="Stop generating"
+                  className="grid size-9 shrink-0 place-items-center rounded-full border border-bone/25 text-xs text-bone-dim transition-colors hover:border-ember hover:text-ember"
+                >
+                  Stop
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!input.trim()}
+                  aria-label="Send message"
+                  className="grid size-9 shrink-0 place-items-center rounded-full text-bone-dim transition-opacity hover:text-ember disabled:cursor-default disabled:opacity-30 disabled:hover:text-bone-dim"
+                >
+                  {/* The label carries the action at desktop widths, where the
+                      glyph alone read as "submit" in a form with no other
+                      affordance. Below that there is no room for it. */}
+                  <span className="hidden md:inline md:px-1 md:text-xs md:tracking-wide">Send</span>
+                  <ArrowUp aria-hidden="true" className="size-4 md:hidden" />
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-[0.6875rem] text-bone-dim/35">
+              Enter to send · Shift+Enter newline
+            </p>
           </form>
         </div>
       )}
 
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? close() : setOpen(true))}
         aria-expanded={open}
         aria-label="Ask about Terry's work"
         className="label-eyebrow inline-flex min-h-11 items-center rounded-full border border-bone/25 bg-ink px-5 py-3 text-bone transition-colors hover:border-ember hover:text-ember focus-visible:bg-ember/15"

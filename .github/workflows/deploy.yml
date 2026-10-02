@@ -206,14 +206,40 @@ jobs:
         # it scored the previous release and the pull request was never actually
         # measured — a green run on this job said nothing about the change.
         #
-        # A 0/N score means the chatbot is completely unavailable: quota
-        # exhausted, generation failing everywhere, endpoint down. That blocks,
-        # because shipping a chatbot that cannot answer is worse than not
-        # shipping. A partial score warns: content may simply not be indexed yet.
+        # The suite classifies its own failures and returns the class as the exit
+        # code, because a single score cannot carry both decisions:
+        #
+        #   1  availability  BLOCK. No model answered, cases were rate limited, or
+        #      nothing passed at all. Shipping a chatbot that cannot answer is
+        #      worse than not shipping one, and this is a real regression — the
+        #      deploy immediately before this step already proved the endpoint
+        #      responds.
+        #   2  content       WARN. The chatbot answered; retrieval or phrasing did
+        #      not land. Content lags a deploy by design (the corpus is ingested
+        #      after), models phrase things differently, and a golden case keyed
+        #      on the string "300" is a fragile thing to block every push on.
+        #
+        # This step previously swallowed every failure with `set +e` and only
+        # warned — so the gate could not fail a deploy even when the chatbot was
+        # completely dead, which is the one thing it existed to catch.
         run: |
           set +e
           npm run eval
           code=$?
-          if [ $code -ne 0 ]; then
-            echo "::warning::Evaluation did not pass in full. Review the run summary before trusting it."
-          fi
+          set -e
+          case "$code" in
+            0)
+              echo "::notice::Evaluation passed in full."
+              ;;
+            2)
+              echo "::warning::Evaluation had content misses — the chatbot answered, but some answers did not contain the expected facts. Review the run summary; this does not block the deploy."
+              ;;
+            1)
+              echo "::error::Evaluation reports an AVAILABILITY failure — the deployed chatbot is not answering. This blocks the deploy."
+              exit 1
+              ;;
+            *)
+              echo "::error::Evaluation exited $code, which it should never do. Treating it as a failure."
+              exit 1
+              ;;
+          esac

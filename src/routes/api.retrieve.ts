@@ -91,13 +91,17 @@ async function runRetrievalOnly(
   }
 
   try {
-    const results = await retrieveHybrid(question, env as never, CHAT_CONFIG);
-    const live = results.filter((r) => r.source !== "cache");
+    const { results, health } = await retrieveHybrid(question, env as never, CHAT_CONFIG);
+    // Cache provenance is a separate flag from the source, so this counts only
+    // the results that were replayed rather than every result that came from
+    // the cache. The `live` split below stays honest for the same reason.
+    const cached = results.filter((r) => r.fromCache === true);
+    const live = results.filter((r) => r.fromCache !== true);
     const methods = {
       static: live.some((r) => r.source === "static"),
       bm25: live.some((r) => r.source === "bm25"),
       vector: live.some((r) => r.source === "vector"),
-      cache: results.some((r) => r.source === "cache"),
+      cache: cached.length > 0,
     };
 
     const liveCount = Number(methods.static) + Number(methods.bm25) + Number(methods.vector);
@@ -118,6 +122,11 @@ async function runRetrievalOnly(
               : "single"
             : "hybrid",
       methods,
+      // Which live methods ran and which failed, as opposed to which returned
+      // something. An empty result from a healthy index and an empty result
+      // from a broken one look identical in `methods` above; this is the field
+      // that tells them apart.
+      health,
       results: live.map((r) => ({
         id: r.id,
         anchor: r.anchor,

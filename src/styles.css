@@ -591,6 +591,38 @@
   }
 }
 
+/* The chat window's geometry.
+ *
+ * Two shapes, because a chat window that works on a phone does not work on a
+ * desktop and a chat window that works on a desktop is unusable on a phone:
+ *
+ *   chat-sheet  the default. Full width minus the safe-fab inset on both sides,
+ *               and tall enough to be a real conversation. The safe-area padding
+ *               is what keeps the composer above the home indicator.
+ *   chat-panel  from 48rem up, a floating card beside the trigger instead.
+ *
+ * `100vw` is deliberate: the parent is `position: fixed` with only `right` and
+ * `bottom` set, so it shrink-wraps its content and a percentage width on a
+ * child resolves against that, not the viewport.
+ *
+ * These are utilities rather than arbitrary values for the reason in AGENTS.md
+ * — the height- and viewport-dependent parts are nested `min()`/`calc()`, which
+ * the compiler drops inside `h-[]`. `safe-fab` above has the same constraint and
+ * solves it the same way.
+ */
+@utility chat-sheet {
+  width: calc(100vw - 2.5rem);
+  height: min(45rem, calc(100dvh - 1rem));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility chat-panel {
+  /* 24rem = 384px. The window was 368px and cramped on a laptop; the plan
+   * band is 360–400px, so this is the midpoint rather than either edge. */
+  width: min(24rem, calc(100vw - 5rem));
+  height: min(37.5rem, 72dvh);
+}
+
 @utility experience-print {
   @media (min-width: 64rem) {
     /* The subtraction keeps the whole sticky column on one screen. It was set
@@ -626,7 +658,8 @@
   button:focus-visible,
   [tabindex]:focus-visible,
   input:focus-visible,
-  summary:focus-visible {
+  summary:focus-visible,
+  textarea:focus-visible {
     outline: 2px solid var(--ember);
     outline-offset: 4px;
   }

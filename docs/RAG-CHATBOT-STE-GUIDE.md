@@ -106,7 +106,11 @@ The load command sends your knowledge files into the vector store. The command n
 The command does four jobs. It reads the files. It cuts the files into parts. It makes a
 vector for each part. Then it saves the vectors and the text into the search systems.
 
-**You must run this command each time you change a knowledge file.**
+**You must run this command each time you change a knowledge file.** In practice the
+deploy workflow does this for you: the knowledge files are bundled into the build, so the
+command runs only after the new build is live. Running it earlier loads the old text.
+A content change also needs the corpus version bumped, because the answer and retrieval
+caches are keyed on it and would otherwise serve the previous wording for a day.
 
 The command uses the web address below.
 
@@ -321,27 +325,34 @@ not send any message to the visitor about notifications.
 
 This section is important. Read this section before you change any limit.
 
-| Part | Free amount | When you use it | Your cost |
-|---|---|---|---|
-| Cloudflare Workers | 100,000 requests each day | Every page visit and every question | $0 |
-| Workers AI | 10,000 neurons each day | Loading the knowledge files only | $0 |
-| Vectorize | 1 free plan with a large limit | Once for each load | $0 |
-| D1 | 5 million rows read each day | Every question | $0 |
-| KV | 100,000 reads each day | Every question | $0 |
-| Groq | 200,000 words each day | If OpenRouter fails | $0 |
-| OpenRouter free model | Depends on the service | Every question | $0 |
-| OpenRouter paid model | You pay for each word | If you set a paid model | Small |
-| Pushover | One payment when you make the app | Only when you send | One payment |
+| Part                  | Free amount                       | When you use it                     | Your cost   |
+| --------------------- | --------------------------------- | ----------------------------------- | ----------- |
+| Cloudflare Workers    | 100,000 requests each day         | Every page visit and every question | $0          |
+| Workers AI            | 10,000 neurons each day           | Loading the knowledge files only    | $0          |
+| Vectorize             | 1 free plan with a large limit    | Once for each load                  | $0          |
+| D1                    | 5 million rows read each day      | Every question                      | $0          |
+| KV                    | 100,000 reads each day            | Every question                      | $0          |
+| Groq                  | 200,000 words each day            | If OpenRouter fails                 | $0          |
+| OpenRouter free model | Depends on the service            | Every question                      | $0          |
+| OpenRouter paid model | You pay for each word             | If you set a paid model             | Small       |
+| Pushover              | One payment when you make the app | Only when you send                  | One payment |
 
 **Important:** The website can work at no cost. All parts have a free amount. Your OpenRouter
 balance gives you more than the traffic you receive.
 
-**Important:** OpenRouter has two kinds of models. Some models are free. Some models use
-your balance. The free kind is named `openrouter/free`.
+**Important:** The system does not use OpenRouter's free routing alias. It names a full,
+pinned model id: `anthropic/claude-sonnet-4.5` for answers and tool calls, and
+`anthropic/claude-haiku-4.5` for rewriting follow-up questions.
 
-**Caution:** The `openrouter/free` name is not one fixed model. OpenRouter chooses which
-free models to use. The choice can change at any time. If you want a fixed model, you must
-write the full model name. You must check the model on the OpenRouter website first.
+**Why not the alias:** the free name such as `openrouter/free` is not one fixed model.
+OpenRouter chooses what backs it, and can change that without notice. Because the same
+model id also governs tool calling, a silent swap changes how contact details are captured
+and not only how answers are phrased — and the chatbot keeps answering throughout, so
+nothing looks broken. Pin the id and check it on the OpenRouter website first.
+
+**Note:** the tool round trip on the pinned id has not been verified live. A check script
+exists for that (`npm run verify:models`); until it has been run with a key, treat the
+pinned ids as configured rather than proven.
 
 ### 4.1 Why the Workers AI neurons are a problem
 
@@ -369,23 +380,23 @@ This section is important. It explains what you must repeat.
 
 ### 5.1 Work you do only when you change something
 
-| Task | How often | Command |
-|---|---|---|
-| Write or change a knowledge file | Each time you want a change | Your text editor |
-| Load the knowledge files | After each change | `curl` in section 10 |
-| Change the AI service order | Rarely | `src/server/chat.config.ts` |
-| Add a new AI model name | Rarely | `src/server/chat.config.ts` |
+| Task                             | How often                   | Command                     |
+| -------------------------------- | --------------------------- | --------------------------- |
+| Write or change a knowledge file | Each time you want a change | Your text editor            |
+| Load the knowledge files         | After each change           | `curl` in section 10        |
+| Change the AI service order      | Rarely                      | `src/server/chat.config.ts` |
+| Add a new AI model name          | Rarely                      | `src/server/chat.config.ts` |
 
 ### 5.2 Work the system does each time
 
-| Task | How often | Cost |
-|---|---|---|
-| Vector search | Each question | Free |
-| Keyword search | Each question | Free |
-| Check the answer memory | Each question | Free |
-| Rewrite a second question | Each follow-up question | Small or free |
-| Write the answer | Each question | Small or free |
-| Send a notification | Only when a visitor gives contact details | Free |
+| Task                      | How often                                 | Cost          |
+| ------------------------- | ----------------------------------------- | ------------- |
+| Vector search             | Each question                             | Free          |
+| Keyword search            | Each question                             | Free          |
+| Check the answer memory   | Each question                             | Free          |
+| Rewrite a second question | Each follow-up question                   | Small or free |
+| Write the answer          | Each question                             | Small or free |
+| Send a notification       | Only when a visitor gives contact details | Free          |
 
 ### 5.3 The answer for a simple question
 
@@ -477,7 +488,8 @@ system stays quiet. The chat still works.
 
 ### Decision 2 — Add OpenRouter as the first AI service
 
-**What we decided:** The system tries OpenRouter first. Then Groq. Then Workers AI.
+**What we decided:** The system tries OpenRouter first. Then Groq. Workers AI is not in
+the generation chain at all.
 
 **Reason:** We saw both free services run out on the same evening. Workers AI had no
 neurons. Groq had used 199,806 of its 200,000 words. So most of the day showed the words
@@ -485,13 +497,18 @@ from the knowledge file instead of a real answer.
 
 **Result:** The assistant works at all times. It uses your OpenRouter balance.
 
-**Note:** We did not remove Workers AI. It is free and quick while the allowance lasts. There
-is no reason to remove a working service. You can remove it in the config file.
+**Note:** We later removed Workers AI from generation entirely, which reversed the
+reasoning above. Keeping it as a last-resort tier is not free: it is the tier that gets
+reached exactly when the other two are exhausted, which is when the evaluation suite is
+also running. The cost of one answer there is orders of magnitude more of the daily
+allowance than one embedding, so the fallback answers were spending the budget the corpus
+rebuild needed. Workers AI now produces embeddings and nothing else.
 
 ### Decision 3 — Move question condensing off Workers AI
 
-**What we decided:** The system rewrites questions on OpenRouter. Workers AI is the last
-choice. The system no longer uses most of the 10,000 neurons.
+**What we decided:** The system rewrites questions on OpenRouter, using a pinned
+`anthropic/claude-haiku-4.5`. Workers AI is not used for rewriting. The system no longer
+uses most of the 10,000 neurons.
 
 **Reason:** This is the most important decision in this document.
 
@@ -628,7 +645,6 @@ words of each part next to its vector and sends those.
 program. The test measured the wrong program. Error 5 describes the error in
 full.
 
-
 ## 8. Errors we made, and the fixes
 
 This section is the record. Every error is here with its cause, the change we
@@ -640,30 +656,30 @@ taking from this list, and it is written out at the end of the section.
 
 ### 8.1 The list at a glance
 
-| # | Error | Fix | How we know |
-|---|---|---|---|
-| 1 | Chat showed an error when the answer was correct | Read the answer from the last message | Asked a question, saw the real reply |
-| 2 | The test was fixed but the chat was not | Searched for every reader of the answer | Both paths read the answer now |
-| 3 | A deleted file broke the build | Searched for the name after deleting | The build finishes |
-| 4 | A photo cut the person out of the frame | Set the position of the window | The person is in the picture |
-| 5 | A name was wrong in three places | Found the true value, then searched for the wrong one | The page, the data, and the chat all agree |
-| 6 | The chat spent the units that the load command needed | Gave the units to one job only | The load command works all day |
-| 7 | Failed calls used up the rest of the limit | Stop at the first limit | The count stops rising |
-| 8 | Deleted knowledge stayed answerable | The load command now removes it | The removed file is gone from the answer |
-| 9 | The slow path was correct but took 9 seconds | Cut the time each step may take | The reply arrives before the browser stops waiting |
-| 10 | The code said one thing and did another | Write the correct rule, then check the numbers | A test shows the numbers |
-| 11 | One visitor could receive another visitor's reply | Store a whole answer only for a first question | Two conversations, one reply each |
-| 12 | The parts that matched were thrown away | Keep the words next to each vector | The model receives parts, not files |
-| 13 | The backup service was never tried | Use a list of services, not a choice of one | A failing service moves to the next |
-| 14 | A new rule worked against an old rule | Write what the rule must not allow | The rule now refuses facts from memory |
-| 15 | A test measured the old program | Test after the program is on the server | The test scores the new version |
-| 16 | A limit was set but never applied | Use one code path for both routes | A 9.7 MB request becomes 9,600 characters |
-| 17 | A true number made a measurement wrong | Report what actually happened | A cache hit no longer reads as an outage |
-| 18 | A build step reported success and did nothing | Make the step able to fail | The build fails when the key is missing |
-| 19 | The keyword index was a frozen copy of an old month | Write to it on every load | The result is thicker than the old placeholder |
-| 20 | The search said "hybrid" while one method ran | Count the methods that returned | A test fails below two |
-| 21 | A note promised a repair the code did not contain | Write the repair | The log names how many documents needed it |
-| 22 | The test for a broken system was skipped by it | Give the search its own address | The test no longer skips |
+| #   | Error                                                 | Fix                                                   | How we know                                        |
+| --- | ----------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| 1   | Chat showed an error when the answer was correct      | Read the answer from the last message                 | Asked a question, saw the real reply               |
+| 2   | The test was fixed but the chat was not               | Searched for every reader of the answer               | Both paths read the answer now                     |
+| 3   | A deleted file broke the build                        | Searched for the name after deleting                  | The build finishes                                 |
+| 4   | A photo cut the person out of the frame               | Set the position of the window                        | The person is in the picture                       |
+| 5   | A name was wrong in three places                      | Found the true value, then searched for the wrong one | The page, the data, and the chat all agree         |
+| 6   | The chat spent the units that the load command needed | Gave the units to one job only                        | The load command works all day                     |
+| 7   | Failed calls used up the rest of the limit            | Stop at the first limit                               | The count stops rising                             |
+| 8   | Deleted knowledge stayed answerable                   | The load command now removes it                       | The removed file is gone from the answer           |
+| 9   | The slow path was correct but took 9 seconds          | Cut the time each step may take                       | The reply arrives before the browser stops waiting |
+| 10  | The code said one thing and did another               | Write the correct rule, then check the numbers        | A test shows the numbers                           |
+| 11  | One visitor could receive another visitor's reply     | Store a whole answer only for a first question        | Two conversations, one reply each                  |
+| 12  | The parts that matched were thrown away               | Keep the words next to each vector                    | The model receives parts, not files                |
+| 13  | The backup service was never tried                    | Use a list of services, not a choice of one           | A failing service moves to the next                |
+| 14  | A new rule worked against an old rule                 | Write what the rule must not allow                    | The rule now refuses facts from memory             |
+| 15  | A test measured the old program                       | Test after the program is on the server               | The test scores the new version                    |
+| 16  | A limit was set but never applied                     | Use one code path for both routes                     | A 9.7 MB request becomes 9,600 characters          |
+| 17  | A true number made a measurement wrong                | Report what actually happened                         | A cache hit no longer reads as an outage           |
+| 18  | A build step reported success and did nothing         | Make the step able to fail                            | The build fails when the key is missing            |
+| 19  | The keyword index was a frozen copy of an old month   | Write to it on every load                             | The result is thicker than the old placeholder     |
+| 20  | The search said "hybrid" while one method ran         | Count the methods that returned                       | A test fails below two                             |
+| 21  | A note promised a repair the code did not contain     | Write the repair                                      | The log names how many documents needed it         |
+| 22  | The test for a broken system was skipped by it        | Give the search its own address                       | The test no longer skips                           |
 
 ### 8.2 The records
 
@@ -1217,13 +1233,13 @@ npx wrangler secret put KEY_NAME
 
 The system uses these keys. You must put all five in place.
 
-| Key name | Where to get the value |
-|---|---|
-| `OPENROUTER_API_KEY` | openrouter.ai |
-| `GROQ_API_KEY` | console.groq.com |
-| `INGEST_KEY` | You make this value. Section 10.2 explains. |
-| `PUSHOVER_TOKEN` | The Pushover website. You make the app. |
-| `PUSHOVER_USER` | The Pushover website. Your user key. |
+| Key name             | Where to get the value                      |
+| -------------------- | ------------------------------------------- |
+| `OPENROUTER_API_KEY` | openrouter.ai                               |
+| `GROQ_API_KEY`       | console.groq.com                            |
+| `INGEST_KEY`         | You make this value. Section 10.2 explains. |
+| `PUSHOVER_TOKEN`     | The Pushover website. You make the app.     |
+| `PUSHOVER_USER`      | The Pushover website. Your user key.        |
 
 **Important:** A secret key must never go in a file that goes to the internet. Never put a
 secret key in these places:
@@ -1313,11 +1329,11 @@ The log shows you which AI service answered. The log also shows you why a servic
 
 Do not use these commands in the normal work. These commands can break the system.
 
-| Command | Why you must not use it |
-|---|---|
+| Command                                                     | Why you must not use it                                                       |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `npx wrangler d1 execute --command "DELETE FROM documents"` | This removes the text from all search systems. You must load the files again. |
-| `npx wrangler secret delete` | The service stops. The system loses this part. |
-| `npx wrangler tail --format json` on a busy site | This makes a large amount of text. |
+| `npx wrangler secret delete`                                | The service stops. The system loses this part.                                |
+| `npx wrangler tail --format json` on a busy site            | This makes a large amount of text.                                            |
 
 ---
 
@@ -1325,32 +1341,33 @@ Do not use these commands in the normal work. These commands can break the syste
 
 These words have a special meaning in this document.
 
-| Word | Meaning |
-|---|---|
-| **AI service** | A company on the internet that writes the answer. OpenRouter, Groq, and Workers AI are AI services. |
-| **Chunk** | A small part of a knowledge file. Each chunk has one vector. |
-| **Embedding** | A list of 768 numbers. The list shows the meaning of a chunk. |
-| **Vector** | The same as an embedding. |
-| **Vectorize** | The Cloudflare service that stores and searches vectors. |
-| **Ingest** | The command that loads the knowledge files. |
-| **RAG** | Retrieval-Augmented Generation. The system finds the facts first. Then it asks the AI to write the answer. |
-| **Hybrid search** | The system uses two search methods. It uses vectors and words. |
-| **Rank fusion** | The system puts the results of the search methods together by position. |
-| **Question condensing** | The system rewrites a short question into a full question. |
-| **Tool** | A function the AI can ask the system to run. |
-| **Secret key** | A value the system reads. A person cannot read it later. |
-| **Token** (for secrets) | The secret key value from Pushover. |
-| **Token** (for AI) | A part of a word. An AI service counts tokens. |
-| **Neuron** | The Cloudflare unit for AI work. The free amount is 10,000 each day. |
-| **Tool call** | When the AI asks the system to run a tool. |
+| Word                    | Meaning                                                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **AI service**          | A company on the internet that writes the answer. OpenRouter and Groq are AI services. Workers AI supplies embeddings only and is not an AI service in this sense. |
+| **Chunk**               | A small part of a knowledge file. Each chunk has one vector.                                                                                                       |
+| **Embedding**           | A list of 768 numbers. The list shows the meaning of a chunk.                                                                                                      |
+| **Vector**              | The same as an embedding.                                                                                                                                          |
+| **Vectorize**           | The Cloudflare service that stores and searches vectors.                                                                                                           |
+| **Ingest**              | The command that loads the knowledge files.                                                                                                                        |
+| **RAG**                 | Retrieval-Augmented Generation. The system finds the facts first. Then it asks the AI to write the answer.                                                         |
+| **Hybrid search**       | The system uses two search methods. It uses vectors and words.                                                                                                     |
+| **Rank fusion**         | The system puts the results of the search methods together by position.                                                                                            |
+| **Question condensing** | The system rewrites a short question into a full question.                                                                                                         |
+| **Tool**                | A function the AI can ask the system to run.                                                                                                                       |
+| **Secret key**          | A value the system reads. A person cannot read it later.                                                                                                           |
+| **Token** (for secrets) | The secret key value from Pushover.                                                                                                                                |
+| **Token** (for AI)      | A part of a word. An AI service counts tokens.                                                                                                                     |
+| **Neuron**              | The Cloudflare unit for AI work. The free amount is 10,000 each day.                                                                                               |
+| **Tool call**           | When the AI asks the system to run a tool.                                                                                                                         |
 
 ---
 
 ## Summary
 
 The chat assistant finds facts in your own files. Then an AI service writes the
-answer. The system uses OpenRouter first. It uses Groq and Workers AI as
-fallbacks.
+answer. The system uses OpenRouter first, with a pinned Claude model, and Groq as
+the fallback for both answers and tool calls. Workers AI supplies the embeddings
+and writes nothing.
 
 You must run the load command each time you change a file. The load command
 needs 10,000 units each day. The question rewrite now uses OpenRouter. So the

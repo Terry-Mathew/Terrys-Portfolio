@@ -17,6 +17,7 @@
 
 import { CHAT_CONFIG } from "@/server/chat.config";
 import type { CloudflareEnvShape } from "@/server/env";
+import { parseFrontmatter } from "@/server/frontmatter";
 
 /** Bindings ingestion actually requires. */
 const REQUIRED = ["VECTORIZE", "DB", "CACHE", "AI"] as const;
@@ -42,9 +43,45 @@ const rawModules = import.meta.glob("../content/knowledge/*.md", {
 
 const SKIP = new Set(["README.md", "RAG-ARCHITECTURE.md"]);
 
-/** Anchors the site's source links to. Unknown files fall back to "knowledge". */
+/**
+ * Where the chatbot's source links point.
+ *
+ * Each value is either a bare section id on the home page, or a path to a real
+ * route. Both are resolved by {@link anchorFor} in knowledge.ts, which prefixes
+ * a bare id with `#` and leaves a path alone.
+ *
+ * Three of these were wrong, and all of them shipped:
+ *  - "off-the-clock" — no element on the site carries that id. The section is
+ *    `id="beyond-work"` (OffTheClock.tsx), so every citation to Terry's
+ *    hobbies was a link to nowhere.
+ *  - "how-this-works" — no route and no element with that id at all. The
+ *    document explaining the chatbot pointed at nothing. It is now the Digital
+ *    Twin case study, which is the real page that describes it.
+ *  - "resume" — no such section either. The resume is a PDF, not a section, so
+ *    it links to the file itself. That is the same target the nav and the
+ *    contact section already use, so a citation agrees with the rest of the page.
+ *
+ * "approach" and "speaking" used to be listed here too, and both were wrong:
+ * neither `approach.md` nor `speaking.md` is in the corpus, and no element
+ * carries either id. They are removed rather than pointed somewhere plausible —
+ * an inert mapping for a file that does not exist is dead code that will
+ * quietly mislabel the day someone adds one. scripts/pipeline-test.mjs checks
+ * every remaining entry against the ids and routes that actually exist.
+ *
+ * Anything unknown falls back to "knowledge", which has no anchor either. That
+ * is deliberate: a dead `#knowledge` link is visible and fixable, whereas
+ * guessing an anchor that does not exist hides the mistake.
+ */
 const CATEGORY: Record<string, string> = {
   "bio.md": "about",
+  // The canonical facts layer. Anchored to #about because it is where a
+  // visitor asking "who is Terry" should end up, and because it restates the
+  // biography rather than replacing it — two documents answering the same
+  // question is the duplication that `experiments.md` was trimmed to avoid.
+  // Without an entry here this would fall back to `#knowledge`, which exists
+  // nowhere, and every citation drawn from the facts layer would be a dead
+  // link — which is exactly what happened twice before the anchor test.
+  "facts.md": "about",
   "experience.md": "experience",
   // "work" is chatbot context only — the Selected Work section was removed, so
   // anchoring to #selected-work would emit a dead source link.
@@ -56,11 +93,9 @@ const CATEGORY: Record<string, string> = {
   "experiments.md": "experiments",
   "skills.md": "capabilities",
   "contact.md": "contact",
-  "off-the-clock.md": "off-the-clock",
-  "approach.md": "approach",
-  "speaking.md": "speaking",
-  "resume.md": "resume",
-  "how-this-works.md": "how-this-works",
+  "off-the-clock.md": "beyond-work",
+  "resume.md": "/Terry-Mathew-CV.pdf",
+  "how-this-works.md": "/projects/digital-twin",
 };
 
 const humanize = (name: string) =>
@@ -70,13 +105,23 @@ const humanize = (name: string) =>
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
 const SOURCES = Object.entries(rawModules)
-  .map(([path, body]) => {
+  .map(([path, raw]) => {
     const file = path.split("/").pop() ?? path;
+    // Frontmatter is parsed here and then deliberately not carried forward.
+    // `body` is what gets hashed, chunked, embedded, and written to D1 and the
+    // FTS index, so keeping the metadata out of it means a title edit costs
+    // nothing and the metadata never pollutes keyword or vector search. The
+    // source file is untouched — this only changes what is read out of it.
+    const { frontmatter, body } = parseFrontmatter(raw);
     return {
       file,
       id: file.replace(/\.md$/, ""),
       category: CATEGORY[file] ?? "knowledge",
-      title: /^#\s+(.+)$/m.exec(body)?.[1]?.trim() ?? humanize(file),
+      // The frontmatter title wins over the first heading. It is authored
+      // deliberately, it is the label a visitor sees on a source link, and in
+      // the supplied bundle the two differ — the projects document is titled
+      // "Terry Mathew — Projects" and headed "Terry Mathew — Personal Projects".
+      title: frontmatter.title ?? /^#\s+(.+)$/m.exec(body)?.[1]?.trim() ?? humanize(file),
       body,
     };
   })
@@ -117,6 +162,28 @@ async function embed(env: RagEnv, texts: string[]): Promise<number[][]> {
 async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * What the stored hash actually covers: the text, plus where it links to.
+ *
+ * Hashing the body alone meant a category-only change could never land. The
+ * document is skipped when its body hash matches, and `documents.category` is
+ * only rewritten for documents that were NOT skipped — so editing `CATEGORY`
+ * changed the mapping in the source and changed nothing in the index. The
+ * chatbot carried on emitting the dead anchor until someone noticed the dead
+ * link by hand.
+ *
+ * The deploy workflow calls ingest without `?force=1`, so this is the only
+ * mechanism that can carry a category change to production. The NUL separator
+ * cannot occur in a filename, so `a\u0000bc` and `ab\u0000c` cannot collide.
+ *
+ * Cost: changing this invalidates every document once and forces one full
+ * re-embed. That is a one-time cost and it is the correct trade — the hash has
+ * to cover everything that is written to the row.
+ */
+function fingerprint(source: { category: string; body: string }): string {
+  return `${source.category}\u0000${source.body}`;
 }
 
 export type IngestResult = {
@@ -172,7 +239,7 @@ export async function ingestKnowledge(
   const pending: { id: string; hash: string; chunkCount: number }[] = [];
 
   for (const source of SOURCES) {
-    const hash = await sha256(source.body);
+    const hash = await sha256(fingerprint(source));
     const existing = await bindings.DB.prepare("SELECT hash FROM documents WHERE id = ?")
       .bind(source.id)
       .first<{ hash: string }>();

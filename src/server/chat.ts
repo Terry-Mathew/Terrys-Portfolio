@@ -130,6 +130,37 @@ export function promisesHandoff(answer: string): boolean {
   return HANDOFF_CLAIM.test(answer);
 }
 
+/**
+ * What to say when the promise turns out to be false.
+ *
+ * It admits the fault. The visitor asked Terry to call them, the handoff did
+ * not happen, and the only way they find out is by being told. Hiding it loses
+ * them: they wait for a call that was never going to come.
+ */
+export const HANDOFF_FAILURE_NOTICE =
+  "Sorry — that did not send. Please email terry.perangat@gmail.com and Terry will pick it up.";
+
+/**
+ * Correct an answer that promised a handoff no tool call backs.
+ *
+ * Appended rather than rewritten. The promise was streamed to the visitor as it
+ * was written, so it cannot be taken back — a replacement would leave what they
+ * already read on screen contradicted by silence. A correction the visitor sees
+ * arrive is honest; a quiet rewrite is not.
+ *
+ * The notice is also what stops a false promise being pinned for a day. An
+ * answer carrying it is not cached, so the next visitor who asks the same thing
+ * gets a fresh attempt rather than this one replayed.
+ */
+export function applyHandoffCorrection(
+  answer: string,
+  contactCaptured: boolean,
+): { text: string; broken: boolean } {
+  if (contactCaptured) return { text: answer, broken: false };
+  if (!promisesHandoff(answer)) return { text: answer, broken: false };
+  return { text: `${answer}\n\n${HANDOFF_FAILURE_NOTICE}`, broken: true };
+}
+
 export const isChatCancelled = (e: unknown): e is ChatCancelled =>
   e instanceof ChatCancelled || (e instanceof Error && e.name === "ChatCancelled");
 
@@ -1389,33 +1420,36 @@ export async function runChat(
   // does not depend on the AI binding, so the visitor still gets a real answer
   // rather than a dead chatbot. Extractive rather than generated, and labelled,
   // so it is never mistaken for something the model wrote.
-  const finalAnswer = unanswered ? extractiveAnswer(results, searchQuery) : generated.text;
+  const draftAnswer = unanswered ? extractiveAnswer(results, searchQuery) : generated.text;
 
   // A promised handoff that never happened.
   //
   // The model can write "Done. Terry will reach out." as ordinary text without
   // ever calling record_user_details. Nothing checked. The visitor believes
-  // their details were passed on, walks away, and Terry is never told — the
-  // failure is invisible from the inside too, because a successful push logs
-  // nothing and the tool result was previously discarded unread.
+  // their details were passed on, walks away, and Terry is never told.
   //
-  // This cannot be prevented at generation time, only detected. So it is
-  // detected, logged, and reported on the reply, which is what lets the eval
-  // count it and the deploy notice stay honest.
-  const promisedHandoff = promisesHandoff(finalAnswer);
-  const handoffBroken = promisedHandoff && !generated.contactCaptured;
+  // It cannot be prevented at generation time, only caught afterwards. So it is
+  // caught, the visitor is told, and the turn is marked so the eval counts it.
+  const { text: finalAnswer, broken: handoffBroken } = applyHandoffCorrection(
+    draftAnswer,
+    generated.contactCaptured === true,
+  );
   if (handoffBroken) {
     console.warn(
-      "[tools] the answer promises a callback but no contact was captured — " +
-        "the model announced a handoff it did not perform. Answer: " +
-        finalAnswer.slice(0, 160),
+      "[tools] the answer promised a callback no tool call backs — the model " +
+        "announced a handoff it did not perform. Answer: " +
+        draftAnswer.slice(0, 160),
     );
+    // Stream the correction. The promise already reached the visitor while it
+    // was being written; without this the reply on the done event would carry
+    // the correction and the text on their screen would not.
+    onDelta?.(`\n\n${HANDOFF_FAILURE_NOTICE}`);
   }
 
   // Only a real generation is worth remembering. Storing the extractive
   // fallback would pin one bad minute — every tier rate-limited, say — into
   // every repeat of that question for the next 24 hours.
-  if (cacheable && env?.CACHE) {
+  if (cacheable && !handoffBroken && env?.CACHE) {
     try {
       await env.CACHE.put(
         answerKey,

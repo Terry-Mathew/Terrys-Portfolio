@@ -206,7 +206,15 @@ export const CHAT_CONFIG = {
     minMessageLength: 20,
     // Per-IP ceilings, backed by KV. Without these one visitor can fill the
     // phone in under a minute.
-    maxContactsPerIpPerHour: 1,
+    //
+    // Raised from 1 to 3. One was low enough to drop real leads: offices,
+    // universities and mobile carriers put many visitors behind one address, so
+    // the second and third genuine enquiries in an hour were discarded while
+    // the visitor was told they had been passed on. Repeats from the same
+    // person are already handled separately — the 24-hour fingerprint on
+    // email, name and number — so this ceiling is not what stops one visitor
+    // sending the same enquiry repeatedly. That is what the fingerprint is for.
+    maxContactsPerIpPerHour: 3,
     maxUnknownPerIpPerHour: 3,
   },
 

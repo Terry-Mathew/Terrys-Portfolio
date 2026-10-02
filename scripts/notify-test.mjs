@@ -89,8 +89,10 @@ test("modules transpile and load", async () => {
 // chat.ts rather than bundling the whole server to reach it.
 test("the handoff detector is a pure function of the answer", async () => {
   const src = readFileSync(join(root, "src", "server", "chat.ts"), "utf8");
+  const to = src.indexOf("export const isChatCancelled");
   const start = src.indexOf("const HANDOFF_CLAIM");
   const end = src.indexOf("export const isChatCancelled");
+  // applyHandoffCorrection and the notice live just below the detector.
   assert.ok(start > -1 && end > start, "HANDOFF_CLAIM not found in chat.ts");
   const snippet = src.slice(start, end);
   // Still TypeScript — it carries a parameter type — so it goes through the
@@ -102,6 +104,8 @@ test("the handoff detector is a pure function of the answer", async () => {
   writeFileSync(file, outputText);
   chat = await import(pathToFileURL(file).href);
   assert.equal(typeof chat.promisesHandoff, "function");
+  assert.equal(typeof chat.applyHandoffCorrection, "function");
+  assert.equal(typeof chat.HANDOFF_FAILURE_NOTICE, "string");
 });
 
 const corpus = (content) => guard.buildUserCorpus([{ role: "user", content }]);
@@ -557,4 +561,65 @@ test("the detector ignores the answer a capture failure produces", () => {
   ]) {
     assert.equal(chat.promisesHandoff(answer), false, answer);
   }
+});
+
+// --- option B: tell the visitor the truth ------------------------------------
+//
+// The promise was streamed before anyone could know it was false, so it cannot
+// be taken back. What can be done is arrive with the correction rather than
+// leaving a false claim on screen.
+
+test("a false promise is corrected and the correction says how to reach Terry", () => {
+  const out = chat.applyHandoffCorrection("Done. Terry will reach out.", false);
+  assert.equal(out.broken, true);
+  assert.match(out.text, /^Done\. Terry will reach out\./);
+  assert.ok(out.text.includes(chat.HANDOFF_FAILURE_NOTICE));
+  assert.match(out.text, /terry\.perangat@gmail\.com/, "a dead end is not a correction");
+});
+
+test("a real capture is left exactly as written", () => {
+  const answer = "Done. Terry will reach out.";
+  const out = chat.applyHandoffCorrection(answer, true);
+  assert.equal(out.broken, false);
+  assert.equal(out.text, answer, "a working capture must not gain a false apology");
+});
+
+test("an answer with no promise is untouched either way", () => {
+  const answer = "He led a 20-person EMEA operations team handling 20,000 tickets a quarter.";
+  assert.deepEqual(chat.applyHandoffCorrection(answer, true), { text: answer, broken: false });
+  assert.deepEqual(chat.applyHandoffCorrection(answer, false), { text: answer, broken: false });
+});
+
+test("a guarded refusal is not mistaken for a broken promise", () => {
+  // Every rejection returns success:false and a message that says nothing was
+  // promised. If any of these counted as broken, the counter would fill with
+  // noise and the real failures would be lost in it.
+  for (const answer of ["Contact recorded.", "Contact noted.", "Contact already recorded."]) {
+    assert.equal(chat.applyHandoffCorrection(answer, false).broken, false, answer);
+  }
+});
+
+test("the correction keeps the promise it is correcting", () => {
+  // Rewriting instead of appending would leave what the visitor already read
+  // contradicted by silence, which is the thing this is meant to avoid.
+  const promise = "I'll pass that along to Terry.";
+  const out = chat.applyHandoffCorrection(promise, false);
+  assert.ok(out.text.startsWith(promise), "the original wording must survive");
+  assert.ok(out.text.includes(chat.HANDOFF_FAILURE_NOTICE));
+});
+
+test("an answer carrying a broken promise is never cached", () => {
+  // Caching it would pin a false promise for a day, and the next visitor to ask
+  // the same thing would be told it had been passed on too.
+  const src = readFileSync(join(root, "src", "server", "chat.ts"), "utf8");
+  assert.match(src, /cacheable && !handoffBroken/);
+});
+
+test("the per-IP ceiling allows a second visitor but the fingerprint still blocks a repeat", () => {
+  const config = readFileSync(join(root, "src", "server", "chat.config.ts"), "utf8");
+  const limit = Number(/maxContactsPerIpPerHour:\s*(\d+)/.exec(config)?.[1]);
+  assert.ok(limit >= 3, `ceiling is ${limit}; offices put many visitors on one address`);
+  // The ceiling is not what stops one visitor repeating themselves.
+  const tools = readFileSync(join(root, "src", "server", "chat-tools.ts"), "utf8");
+  assert.match(tools, /push:dedup:/, "the 24-hour fingerprint must still exist");
 });

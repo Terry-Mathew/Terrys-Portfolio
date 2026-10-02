@@ -11,7 +11,14 @@
 // remains the fallback for when Groq is absent or down.
 
 import type { CloudflareEnvShape } from "@/server/env";
-import { buildUserCorpus, rejectionMessage, validateContactEmail } from "@/server/email-guard";
+import {
+  buildUserCorpus,
+  normalisePhone,
+  phoneRejectionMessage,
+  rejectionMessage,
+  validateContactEmail,
+  validateContactPhone,
+} from "@/server/contact-guard";
 import { sendPush } from "@/server/pushover";
 import { CHAT_CONFIG } from "@/server/chat.config";
 
@@ -34,7 +41,10 @@ export const TOOLS: ToolDefinition[] = [
         "ONLY after the visitor has explicitly given you their name and email " +
         "address themselves — usually in response to you asking how to reach " +
         "them. Never construct, guess, complete or infer an address: if the " +
-        "visitor has not typed one, ask them for one instead.",
+        "visitor has not typed one, ask them for one instead. " +
+        "phone is OPTIONAL: include it only when the visitor gave you a number " +
+        "or asked to be called. Never invent, complete or guess a number; an " +
+        "invented one is rejected. Leave phone out entirely if they did not offer one.",
       parameters: {
         type: "object",
         properties: {
@@ -43,12 +53,21 @@ export const TOOLS: ToolDefinition[] = [
             description: "The visitor's email address, exactly as they typed it",
           },
           name: { type: "string", description: "The visitor's name" },
-          notes: {
+          phone: {
             type: "string",
-            description: "One or two sentences on what they want to discuss or asked about",
+            description:
+              "OPTIONAL. The visitor's phone number, exactly as they typed it. " +
+              "Only include this if they gave you one or asked to be called back.",
+          },
+          message: {
+            type: "string",
+            description:
+              "What the visitor wants, in their own words as far as possible: " +
+              "what they are looking for, what they asked about, and anything " +
+              "they said Terry should know. This is what Terry reads first.",
           },
         },
-        required: ["email", "name", "notes"],
+        required: ["email", "name", "message"],
       },
     },
   },
@@ -74,6 +93,9 @@ export const TOOLS: ToolDefinition[] = [
 export type ToolCall = { id: string; name: string; args: Record<string, unknown> };
 
 const MAX_QUESTION_CHARS = 400;
+
+/** Pushover rejects a message body over 1024 characters. */
+const MAX_MESSAGE_CHARS = 700;
 
 /**
  * Recover a tool call that arrived as plain text.
@@ -161,8 +183,11 @@ async function isDuplicate(env: CloudflareEnvShape, fingerprint: string): Promis
   }
 }
 
-const fingerprint = (email: string, name: string): string =>
-  `${email.toLowerCase()}|${name.trim().toLowerCase()}`.replace(/[^a-z0-9@.|+_-]/g, "");
+const fingerprint = (email: string, name: string, phone: string): string =>
+  `${email.toLowerCase()}|${name.trim().toLowerCase()}|${normalisePhone(phone)}`.replace(
+    /[^a-z0-9@.|+_-]/g,
+    "",
+  );
 
 /** Alias so the tool layer reads as a unit; it is the Worker's own env shape. */
 export type ToolEnv = CloudflareEnvShape;
@@ -188,7 +213,22 @@ export async function runToolCall(
   if (call.name === "record_user_details") {
     const email = typeof call.args["email"] === "string" ? call.args["email"] : "";
     const name = typeof call.args["name"] === "string" ? call.args["name"].trim() : "";
-    const notes = typeof call.args["notes"] === "string" ? call.args["notes"].trim() : "";
+    // Optional. Absent, null and empty all mean "no number was given", which is
+    // the common case and must not fail the capture.
+    const phone =
+      typeof call.args["phone"] === "string" && call.args["phone"].trim()
+        ? call.args["phone"].trim()
+        : "";
+    // `notes` is read too, because a model trained on the previous schema will
+    // still emit it, and dropping a visitor's message on the floor is a worse
+    // outcome than accepting an older field name.
+    const rawMessage =
+      typeof call.args["message"] === "string" && call.args["message"].trim()
+        ? call.args["message"]
+        : typeof call.args["notes"] === "string"
+          ? call.args["notes"]
+          : "";
+    const message = rawMessage.trim();
 
     const verdict = validateContactEmail(email, corpus);
     if (!verdict.ok) {
@@ -209,19 +249,32 @@ export async function runToolCall(
       };
     }
 
-    if (notes.length < CHAT_CONFIG.notifications.minNotesLength) {
+    const phoneVerdict = validateContactPhone(phone, corpus);
+    if (!phoneVerdict.ok) {
+      // Refused rather than silently dropped: a number Terry cannot trust is
+      // worse than no number, because he will act on it.
+      console.warn(`[push] phone rejected (${phoneVerdict.reason})`);
+      return {
+        output: { success: false, error: phoneRejectionMessage(phone, phoneVerdict.reason) },
+        pushed: false,
+      };
+    }
+
+    if (message.length < CHAT_CONFIG.notifications.minMessageLength) {
       // Models fire this tool eagerly, on the first "tell me about yourself".
-      // Without a real note there is nothing to follow up on.
+      // Without a real message there is nothing to follow up on.
       return {
         output: {
           success: false,
-          error: `The notes field needs at least ${CHAT_CONFIG.notifications.minNotesLength} characters describing what the visitor wants. Ask them what they are looking for first.`,
+          error: `The message field needs at least ${CHAT_CONFIG.notifications.minMessageLength} characters describing what the visitor wants. Ask them what they are looking for first.`,
         },
         pushed: false,
       };
     }
 
-    const fp = fingerprint(email, name);
+    // The number is part of the identity: the same person asking twice from two
+    // browsers is one lead, and two numbers for one name is worth seeing again.
+    const fp = fingerprint(email, name, phone);
     if (env && (await isDuplicate(env, fp))) {
       console.info("[push] duplicate contact suppressed");
       return { output: { success: true, message: "Contact already recorded." }, pushed: false };
@@ -239,10 +292,21 @@ export async function runToolCall(
       return { output: { success: true, message: "Contact noted." }, pushed: false };
     }
 
+    // Laid out the way Terry reads it: who, how to reach them, then what they
+    // said. The message is capped because Pushover rejects a body over 1024
+    // characters, and a long one would lose the notification entirely.
     const pushed = env
       ? await sendPush(
           env,
-          `New contact via the site chat.\n\nName: ${name}\nEmail: ${email.trim()}\nNotes: ${notes}`,
+          [
+            "New contact via the site chat.",
+            "",
+            `Name: ${name}`,
+            `Email: ${email.trim()}`,
+            phone ? `Phone: ${phone}` : "Phone: not given",
+            "",
+            `Message: ${message.slice(0, MAX_MESSAGE_CHARS)}`,
+          ].join("\n"),
           { priority: 1, title: "Lead captured" },
         )
       : false;

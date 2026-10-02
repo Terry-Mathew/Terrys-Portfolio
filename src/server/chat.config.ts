@@ -200,8 +200,10 @@ export const CHAT_CONFIG = {
   notifications: {
     enabled: true,
     // Models fire record_user_details eagerly, on the first "tell me about
-    // yourself". Requiring a real note first is the cheapest guard.
-    minNotesLength: 20,
+    // yourself". Requiring a real message first is the cheapest guard. Kept at
+    // 20 because a short visitor request still summarises comfortably above it:
+    // "wants a callback about a data role" is 35.
+    minMessageLength: 20,
     // Per-IP ceilings, backed by KV. Without these one visitor can fill the
     // phone in under a minute.
     maxContactsPerIpPerHour: 1,
@@ -257,5 +259,10 @@ export const CHAT_CONFIG = {
   // the old instructions would keep serving the Markdown version — and the
   // answer cache outlives a deploy, so the fix would look like it had not
   // landed at all.
-  promptVersion: 3,
+  // 3 → 4: the contact-capture contract changed. `notes` became `message`,
+  // `phone` was added as an optional field, and the prompt now says when to ask
+  // for a number and what to write in the message. Without the bump, a cached
+  // reply says "Done. Terry will reach out." on the strength of instructions
+  // that no longer apply, and the model keeps asking only for an email.
+  promptVersion: 4,
 } as const;

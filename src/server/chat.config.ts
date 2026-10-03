@@ -1,7 +1,7 @@
 // RAG chat backend config (Cloudflare-native).
 // mode: "static" = deterministic keyword retrieval over bundled knowledge —
 // zero AI cost, works on first deploy with no Vectorize/R2 setup.
-// mode: "vector" = semantic search via Vectorize + LLM generation via Workers AI / Anthropic.
+// mode: "vector" = semantic search via Vectorize + OpenRouter generation.
 // Flip to "vector" after creating Vectorize index + KV namespace + D1
 // and adding bindings in wrangler.jsonc.
 
@@ -10,12 +10,8 @@ export const CHAT_CONFIG = {
 
   // Generation.
   //
-  // Provider order is OpenRouter -> Groq -> Workers AI. Both free tiers were
-  // observed exhausted on the same evening (Workers AI 10k neurons/day, Groq
-  // 200k tokens/day), which pushed visitors onto the extractive fallback for
-  // most of the day. OpenRouter is OpenAI-compatible like Groq, so the call
-  // path is identical and the credit balance turns the tail of the day back
-  // into real answers.
+  // OpenRouter is the only generation provider. Workers AI remains in use for
+  // embeddings. When OpenRouter fails, the chat uses its extractive fallback.
   //
   // Workers AI is embeddings-only.
   //
@@ -26,14 +22,11 @@ export const CHAT_CONFIG = {
   // when OpenRouter is capped — exhausts the day and the ingest cannot run.
   // That is the 4006 error.
   //
-  // With this off, those neurons serve retrieval and nothing else, so only the
-  // work that actually needs them can spend them. The cost is that when
-  // OpenRouter and Groq both fail, the chat drops straight to the extractive
-  // fallback instead of trying Workers AI — which is where it was heading
-  // anyway, just after destroying the embedding budget.
+  // With this off, those neurons serve retrieval and nothing else. If
+  // OpenRouter fails, the chat uses the extractive fallback.
   useWorkersAiGeneration: false,
 
-  // Tier 1. OpenRouter. Secret is OPENROUTER_API_KEY.
+  // OpenRouter. Secret is OPENROUTER_API_KEY.
   //
   // PINNED, deliberately. This used to be "openrouter/free", which is a
   // routing alias rather than a model: OpenRouter picks whatever backs it and
@@ -45,38 +38,15 @@ export const CHAT_CONFIG = {
   //   - It governs TOOL CALLING too, not just prose. `generateWithTools`
   //     reuses `openRouterModel`, so the alias decided lead capture as well.
   //
-  // Claude Sonnet 4.5 for both roles. The reasoning for it is this project's
-  // own record rather than a leaderboard: the comment on `useTools` below says
-  // Gemini Flash, Llama 3.3 and Nemotron all failed or rate-limited on
-  // structured tool calls. Sonnet is the model that does not need a fallback
-  // tier to capture an email address.
-  //
-  // Cost, for the shape a turn actually takes (≈8k input tokens after the
-  // system prompt, retrieved passages and capped history; ≈250 output tokens):
-  // about $0.028 an answer, $0.056 on a turn that captures a lead and so runs
-  // twice. This is the *paid* tier — the whole reason it is first is that it
-  // still answers when both free tiers are spent, which is when visitors most
-  // need a working chatbot.
-  //
-  // Verified against OpenRouter's public /api/v1/models: id exists, declares
-  // tool support, 1M context (the turn needs under 16k), $3/$15 per MTok.
-  // The live tool round trip and p95 latency still need a key — run
-  // `OPENROUTER_API_KEY=… npm run verify:models` before trusting it, and diff
-  // `npm run eval` before and after. See scripts/verify-models.mjs.
+  // GPT-5 Mini handles answers, tool calls, and follow-up rewrites. The public
+  // catalogue advertises tools and a 400k context. A live tool round trip and
+  // the portfolio evaluation are still required before deployment.
   useOpenRouter: true,
-  openRouterModel: "anthropic/claude-sonnet-4.5",
-  // A second slot for question condensing, so the chat model can be changed
-  // without touching the rewrite. Pinned to the Haiku sibling rather than
-  // reusing the chat model: condensing is a 20-word rewrite against a short
-  // transcript, so paying Sonnet rates for it buys nothing, and keeping it in
-  // one provider family keeps the failure modes predictable.
-  // Leave empty to reuse openRouterModel.
-  openRouterCondenseModel: "anthropic/claude-haiku-4.5",
+  openRouterModel: "openai/gpt-5-mini",
+  openRouterCondenseModel: "openai/gpt-5-mini",
 
-  // Tier 2. Groq, also OpenAI-compatible, free, no daily neuron cap. Stays the
-  // tool-calling backup behind OpenRouter. Free tiers rotate without notice —
-  // verify the id at console.groq.com/docs/models.
-  useGroq: true,
+  // Retained for a possible rollback. Disabled for all chat paths.
+  useGroq: false,
   groqModel: "qwen/qwen3.8-27b",
 
   // Opt-in premium prose. Off by default: it is a paid key, and a retired
@@ -128,7 +98,8 @@ export const CHAT_CONFIG = {
   // day of 14 October 2026, and the Digital Twin architecture was corrected to
   // match the implementation.
   // 7 → 8: contact knowledge now directs resume requests to email.
-  corpusVersion: 8,
+  // 8 → 9: indexed architecture notes now describe the GPT-5 Mini setup.
+  corpusVersion: 9,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,
@@ -173,12 +144,7 @@ export const CHAT_CONFIG = {
 
   fallbackEmail: "terry.perangat@gmail.com",
 
-  // Lead capture.
-  //
-  // Tool calling runs on Groq, not on Workers AI: this project's own history
-  // records Gemini Flash, Llama 3.3 and Nemotron all failing or rate-limiting
-  // on structured tool calls. Groq is OpenAI-compatible and reliable. If Groq
-  // is unavailable the chat still answers — it just does not capture leads.
+  // Lead capture uses the same OpenRouter model as answers.
   useTools: true,
 
   // A model can loop call -> reject -> call. Three iterations is one retry plus
@@ -273,5 +239,6 @@ export const CHAT_CONFIG = {
   // for a number and what to write in the message. Without the bump, a cached
   // reply says "Done. Terry will reach out." on the strength of instructions
   // that no longer apply, and the model keeps asking only for an email.
-  promptVersion: 4,
+  // 4 → 5: the pinned generation model changed. Retire answers from Sonnet.
+  promptVersion: 5,
 } as const;

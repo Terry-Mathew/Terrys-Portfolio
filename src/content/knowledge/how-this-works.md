@@ -15,12 +15,9 @@ provides exact-word search. **KV** caches retrieval results and first-turn
 answers. **Workers AI** turns text into vectors. **Workers** runs the code that
 ties them together. There is no database server and no container.
 
-Generation is a different matter, and it is the part that changed most. A model
-provider writes the replies: **OpenRouter** first, with a pinned Claude Sonnet 4.5,
-and **Groq** as the fallback for both generation and tool calling, both keyed as
-Worker secrets. A smaller model, Claude Haiku 4.5, handles the follow-up
-rewriting, because that is a short rewrite against a short transcript and the
-larger model buys nothing there.
+OpenRouter writes replies with the pinned `openai/gpt-5-mini` model. The same
+model handles tool calls and rewrites follow-up questions. If OpenRouter fails,
+the chatbot uses its extractive fallback. The OpenRouter key is a Worker secret.
 
 The models are pinned to specific identifiers rather than a routing alias,
 because the same identifier also governs tool calling. A routing alias lets the
@@ -44,20 +41,20 @@ cases.
 
 ## The stack
 
-| Layer                        | Choice                                      | Why                                                                  |
-| ---------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
-| Runtime                      | Cloudflare Workers                          | No server to manage, free tier covers it                             |
-| Application                  | TanStack Start, React 19, Vite              | Server-rendered React with server functions                          |
-| Vectors                      | Cloudflare Vectorize, 768 dimensions        | Free, fast, good at short text                                       |
-| Passages + search            | D1 with SQLite FTS5                         | Passage text for retrieval, BM25 for keywords                        |
-| Fusion                       | Reciprocal Rank Fusion, K=60                | Merges rankings without needing comparable scores                    |
-| Generation                   | OpenRouter, pinned Claude Sonnet 4.5        | Paid tier that is available when free tiers are spent                |
-| Follow-up rewriting          | Claude Haiku 4.5 on OpenRouter              | A short rewrite does not need the larger model                       |
-| Generation and tool fallback | Groq                                        | Keeps answering if OpenRouter is unavailable                         |
-| Embeddings                   | Workers AI, 768 dimensions only             | The only thing drawing on its daily allowance                        |
-| Caching                      | Cloudflare KV                               | Retrieval per question, whole answers for self-contained first turns |
-| Streaming                    | Server-sent events                          | Answer text arrives over an open connection                          |
-| Evaluation                   | Golden set scored against the deployed site | Measures the release rather than the intention                       |
+| Layer                       | Choice                                      | Why                                                                  |
+| --------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| Runtime                     | Cloudflare Workers                          | No server to manage, free tier covers it                             |
+| Application                 | TanStack Start, React 19, Vite              | Server-rendered React with server functions                          |
+| Vectors                     | Cloudflare Vectorize, 768 dimensions        | Free, fast, good at short text                                       |
+| Passages + search           | D1 with SQLite FTS5                         | Passage text for retrieval, BM25 for keywords                        |
+| Fusion                      | Reciprocal Rank Fusion, K=60                | Merges rankings without needing comparable scores                    |
+| Generation and tool calling | OpenRouter, pinned GPT-5 Mini               | One model handles answers and lead capture                           |
+| Follow-up rewriting         | GPT-5 Mini on OpenRouter                    | Uses the same model as generation                                    |
+| Generation fallback         | Extractive answer                           | Gives a limited answer if OpenRouter is unavailable                  |
+| Embeddings                  | Workers AI, 768 dimensions only             | The only thing drawing on its daily allowance                        |
+| Caching                     | Cloudflare KV                               | Retrieval per question, whole answers for self-contained first turns |
+| Streaming                   | Server-sent events                          | Answer text arrives over an open connection                          |
+| Evaluation                  | Golden set scored against the deployed site | Measures the release rather than the intention                       |
 
 ## How a question is processed
 

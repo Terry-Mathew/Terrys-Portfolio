@@ -623,7 +623,7 @@ async function generateWithTools(
             tools: TOOLS,
             tool_choice: "auto",
             max_tokens: 1024,
-            temperature: CHAT_CONFIG.temperature,
+            reasoning: { effort: "low" },
           }),
           signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.toolTimeoutMs)),
         });
@@ -670,6 +670,9 @@ async function generateWithTools(
       messages.push({
         role: "assistant",
         content: content || null,
+        ...(tier.provider === "openrouter" && message?.reasoning_details
+          ? { reasoning_details: message.reasoning_details }
+          : {}),
         tool_calls: calls.map((c) => ({
           id: c.id,
           type: "function" as const,
@@ -718,12 +721,14 @@ type OpenAIMessage = {
   content: string | null;
   tool_call_id?: string;
   tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[];
+  reasoning_details?: unknown;
 };
 
 type OpenAiToolResponse = {
   choices?: {
     message?: {
       content?: string | null;
+      reasoning_details?: unknown;
       tool_calls?: { id: string; function?: { name?: string; arguments?: string } }[];
     };
   }[];
@@ -866,7 +871,7 @@ async function callOpenAiCompatible(
     model,
     messages,
     max_tokens: 1024,
-    temperature: CHAT_CONFIG.temperature,
+    reasoning: { effort: "low" },
     ...(onDelta ? { stream: true } : {}),
   };
 
@@ -1043,8 +1048,8 @@ async function condenseQuestion(
         body: JSON.stringify({
           model: tier.model,
           messages: prompt,
-          max_tokens: 64,
-          temperature: 0,
+          max_tokens: 256,
+          reasoning: { effort: "low" },
         }),
         signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.condenseTimeoutMs)),
       });

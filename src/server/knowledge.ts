@@ -132,7 +132,7 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
       "talk",
     ],
     answer:
-      "You can reach Terry at terry.perangat@gmail.com, on LinkedIn (linkedin.com/in/terry-mathew), Instagram (@tedssy), or YouTube (@terrymathew-p). Resume download is in the Experience section.",
+      "You can reach Terry at terry.perangat@gmail.com, on LinkedIn (linkedin.com/in/terry-mathew), Instagram (@tedssy), or YouTube (@terrymathew-p). Email Terry to request his resume.",
   },
 ];
 

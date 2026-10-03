@@ -79,6 +79,13 @@ export type ChatReply = {
      * search. Present so that nothing downstream has to guess.
      */
     retrieval?: RetrievalHealth;
+    /** True when a contact was recorded and the notice went out. */
+    contactCaptured?: boolean;
+    /**
+     * The answer told the visitor their details were passed on, and no tool call
+     * backs that. A lead was promised and lost.
+     */
+    handoffBroken?: boolean;
     /** Which provider actually produced the reply: "workers-ai", "groq",
      *  "anthropic", or "none" when generation was unavailable. */
     generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
@@ -107,6 +114,51 @@ export class ChatCancelled extends Error {
     super("chat cancelled");
     this.name = "ChatCancelled";
   }
+}
+
+/**
+ * Does an answer tell the visitor their details were passed on?
+ *
+ * Only used to detect a promise with nothing behind it, so it leans towards
+ * matching too much rather than too little: a false positive costs one warning
+ * line, a false negative costs a lead.
+ */
+const HANDOFF_CLAIM =
+  /\b(?:terry\s+(?:will|can)['’]?ll?\s+(?:reach|get|come|be in touch)|will\s+(?:reach\s+out|get\s+in\s+touch|be\s+in\s+touch)|reach(?:es)?\s+out\s+to\s+you|get\s+back\s+to\s+you|he['’]?ll\s+(?:get\s+in\s+touch|reach\s+out|call)|i['’]?ll\s+(?:pass|let|forward|relay|note|flag)|pass(?:ed|ing)?\s+(?:that|this|it)\s+(?:on|along|through)|will\s+call\s+you|give\s+you\s+a\s+call)/i;
+
+export function promisesHandoff(answer: string): boolean {
+  return HANDOFF_CLAIM.test(answer);
+}
+
+/**
+ * What to say when the promise turns out to be false.
+ *
+ * It admits the fault. The visitor asked Terry to call them, the handoff did
+ * not happen, and the only way they find out is by being told. Hiding it loses
+ * them: they wait for a call that was never going to come.
+ */
+export const HANDOFF_FAILURE_NOTICE =
+  "Sorry — that did not send. Please email terry.perangat@gmail.com and Terry will pick it up.";
+
+/**
+ * Correct an answer that promised a handoff no tool call backs.
+ *
+ * Appended rather than rewritten. The promise was streamed to the visitor as it
+ * was written, so it cannot be taken back — a replacement would leave what they
+ * already read on screen contradicted by silence. A correction the visitor sees
+ * arrive is honest; a quiet rewrite is not.
+ *
+ * The notice is also what stops a false promise being pinned for a day. An
+ * answer carrying it is not cached, so the next visitor who asks the same thing
+ * gets a fresh attempt rather than this one replayed.
+ */
+export function applyHandoffCorrection(
+  answer: string,
+  contactCaptured: boolean,
+): { text: string; broken: boolean } {
+  if (contactCaptured) return { text: answer, broken: false };
+  if (!promisesHandoff(answer)) return { text: answer, broken: false };
+  return { text: `${answer}\n\n${HANDOFF_FAILURE_NOTICE}`, broken: true };
 }
 
 export const isChatCancelled = (e: unknown): e is ChatCancelled =>
@@ -355,9 +407,19 @@ HOW TO CAPTURE A CONTACT:
   character, not a form.
 - If they give you a name and an email, call record_user_details with exactly
   what they typed.
+- The message field is what Terry reads first. Put what they want in their own
+  words as far as you can: the role, the project, the question, what they said
+  you should know. Do not write "wants to get in touch".
+- A phone number is OPTIONAL. Include it only when they gave you one, or when
+  they asked to be called and you asked for a number and they gave it. If they
+  only gave an email, leave phone out — do not ask for a number nobody offered.
+- If they ask you to call them, ask for a number as well as the email. One
+  question, both details, no form.
 - NEVER construct, guess, autocomplete or infer an email address. If they have
   not typed one, ask for it. A guessed address is rejected, and worse, an
   invented one is worse still.
+- NEVER invent, complete or guess a phone number either. Terry will dial it. A
+  number you made up reaches a stranger, and it is refused if you try.
 - Terry's own email appears in the reference context. It is his, never theirs.
 - If you genuinely cannot answer something, record_unknown_question so the gap
   gets closed. Do not apologise for the gap and stop there.
@@ -505,7 +567,13 @@ async function generateWithTools(
   ip: string,
   onDelta?: (text: string) => void,
   signal?: AbortSignal,
-): Promise<{ text: string; provider: "openrouter" | "groq" | "none" } | null> {
+): Promise<{
+  text: string;
+  provider: "openrouter" | "groq" | "none";
+  /** True only when a contact was recorded AND the notice went out. */
+  contactCaptured: boolean;
+} | null> {
+  let contactCaptured = false;
   if (!CHAT_CONFIG.useTools || !CHAT_CONFIG.notifications.enabled) return null;
 
   // A list, not a single pick. The previous version used a ternary, so an
@@ -596,7 +664,7 @@ async function generateWithTools(
         // Tools are off this path, so any deltas were already flushed by the
         // streaming path; emit the whole answer for consistency.
         onDelta?.(content);
-        return { text: content, provider: tier.provider };
+        return { text: content, provider: tier.provider, contactCaptured };
       }
 
       messages.push({
@@ -613,7 +681,17 @@ async function generateWithTools(
       });
 
       for (const call of calls) {
-        const { output } = await runToolCall(call, messages, env, ip);
+        const { output, pushed } = await runToolCall(call, messages, env, ip);
+        // Previously the result was thrown away unread. That is why a lead
+        // capture could fail with nothing in the log to say so: the tool ran,
+        // the guard refused, and the only symptom was the visitor being told
+        // Terry had been notified. Never log the arguments — they carry the
+        // visitor's contact details.
+        console.info(
+          `[tools] ${call.name} ok=${output["success"] === true} pushed=${pushed}` +
+            (output["error"] ? ` (${String(output["error"]).slice(0, 120)})` : ""),
+        );
+        if (call.name === "record_user_details" && pushed) contactCaptured = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(output) });
       }
     }
@@ -1188,6 +1266,13 @@ export async function runChat(
           docIds?: string[];
           retrievalMode?: "static" | "vector" | "hybrid";
           retrieval?: RetrievalHealth;
+          /** True when a contact was recorded and the notice went out. */
+          contactCaptured?: boolean;
+          /**
+           * The answer told the visitor their details were passed on, and no tool call
+           * backs that. A lead was promised and lost.
+           */
+          handoffBroken?: boolean;
           generation?: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
         };
         // Replay the real metadata and sources. Reporting a hit as
@@ -1325,6 +1410,7 @@ export async function runChat(
   let generated: {
     text: string;
     provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
+    contactCaptured?: boolean;
   } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta, signal);
   if (!generated) {
     generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta, signal);
@@ -1339,12 +1425,36 @@ export async function runChat(
   // does not depend on the AI binding, so the visitor still gets a real answer
   // rather than a dead chatbot. Extractive rather than generated, and labelled,
   // so it is never mistaken for something the model wrote.
-  const finalAnswer = unanswered ? extractiveAnswer(results, searchQuery) : generated.text;
+  const draftAnswer = unanswered ? extractiveAnswer(results, searchQuery) : generated.text;
+
+  // A promised handoff that never happened.
+  //
+  // The model can write "Done. Terry will reach out." as ordinary text without
+  // ever calling record_user_details. Nothing checked. The visitor believes
+  // their details were passed on, walks away, and Terry is never told.
+  //
+  // It cannot be prevented at generation time, only caught afterwards. So it is
+  // caught, the visitor is told, and the turn is marked so the eval counts it.
+  const { text: finalAnswer, broken: handoffBroken } = applyHandoffCorrection(
+    draftAnswer,
+    generated.contactCaptured === true,
+  );
+  if (handoffBroken) {
+    console.warn(
+      "[tools] the answer promised a callback no tool call backs — the model " +
+        "announced a handoff it did not perform. Answer: " +
+        draftAnswer.slice(0, 160),
+    );
+    // Stream the correction. The promise already reached the visitor while it
+    // was being written; without this the reply on the done event would carry
+    // the correction and the text on their screen would not.
+    onDelta?.(`\n\n${HANDOFF_FAILURE_NOTICE}`);
+  }
 
   // Only a real generation is worth remembering. Storing the extractive
   // fallback would pin one bad minute — every tier rate-limited, say — into
   // every repeat of that question for the next 24 hours.
-  if (cacheable && env?.CACHE) {
+  if (cacheable && !handoffBroken && env?.CACHE) {
     try {
       await env.CACHE.put(
         answerKey,
@@ -1382,6 +1492,10 @@ export async function runChat(
       // still a real answer. Both are reported rather than thrown.
       degraded: generated.provider === "none" || !retrieval.healthy,
       retrieval,
+      /** True when a contact was recorded and the notice went out. */
+      contactCaptured: generated.contactCaptured === true,
+      /** The answer promised a callback that no tool call backs. */
+      handoffBroken,
       timings: {
         retrievalMs,
         generationMs,

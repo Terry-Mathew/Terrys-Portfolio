@@ -56,9 +56,8 @@ const SKIP = new Set(["README.md", "RAG-ARCHITECTURE.md"]);
  *  - "how-this-works" — no route and no element with that id at all. The
  *    document explaining the chatbot pointed at nothing. It is now the Digital
  *    Twin case study, which is the real page that describes it.
- *  - "resume" — no such section either. The resume is a PDF, not a section, so
- *    it links to the file itself. That is the same target the nav and the
- *    contact section already use, so a citation agrees with the rest of the page.
+ *  - "resume" — resume details stay in chatbot knowledge. Citations point to
+ *    the public Experience section because the downloadable PDF is removed.
  *
  * "approach" and "speaking" used to be listed here too, and both were wrong:
  * neither `approach.md` nor `speaking.md` is in the corpus, and no element
@@ -93,7 +92,7 @@ const CATEGORY: Record<string, string> = {
   "skills.md": "capabilities",
   "contact.md": "contact",
   "off-the-clock.md": "beyond-work",
-  "resume.md": "/Terry-Mathew-CV.pdf",
+  "resume.md": "experience",
   "how-this-works.md": "/projects/digital-twin",
 };
 

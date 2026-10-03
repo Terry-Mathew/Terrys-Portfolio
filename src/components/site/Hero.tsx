@@ -318,7 +318,7 @@ export function Hero() {
         />
       </div>
 
-      {/* Header readability scrim — keeps nav, Resume and Let's Talk crisp */}
+      {/* Header readability scrim — keeps the nav and talk link crisp */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-[26svh] bg-gradient-to-b from-ink/90 via-ink/50 to-transparent" />
 
       <div className="relative mx-auto flex min-h-[100svh] max-w-[1600px] flex-col justify-end px-5 pt-28 pb-12 md:px-10 lg:justify-center lg:pb-16">
@@ -361,13 +361,6 @@ export function Hero() {
                 ↓
               </span>
               Explore my work
-            </a>
-            <a
-              href={profile.resume}
-              data-hero-reveal="cta-2"
-              className="link-arrow label-eyebrow text-bone-dim transition-colors hover:text-ember"
-            >
-              View resume <span className="arrow">↗</span>
             </a>
           </div>
         </div>

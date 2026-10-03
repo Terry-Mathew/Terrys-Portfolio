@@ -25,4 +25,4 @@ YouTube: https://www.youtube.com/@terrymathew-p
 
 Portfolio: https://www.terrymathew.com
 
-Resume: /Terry-Mathew-CV.pdf
+Resume: Available on request by email.

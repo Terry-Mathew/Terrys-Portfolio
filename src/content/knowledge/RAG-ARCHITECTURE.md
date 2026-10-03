@@ -324,10 +324,10 @@ export const CHAT_CONFIG = {
   rerankTopK: 4, // chunks out to the LLM
   chunkSize: 900, // characters per chunk
   chunkOverlap: 120, // overlap between chunks
-  corpusVersion: 8, // bump on any knowledge file or source-anchor change
+  corpusVersion: 9, // bump on any knowledge file or source-anchor change
   rateLimitPerMinPerIp: 20, // anti-abuse
   cacheTTL: 86400, // 24 hours retrieval cache
-  promptVersion: 4, // bump on prompt or generation model change
+  promptVersion: 5, // bump on prompt or generation model change
 };
 ```
 

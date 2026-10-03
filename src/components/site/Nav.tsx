@@ -200,12 +200,6 @@ export function Nav() {
 
           <div className="flex items-center gap-4">
             <a
-              href={profile.resume}
-              className={`label-eyebrow hidden whitespace-nowrap transition-colors lg:inline ${dim} ${hoverAccent}`}
-            >
-              Resume ↗
-            </a>
-            <a
               href="#contact"
               className={`link-arrow label-eyebrow hidden whitespace-nowrap rounded-full border px-4 py-2 transition-colors md:inline-flex ${
                 onPaper ? "border-graphite/25 text-graphite" : "border-bone/25 text-bone"
@@ -261,13 +255,6 @@ export function Nav() {
               </li>
             ))}
           </ul>
-          <a
-            href={profile.resume}
-            onClick={() => setOpen(false)}
-            className="label-eyebrow mt-auto self-start text-bone-dim"
-          >
-            Resume ↗
-          </a>
         </div>
       )}
     </>

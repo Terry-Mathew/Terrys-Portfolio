@@ -1,5 +1,4 @@
-// Converts public/Terry-Mathew-CV.pdf into src/content/knowledge/resume.md so the
-// resume is searchable by the chatbot, not just downloadable.
+// Converts the private CV source into chatbot knowledge.
 //
 // Runs automatically on `npm run build` (see the "prebuild" script in
 // package.json). The output is a normal knowledge file, so the existing
@@ -16,11 +15,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const pdfPath = join(root, "public", "Terry-Mathew-CV.pdf");
+const pdfPath = join(root, "private", "Terry-Mathew-CV.pdf");
 const outPath = join(root, "src", "content", "knowledge", "resume.md");
 
 if (!existsSync(pdfPath)) {
-  console.warn("[extract-cv] public/Terry-Mathew-CV.pdf not found — skipping.");
+  console.log("[extract-cv] private source not present; keeping checked-in chatbot knowledge.");
   process.exit(0);
 }
 
@@ -76,7 +75,7 @@ if (cleaned.length < 200) {
 
 const body = `# Resume
 
-<!-- Generated from public/Terry-Mathew-CV.pdf by scripts/extract-cv.mjs.
+<!-- Chatbot knowledge generated from private/Terry-Mathew-CV.pdf.
      Edit the PDF, not this file — this file is overwritten on every build. -->
 
 ${cleaned}

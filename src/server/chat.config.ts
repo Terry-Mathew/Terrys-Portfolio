@@ -105,7 +105,7 @@ export const CHAT_CONFIG = {
   // update kept serving pre-update retrieval.
   //
   // WHEN TO BUMP: any time you edit, add, or delete a file in
-  // src/content/knowledge/ — or replace public/Terry-Mathew-CV.pdf.
+  // src/content/knowledge/.
   // HOW: increase the number, then rebuild, deploy, and re-run /api/ingest.
   // Without the bump, a question asked yesterday returns yesterday's answer.
   //
@@ -127,7 +127,8 @@ export const CHAT_CONFIG = {
   // Oracle role is described as current employment with a planned final working
   // day of 14 October 2026, and the Digital Twin architecture was corrected to
   // match the implementation.
-  corpusVersion: 7,
+  // 7 → 8: contact knowledge now directs resume requests to email.
+  corpusVersion: 8,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,

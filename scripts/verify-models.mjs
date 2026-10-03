@@ -150,6 +150,11 @@ for (const [role, id] of ids) {
   } else {
     ok(`${role}: ${id} advertises tools`);
   }
+  if (!params.includes("reasoning") || !params.includes("max_tokens")) {
+    fail(`${role}: "${id}" does not advertise the configured reasoning or token limits`);
+  } else {
+    ok(`${role}: supports reasoning and max_tokens`);
+  }
   if ((m.context_length ?? 0) < TURN_INPUT_TOKENS) {
     fail(
       `${role}: "${id}" has ${m.context_length} context, under the ~${TURN_INPUT_TOKENS} a full turn uses`,
@@ -250,6 +255,7 @@ async function stream(model, body) {
     const { text, frames, sawDone } = await stream(CHAT_MODEL, {
       messages: [{ role: "user", content: "In one sentence: what is a vector index?" }],
       max_tokens: 120,
+      reasoning: { effort: "low" },
     });
     const ms = Date.now() - started;
     if (!text.trim()) fail(`streaming returned no content from ${CHAT_MODEL}`);
@@ -288,8 +294,10 @@ async function stream(model, body) {
         tools: TOOLS,
         tool_choice: "auto",
         max_tokens: 512,
+        reasoning: { effort: "low" },
       });
-      const calls = data.choices?.[0]?.message?.tool_calls ?? [];
+      const message = data.choices?.[0]?.message;
+      const calls = message?.tool_calls ?? [];
       if (calls.length === 0) {
         refusals++;
         continue;
@@ -303,6 +311,26 @@ async function stream(model, body) {
       }
       if (!args.email.includes("@")) {
         fail(`attempt ${attempt + 1}: tool email "${args.email}" is not an address`);
+        continue;
+      }
+      const followUp = await complete(CHAT_MODEL, {
+        messages: [
+          ...prompt,
+          message,
+          {
+            role: "tool",
+            tool_call_id: calls[0].id,
+            content: JSON.stringify({ recorded: true }),
+          },
+        ],
+        tools: TOOLS,
+        tool_choice: "auto",
+        max_tokens: 512,
+        reasoning: { effort: "low" },
+      });
+      const answer = followUp.data.choices?.[0]?.message?.content;
+      if (typeof answer !== "string" || !answer.trim()) {
+        fail(`attempt ${attempt + 1}: model gave no answer after the tool result`);
         continue;
       }
       toolRounds++;
@@ -337,7 +365,8 @@ if (CONDENSE_MODEL !== CHAT_MODEL) {
             "Visitor: What did he do as a team lead at Oracle?\nTerry: He led EMEA operations.\nVisitor: How long was he leading that team?",
         },
       ],
-      max_tokens: 64,
+      max_tokens: 256,
+      reasoning: { effort: "low" },
     });
     const rewritten = data.choices?.[0]?.message?.content?.trim();
     // The actual acceptance rule in condenseQuestion, so this cannot drift from it.

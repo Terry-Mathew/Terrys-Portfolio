@@ -43,9 +43,9 @@ Visitor asks a question
         ▼
 ┌──────────────────────────────────────────┐
 │  Step 3: Write the answer                 │
-│  - OpenRouter, pinned Claude Sonnet 4.5   │
-│  - Follow-up rewriting: Claude Haiku 4.5  │
-│  - Fallback for both: Groq                │
+│  - OpenRouter, pinned GPT-5 Mini          │
+│  - Follow-up rewriting: GPT-5 Mini       │
+│  - Fallback: extractive answer           │
 │  - Workers AI: embeddings only, never     │
 │    generation (see §5b)                   │
 └──────────────────────────────────────────┘
@@ -58,19 +58,17 @@ Visitor sees the answer + source links
 
 ## 3. The Parts (What Each Piece Does)
 
-| Part                          | What It Does                          | Why We Use It                                        |
-| ----------------------------- | ------------------------------------- | ---------------------------------------------------- |
-| **Cloudflare Workers**        | Runs the backend code                 | Fast, cheap, no server to manage                     |
-| **TanStack Start (React 19)** | SSR application, React 19 and Vite    | One codebase for the site and the API routes         |
-| **Vectorize**                 | Stores vector embeddings              | Finds information by meaning, not just words         |
-| **D1 (SQLite)**               | Stores full text + FTS5 keyword index | Finds information by exact words (BM25)              |
-| **KV**                        | Caches retrieval results and answers  | Makes repeat questions instant and cheap             |
-| **Workers AI**                | Embeddings only (768 dimensions)      | Free allowance; never writes an answer — see §5b     |
-| **OpenRouter**                | Generation and tool calling           | Pinned Claude Sonnet 4.5; paid tier, still available |
-| **Claude Haiku 4.5**          | Follow-up question rewriting          | A short rewrite does not need the larger model       |
-| **Groq**                      | Generation and tool-calling fallback  | Keeps answering when OpenRouter is unavailable       |
-| **`/api/ingest` endpoint**    | Re-embeds the knowledge base          | Authenticated, idempotent, runs inside the Worker    |
-| **Golden-set evaluation**     | Scores the deployed chatbot           | Measures the release, not the intention              |
+| Part                          | What It Does                          | Why We Use It                                     |
+| ----------------------------- | ------------------------------------- | ------------------------------------------------- |
+| **Cloudflare Workers**        | Runs the backend code                 | Fast, cheap, no server to manage                  |
+| **TanStack Start (React 19)** | SSR application, React 19 and Vite    | One codebase for the site and the API routes      |
+| **Vectorize**                 | Stores vector embeddings              | Finds information by meaning, not just words      |
+| **D1 (SQLite)**               | Stores full text + FTS5 keyword index | Finds information by exact words (BM25)           |
+| **KV**                        | Caches retrieval results and answers  | Makes repeat questions instant and cheap          |
+| **Workers AI**                | Embeddings only (768 dimensions)      | Free allowance; never writes an answer — see §5b  |
+| **OpenRouter**                | Generation, tool calling, rewriting   | Pinned GPT-5 Mini; paid tier                      |
+| **`/api/ingest` endpoint**    | Re-embeds the knowledge base          | Authenticated, idempotent, runs inside the Worker |
+| **Golden-set evaluation**     | Scores the deployed chatbot           | Measures the release, not the intention           |
 
 ---
 
@@ -195,15 +193,13 @@ We combine all three results using **Reciprocal Rank Fusion (RRF)**. RRF is a si
 
 The retrieved chunks are sent to an LLM with a **system prompt** (the persona). The LLM writes a natural answer using only the provided information.
 
-**Model routing.** Two separate chains, and the order matters:
+**Model routing.** Both passes use GPT-5 Mini through OpenRouter:
 
-1. **Tool-capable pass** — OpenRouter, then Groq. Lead capture (`record_user_details`,
+1. **Tool-capable pass** — OpenRouter. Lead capture (`record_user_details`,
    `record_unknown_question`) lives here, so the model doing the writing is the model
    that can be handed a tool. Bounded at 3 iterations; if no tier produces an answer it
-   returns null and the turn falls through to plain generation, which costs lead capture
-   and nothing else.
-2. **Plain pass** — Anthropic (off by default), OpenRouter, Groq. Workers AI is
-   deliberately absent; see the note below.
+   returns null and the turn falls through to plain generation, which costs lead capture.
+2. **Plain pass** — OpenRouter. Workers AI is deliberately absent; see the note below.
 
 > **Models are pinned to specific ids.** `openrouter/free` was used here for a while. It is
 > a _routing alias_, not a model — OpenRouter chooses what backs it and can change that
@@ -211,7 +207,7 @@ The retrieved chunks are sent to an LLM with a **system prompt** (the persona). 
 > well as prose, and nothing looked broken because the chatbot kept answering.
 > `scripts/verify-models.mjs` checks an id before it is trusted.
 
-**Generation ordering, and why Workers AI is not on it.** One LLM answer costs orders of
+**Why Workers AI does not write answers.** One LLM answer costs orders of
 magnitude more of Workers AI's 10,000 neurons/day than one query embedding does. The eval
 suite alone fires twenty answers per deploy. With Workers AI last in the chain, those
 answers exhausted the day's allowance before the corpus could be re-embedded — which is
@@ -243,7 +239,7 @@ This keeps the chatbot on-brand and prevents hallucination.
 | ------------- | -------------------- | -------------------------------------- |
 | Cached answer | <50ms                | No AI call, just KV lookup             |
 | Vector search | <200ms               | Workers AI embedding + Vectorize query |
-| Full answer   | <1.5s to first token | OpenRouter/Groq generation             |
+| Full answer   | <1.5s to first token | OpenRouter generation                  |
 
 Retrieval runs its two live methods **in parallel** (`Promise.all` over the Vectorize query
 and the D1 FTS5 query). They are independent, so sequencing them made p95 latency the sum of
@@ -260,21 +256,19 @@ both round trips rather than the slower one — directly in front of the first t
 
 ### Monthly cost estimate
 
-| Component                              | Cost          |
-| -------------------------------------- | ------------- |
-| Cloudflare Workers (100K req/day free) | $0            |
-| Vectorize (5M vectors free)            | $0            |
-| D1 (5GB free)                          | $0            |
-| KV (100K reads/day free)               | $0            |
-| Workers AI (embeddings, 100K neurons)  | $0            |
-| OpenRouter (`claude-sonnet-4.5`)       | ~$0.03/answer |
-| **Total**                              | **see below** |
+| Component                              | Cost            |
+| -------------------------------------- | --------------- |
+| Cloudflare Workers (100K req/day free) | $0              |
+| Vectorize (5M vectors free)            | $0              |
+| D1 (5GB free)                          | $0              |
+| KV (100K reads/day free)               | $0              |
+| Workers AI (embeddings, 100K neurons)  | $0              |
+| OpenRouter (`openai/gpt-5-mini`)       | ~$0.0025/answer |
+| **Total**                              | **see below**   |
 
-OpenRouter is the paid tier and the only line item. At roughly **$0.03 an answer**,
-1000 answers a month is about $30; 100 answers a month is about $3. It is deliberately
-first in the chain because it is the tier that still answers when both free tiers are
-exhausted — which is exactly when visitors most need a working chatbot. Groq covers the
-tail of the day for nothing.
+OpenRouter is the paid tier and the only line item. At roughly **$0.0025 an answer**,
+1000 answers a month is about $2.50; 100 answers a month is about $0.25. These
+figures use an assumed token count, not measured usage.
 
 ---
 
@@ -320,9 +314,9 @@ All settings live in `src/server/chat.config.ts`:
 export const CHAT_CONFIG = {
   mode: "vector", // "static" or "vector"
   useWorkersAiGeneration: false, // embeddings only — see §5b
-  openRouterModel: "anthropic/claude-sonnet-4.5", // pinned, not an alias
-  openRouterCondenseModel: "anthropic/claude-haiku-4.5", // question rewrites
-  groqModel: "qwen/qwen3.8-27b", // free backup tier
+  openRouterModel: "openai/gpt-5-mini", // pinned, not an alias
+  openRouterCondenseModel: "openai/gpt-5-mini", // question rewrites
+  useGroq: false, // disabled backup tier
   useAnthropic: false, // opt-in premium prose
   embeddingModel: "@cf/baai/bge-base-en-v1.5", // 768 dimensions
   dimensions: 768,
@@ -330,10 +324,10 @@ export const CHAT_CONFIG = {
   rerankTopK: 4, // chunks out to the LLM
   chunkSize: 900, // characters per chunk
   chunkOverlap: 120, // overlap between chunks
-  corpusVersion: 7, // bump on any knowledge file or source-anchor change
+  corpusVersion: 9, // bump on any knowledge file or source-anchor change
   rateLimitPerMinPerIp: 20, // anti-abuse
   cacheTTL: 86400, // 24 hours retrieval cache
-  promptVersion: 2, // bump on any system prompt change
+  promptVersion: 5, // bump on prompt or generation model change
 };
 ```
 
@@ -341,7 +335,7 @@ export const CHAT_CONFIG = {
 folded into the answer-cache key, and bumping either retires every cached answer instantly
 (KV has no tag invalidation). `corpusVersion` when `src/content/knowledge/*.md` changes —
 **including a source-anchor change**, since the category becomes the citation link on the
-answer. `promptVersion` when the system prompt text changes. A missing bump means
+answer. `promptVersion` when the system prompt or pinned generation model changes. A missing bump means
 yesterday's question returns yesterday's answer.
 
 > **Chunk sizes are characters, not tokens.** The comment in the config used to say
@@ -402,8 +396,8 @@ active and the RAG layer is not doing anything.
 | KV Namespace    | `CACHE`                            | Answer cache, retrieval cache, and the degraded-status flag    |
 | Workers AI      | (binding)                          | Embeddings only — never generation                             |
 | Secrets         | `OPENROUTER_API_KEY`               | Paid generation tier, and the tool-calling tier                |
-| Secrets         | `GROQ_API_KEY`                     | Free generation and tool-calling backup                        |
-| Secrets         | `ANTHROPIC_API_KEY`                | Optional premium prose (`useAnthropic: false` by default)      |
+| Secrets         | `GROQ_API_KEY`                     | Not needed while Groq remains disabled                         |
+| Secrets         | `ANTHROPIC_API_KEY`                | Not needed while Anthropic remains disabled                    |
 | Secrets         | `INGEST_KEY`                       | Authorises `POST /api/ingest`                                  |
 | Secrets         | `PUSHOVER_TOKEN` / `PUSHOVER_USER` | Lead and deploy notifications                                  |
 
@@ -440,7 +434,7 @@ If someone asks "Tell me about your RAG architecture":
 
 **Q: What's the cost?**
 
-> "Cloudflare's free tiers cover Workers, Vectorize, D1 and KV, and embeddings are on the free Workers AI allowance. The only cost is the generation model, roughly three cents an answer. That's deliberately the tier that stays available when both free tiers are exhausted."
+> "Cloudflare's free tiers cover Workers, Vectorize, D1 and KV. OpenRouter writes answers with GPT-5 Mini. The estimated model cost is about $0.0025 per answer at the assumed token count."
 
 ---
 

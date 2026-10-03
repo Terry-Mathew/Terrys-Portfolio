@@ -40,7 +40,7 @@ The results are combined using Reciprocal Rank Fusion.
 
 The embeddings are 768-dimensional, and Workers AI is used for those embeddings only. It does not write answers.
 
-Answers are written by OpenRouter using a pinned Claude Sonnet 4.5, with a smaller Claude Haiku 4.5 handling the rewriting of follow-up questions, and Groq as the fallback for both answer generation and tool calling.
+OpenRouter writes answers with the pinned `openai/gpt-5-mini` model. The same model rewrites follow-up questions and handles tool calls. If OpenRouter fails, the chatbot uses its extractive fallback.
 
 The answer is streamed back to the browser over server-sent events, so the text appears while it is being written rather than appearing all at once at the end.
 

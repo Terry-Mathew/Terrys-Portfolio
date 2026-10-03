@@ -13,7 +13,7 @@ Ask it anything about the work. It answers from a knowledge base, not from
 memory — when retrieval finds nothing it says so rather than filling the gap,
 which is the only rule that matters when the subject is a real person.
 
-- **Hybrid retrieval** — vector similarity (Cloudflare Vectorize, 768d) *and*
+- **Hybrid retrieval** — vector similarity (Cloudflare Vectorize, 768d) _and_
   BM25 keyword search (D1 + SQLite FTS5), merged with Reciprocal Rank Fusion.
   Each method fails differently: vectors catch paraphrase, BM25 catches exact
   terms like `1.2B credits`. A document found by all three outranks one found
@@ -21,7 +21,7 @@ which is the only rule that matters when the subject is a real person.
 - **Passage-level context** — Vectorize stores a vector per passage and the
   passages that matched are what reach the model, not the whole parent document.
 - **Conversational** — follow-ups are rewritten into standalone queries before
-  retrieval, so *"how long was he leading that team?"* resolves its pronoun
+  retrieval, so _"how long was he leading that team?"_ resolves its pronoun
   against the conversation rather than searching for the word "team".
 - **Persona** — a system prompt with separate modes for work, personal, and
   hostile questions, plus guards against prompt injection and against
@@ -33,10 +33,8 @@ which is the only rule that matters when the subject is a real person.
   turns only, so a follow-up can never be served another conversation's reply.
 
 **Cost:** storage, search and embeddings run on Cloudflare's free tier. Text
-generation uses OpenRouter with Groq as a fallback, because the free generation
-allowances on both were observed exhausted on the same evening — keeping the
-chatbot on free tiers turned out to mean its availability was set by someone
-else's quota. Details and the reasoning are in
+generation uses GPT-5 Mini through OpenRouter. If OpenRouter fails, the chatbot
+uses its extractive fallback. Details are in
 [`how-this-works.md`](src/content/knowledge/how-this-works.md).
 
 Full architecture: [`src/content/knowledge/how-this-works.md`](src/content/knowledge/how-this-works.md)
@@ -80,15 +78,15 @@ measures retrieval turns those into a score of zero, which is impossible to miss
 
 ## Stack
 
-| Layer | Choice |
-|---|---|
-| Framework | TanStack Start (SSR) + React 19 + Vite |
-| Styling | Tailwind CSS v4 |
-| Runtime | Cloudflare Workers (Nitro, `cloudflare-module` preset) |
-| Vectors | Cloudflare Vectorize |
-| Database | Cloudflare D1 (SQLite + FTS5) |
-| Cache | Cloudflare KV |
-| AI | Cloudflare Workers AI — embeddings, rewriting, generation |
+| Layer     | Choice                                                                               |
+| --------- | ------------------------------------------------------------------------------------ |
+| Framework | TanStack Start (SSR) + React 19 + Vite                                               |
+| Styling   | Tailwind CSS v4                                                                      |
+| Runtime   | Cloudflare Workers (Nitro, `cloudflare-module` preset)                               |
+| Vectors   | Cloudflare Vectorize                                                                 |
+| Database  | Cloudflare D1 (SQLite + FTS5)                                                        |
+| Cache     | Cloudflare KV                                                                        |
+| AI        | Cloudflare Workers AI — embeddings; OpenRouter — rewriting, generation, tool calling |
 
 No server to run. No database to provision beyond four CLI commands.
 
@@ -109,24 +107,24 @@ previously generated file.
 
 ### Commands
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Dev server |
-| `npm run build` | Production build (runs the résumé extraction first) |
-| `npm run lint` | ESLint + Prettier check |
-| `npm run eval` | Score the live chatbot against the golden set |
-| `npm run assets` | Re-render the OG image and icon set from `assets/` |
+| Command          | Purpose                                             |
+| ---------------- | --------------------------------------------------- |
+| `npm run dev`    | Dev server                                          |
+| `npm run build`  | Production build (runs the résumé extraction first) |
+| `npm run lint`   | ESLint + Prettier check                             |
+| `npm run eval`   | Score the live chatbot against the golden set       |
+| `npm run assets` | Re-render the OG image and icon set from `assets/`  |
 
 ### Secrets
 
-Two secrets, both as Cloudflare Worker secrets. Neither is in the repo.
+The chatbot uses Cloudflare Worker secrets. None is in the repo.
 
 ```sh
 npx wrangler secret put INGEST_KEY   # authorises POST /api/ingest
+npx wrangler secret put OPENROUTER_API_KEY   # chatbot answers and tool calls
 ```
 
-`ANTHROPIC_API_KEY` is supported but off by default — the chatbot is designed to
-run entirely on the free tier, so the key is optional.
+`GROQ_API_KEY` and `ANTHROPIC_API_KEY` are not needed for this configuration.
 
 ### Cloudflare resources
 

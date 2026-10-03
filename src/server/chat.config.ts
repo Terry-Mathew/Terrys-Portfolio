@@ -105,7 +105,7 @@ export const CHAT_CONFIG = {
   // update kept serving pre-update retrieval.
   //
   // WHEN TO BUMP: any time you edit, add, or delete a file in
-  // src/content/knowledge/ — or replace public/Terry-Mathew-CV.pdf.
+  // src/content/knowledge/.
   // HOW: increase the number, then rebuild, deploy, and re-run /api/ingest.
   // Without the bump, a question asked yesterday returns yesterday's answer.
   //
@@ -127,7 +127,8 @@ export const CHAT_CONFIG = {
   // Oracle role is described as current employment with a planned final working
   // day of 14 October 2026, and the Digital Twin architecture was corrected to
   // match the implementation.
-  corpusVersion: 7,
+  // 7 → 8: contact knowledge now directs resume requests to email.
+  corpusVersion: 8,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,
@@ -200,11 +201,21 @@ export const CHAT_CONFIG = {
   notifications: {
     enabled: true,
     // Models fire record_user_details eagerly, on the first "tell me about
-    // yourself". Requiring a real note first is the cheapest guard.
-    minNotesLength: 20,
+    // yourself". Requiring a real message first is the cheapest guard. Kept at
+    // 20 because a short visitor request still summarises comfortably above it:
+    // "wants a callback about a data role" is 35.
+    minMessageLength: 20,
     // Per-IP ceilings, backed by KV. Without these one visitor can fill the
     // phone in under a minute.
-    maxContactsPerIpPerHour: 1,
+    //
+    // Raised from 1 to 3. One was low enough to drop real leads: offices,
+    // universities and mobile carriers put many visitors behind one address, so
+    // the second and third genuine enquiries in an hour were discarded while
+    // the visitor was told they had been passed on. Repeats from the same
+    // person are already handled separately — the 24-hour fingerprint on
+    // email, name and number — so this ceiling is not what stops one visitor
+    // sending the same enquiry repeatedly. That is what the fingerprint is for.
+    maxContactsPerIpPerHour: 3,
     maxUnknownPerIpPerHour: 3,
   },
 
@@ -257,5 +268,10 @@ export const CHAT_CONFIG = {
   // the old instructions would keep serving the Markdown version — and the
   // answer cache outlives a deploy, so the fix would look like it had not
   // landed at all.
-  promptVersion: 3,
+  // 3 → 4: the contact-capture contract changed. `notes` became `message`,
+  // `phone` was added as an optional field, and the prompt now says when to ask
+  // for a number and what to write in the message. Without the bump, a cached
+  // reply says "Done. Terry will reach out." on the strength of instructions
+  // that no longer apply, and the model keeps asking only for an email.
+  promptVersion: 4,
 } as const;

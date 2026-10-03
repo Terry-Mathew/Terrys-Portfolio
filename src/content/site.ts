@@ -16,8 +16,6 @@ export const profile = {
   linkedin: "https://www.linkedin.com/in/terry-mathew",
   instagram: "https://www.instagram.com/tedssy/",
   youtube: "https://www.youtube.com/@terrymathew-p",
-  // Served from public/Terry-Mathew-CV.pdf — linked from Nav, Hero, Experience and Contact.
-  resume: "/Terry-Mathew-CV.pdf",
 };
 
 export const timeline = [

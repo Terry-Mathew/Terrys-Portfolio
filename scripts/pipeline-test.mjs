@@ -250,8 +250,7 @@ test("every source anchor in the category map resolves to something real", () =>
   for (const { file, target } of entries) {
     if (target.startsWith("/")) {
       // Three shapes are legitimate: a /projects/<slug> route, any other route
-      // file, or a static asset in public/ served from the root — the resume is
-      // a PDF, not a page.
+      // file, or a static asset in public/ served from the root.
       const slug = target.startsWith("/projects/") ? target.slice("/projects/".length) : null;
       if (slug) {
         if (!slugs.has(slug)) dead.push(`${file} → ${target} (no project with id "${slug}")`);

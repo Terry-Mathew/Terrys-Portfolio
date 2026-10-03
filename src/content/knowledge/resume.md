@@ -1,7 +1,6 @@
 # Resume
 
-<!-- Generated from public/Terry-Mathew-CV.pdf by scripts/extract-cv.mjs.
-     Edit the PDF, not this file — this file is overwritten on every build. -->
+<!-- Chatbot knowledge generated from private/Terry-Mathew-CV.pdf. -->
 
 Terry Mathew
 Data Products | Partner & GTM Analytics | Commercial Operations

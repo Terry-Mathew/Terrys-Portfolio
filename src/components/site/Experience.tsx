@@ -119,15 +119,6 @@ export function Experience() {
                   products. The common thread was getting to the bottom of a problem and making the
                   answer useful.
                 </p>
-
-                <div className="mt-9 flex flex-wrap gap-4 short:mt-6">
-                  <a
-                    href={profile.resume}
-                    className="link-arrow label-eyebrow rounded-full border border-graphite/25 px-5 py-3 transition-colors hover:border-ember-ink hover:text-ember-ink"
-                  >
-                    Download resume <span className="arrow">↗</span>
-                  </a>
-                </div>
               </Reveal>
 
               <Reveal delay={180}>

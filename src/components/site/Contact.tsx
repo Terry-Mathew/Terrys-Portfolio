@@ -8,7 +8,6 @@ const links = [
   { label: "LinkedIn", href: profile.linkedin },
   { label: "Instagram", href: profile.instagram },
   { label: "YouTube", href: profile.youtube },
-  { label: "Resume", href: profile.resume },
 ];
 
 /**

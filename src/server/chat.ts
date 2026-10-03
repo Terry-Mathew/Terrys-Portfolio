@@ -602,6 +602,9 @@ async function generateWithTools(
       messages.push({
         role: "assistant",
         content: content || null,
+        ...(tier.provider === "openrouter" && message?.reasoning_details
+          ? { reasoning_details: message.reasoning_details }
+          : {}),
         tool_calls: calls.map((c) => ({
           id: c.id,
           type: "function" as const,
@@ -640,12 +643,14 @@ type OpenAIMessage = {
   content: string | null;
   tool_call_id?: string;
   tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[];
+  reasoning_details?: unknown;
 };
 
 type OpenAiToolResponse = {
   choices?: {
     message?: {
       content?: string | null;
+      reasoning_details?: unknown;
       tool_calls?: { id: string; function?: { name?: string; arguments?: string } }[];
     };
   }[];

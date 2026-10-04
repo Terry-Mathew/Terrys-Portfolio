@@ -23,31 +23,31 @@ export const timeline = [
     period: "2024–2026",
     title: "Senior Data Product Manager",
     org: "Partner Analytics",
-    note: "Built reporting for partner programs, translated incentive policies into auditable logic, and shaped requirements for a credit management application.",
+    note: "Turned partner-program needs into analytics products that improved visibility into bookings, assessment activity, and incentive decisions.",
   },
   {
     period: "2023–2024",
     title: "Insights Analyst II",
     org: "Partner Insights and Revenue Operations",
-    note: "Worked across deal registration, pipeline, bookings, and partner program reporting. Turned complex activity into information teams could use.",
+    note: "Built partner and revenue reporting, then used the data to explain operational trends and support planning.",
   },
   {
     period: "2022–2023",
     title: "Business Operations Team Lead",
     org: "EMEA Operations",
-    note: "Led a 20-person team handling more than 20,000 partner transactions each quarter. Changed the verification process, bringing average turnaround down from 20 days to 3–4.",
+    note: "Led the full opportunity-to-cash process, approved deal registrations, supported complex deals, and improved how the EMEA team handled transactions and exceptions.",
   },
   {
     period: "2021–2022",
     title: "Business Operations Specialist",
     org: "Partner Transactions",
-    note: "Helped sales teams work through licensing, pricing, and approval questions, including complex deal exceptions.",
+    note: "Guided Sales through complex cloud deal setup, commercial terms, approvals, and booking handoffs.",
   },
   {
     period: "2018–2021",
     title: "Business Operations Analyst",
     org: "Partner Transactions",
-    note: "Processed and checked partner deal registrations and approvals across EMEA and APAC.",
+    note: "Checked partner deal registrations and prepared quotes so eligible deals could move through Oracle’s sales process.",
   },
 ];
 

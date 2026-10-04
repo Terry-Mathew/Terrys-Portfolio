@@ -1,0 +1,29 @@
+{
+  "colors": {
+    "ink-2": "#111413",
+    "bone-dim": "#b9b09f"
+  },
+  "results": [
+    {
+      "text_opacity": 0.35,
+      "contrast_on_opaque_ink_2": 2.1
+    },
+    {
+      "text_opacity": 0.4,
+      "contrast_on_opaque_ink_2": 2.38
+    },
+    {
+      "text_opacity": 0.5,
+      "contrast_on_opaque_ink_2": 3.04
+    },
+    {
+      "text_opacity": 0.6,
+      "contrast_on_opaque_ink_2": 3.84
+    },
+    {
+      "text_opacity": 1,
+      "contrast_on_opaque_ink_2": 8.62
+    }
+  ],
+  "limit": "Opaque token calculation, not the rendered translucent surface."
+}

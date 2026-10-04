@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import portraitSide from "@/assets/portrait-side.png";
 import portraitAvif640 from "@/assets/portrait-side-640w.avif";
@@ -10,7 +11,6 @@ import mountains from "@/assets/hero-mountains.jpg";
 import mountainsAvif from "@/assets/hero-mountains-704w.avif";
 import mountainsWebp from "@/assets/hero-mountains-704w.webp";
 import { profile } from "@/content/site";
-import { useIsDesktop } from "@/lib/motion-hooks";
 import { DURATION, EASE, REVEAL } from "@/lib/motion";
 import { useGsapContext } from "@/lib/useGsapContext";
 import { Picture } from "./Picture";
@@ -76,156 +76,177 @@ const RISE = {
 } as const;
 
 export function Hero() {
-  const isDesktop = useIsDesktop(1024);
+  const entranceSeen = useRef(false);
+  // A static reduced-motion presentation also counts as a visible page entry.
+  useEffect(() => {
+    entranceSeen.current = true;
+  }, []);
 
-  const scopeRef = useGsapContext(
-    (context) => {
-      // The hero is the only element with this id, so this is unambiguous, and it
-      // runs once per setup rather than per frame. `context.selector()` is not
-      // used here: it returns nothing useful at this point, because a GSAP
-      // context has no selector until something inside it has been animated.
-      // Every tween below still gets registered with the context, which is what
-      // makes the cleanup total.
-      const section = document.getElementById("top");
-      if (!(section instanceof HTMLElement)) return;
+  const scopeRef = useGsapContext(() => {
+    // The hero is the only element with this id, so this is unambiguous, and it
+    // runs once per setup rather than per frame. `context.selector()` is not
+    // used here: it returns nothing useful at this point, because a GSAP
+    // context has no selector until something inside it has been animated.
+    // Every tween below still gets registered with the context, which is what
+    // makes the cleanup total.
+    const section = document.getElementById("top");
+    if (!(section instanceof HTMLElement)) return;
 
-      // ---- Scroll parallax ------------------------------------------------
-      // One ScrollTrigger, one timeline, six tweens. The previous version
-      // re-rendered this whole component on every scroll frame and every
-      // pointer frame because the offsets lived in React state; here the
-      // timeline writes six transforms directly and React never re-renders.
-      const travel = isDesktop ? LAYER_TRAVEL.desktop : LAYER_TRAVEL.mobile;
+    // Resize rebuilds only parallax and pointer work, never the entrance.
+    const responsive = gsap.matchMedia();
+    responsive.add(
+      { desktop: "(min-width: 1024px)", mobile: "(width < 1024px)", hover: "(hover: hover)" },
+      (responsiveContext) => {
+        // ---- Scroll parallax ------------------------------------------------
+        // One ScrollTrigger, one timeline, six tweens. The previous version
+        // re-rendered this whole component on every scroll frame and every
+        // pointer frame because the offsets lived in React state; here the
+        // timeline writes six transforms directly and React never re-renders.
+        const isDesktop = Boolean(responsiveContext.conditions?.["desktop"]);
+        const travel = isDesktop ? LAYER_TRAVEL.desktop : LAYER_TRAVEL.mobile;
 
-      const parallax = gsap.timeline({
-        defaults: { ease: "none" },
-        scrollTrigger: {
-          trigger: section,
-          // Reproduces the old `scrollY / innerHeight` clamped to 0..1.
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-          invalidateOnRefresh: true,
-        },
-      });
-
-      for (const [name, distance] of Object.entries(travel)) {
-        const el = section.querySelector(`[data-hero-layer="${name}"]`);
-        if (!el) continue;
-        // Starts at 0 and eases to `distance` with no easing, so the mapping
-        // from scroll position to offset is identical to the old multiply.
-        parallax.fromTo(el, { y: 0 }, { y: distance, duration: 1 }, 0);
-      }
-
-      // ---- Entrance -------------------------------------------------------
-      // Both ends are stated explicitly rather than using `.from()`, which
-      // records the *current* value as its target — and the current value is
-      // already 0, because the hidden state comes from CSS.
-      const intro = gsap.timeline({ defaults: { ease: EASE.out } });
-      const arrive = (name: string, rise: number, at: number, duration: number) => {
-        const el = section.querySelector(`[data-hero-reveal="${name}"]`);
-        if (!el) return;
-        intro.fromTo(
-          el,
-          { opacity: 0, y: rise },
-          { opacity: 1, y: 0, duration, clearProps: "transform" },
-          at,
-        );
-      };
-
-      arrive("eyebrow", RISE.eyebrow, ENTRANCE.eyebrow, DURATION.fast);
-      arrive("name-1", RISE.name, ENTRANCE.name1, DURATION.reveal);
-      arrive("name-2", RISE.name, ENTRANCE.name2, DURATION.reveal);
-      arrive("statement", RISE.body, ENTRANCE.statement, DURATION.reveal);
-      arrive("background", RISE.body, ENTRANCE.background, DURATION.reveal);
-      arrive("cta-1", RISE.cta, ENTRANCE.cta1, DURATION.fast);
-      arrive("cta-2", RISE.cta, ENTRANCE.cta2, DURATION.fast);
-
-      // Atmosphere first: it is what everything else is revealed against.
-      for (const [name, at] of [
-        ["glow", ENTRANCE.glow],
-        ["mountains", ENTRANCE.mountains],
-      ] as const) {
-        const el = section.querySelector(`[data-hero-reveal="${name}"]`);
-        if (!el) continue;
-        intro.fromTo(
-          el,
-          { opacity: 0 },
-          { opacity: 1, duration: DURATION.editorial, clearProps: "willChange" },
-          at,
-        );
-      }
-
-      // The portrait is the LCP image, so its mask starts first and finishes
-      // early. A wipe from the bottom edge matches where the image already
-      // bleeds off, so the mask reads as the silhouette resolving rather than
-      // as a rectangle being revealed.
-      const portrait = section.querySelector<HTMLElement>('[data-hero-mask="portrait"]');
-      if (portrait) {
-        intro.fromTo(
-          portrait,
-          { clipPath: REVEAL.clip },
-          {
-            clipPath: "inset(0% 0% 0% 0%)",
-            duration: DURATION.editorial,
-            // Clearing clipPath alone is not enough, and would in fact be a
-            // trap: the hidden state lives in the stylesheet, so stripping the
-            // inline value would let the closed mask fall back into place the
-            // instant the reveal finished. The attribute takes the element out
-            // of that stylesheet rule, then the inline value can go.
-            onComplete: () => {
-              portrait.setAttribute("data-hero-mask-done", "");
-              gsap.set(portrait, { clearProps: "clipPath" });
-            },
+        const parallax = gsap.timeline({
+          defaults: { ease: "none" },
+          scrollTrigger: {
+            trigger: section,
+            // Reproduces the old `scrollY / innerHeight` clamped to 0..1.
+            start: "top top",
+            end: "bottom top",
+            scrub: true,
+            invalidateOnRefresh: true,
           },
-          ENTRANCE.portrait,
-        );
-      }
+        });
 
-      // ---- Pointer --------------------------------------------------------
-      // X only. `y` belongs to the scroll timeline, and two systems writing the
-      // same transform property would fight; verified that GSAP composes them, so
-      // the portrait settles on translate3d(x, y, 0) with both intact.
-      //
-      // `quickSetter` writes straight through on each event instead of driving a
-      // tween: the response is immediate, it does not depend on the frame ticker,
-      // and no smoothing tween is left running between events. Pointer events
-      // arrive often enough that the result reads as smooth, and a catch-up tween
-      // would feel like lag on something meant to track the cursor.
-      if (isDesktop && window.matchMedia("(hover: hover)").matches) {
-        const mountainsEl = section.querySelector('[data-hero-layer="mountains"]');
-        const portraitEl = section.querySelector('[data-hero-layer="portrait"]');
-        const setMountainsX = mountainsEl
-          ? (gsap.quickSetter(mountainsEl, "x", "px") as (v: number) => void)
-          : null;
-        const setPortraitX = portraitEl
-          ? (gsap.quickSetter(portraitEl, "x", "px") as (v: number) => void)
-          : null;
-
-        if (setMountainsX || setPortraitX) {
-          const onMove = (event: PointerEvent) => {
-            const nx = (event.clientX / window.innerWidth) * 2 - 1;
-            setMountainsX?.(nx * POINTER_X.mountains);
-            setPortraitX?.(nx * POINTER_X.portrait);
-          };
-
-          // `context.add` does NOT mean "register this for cleanup". It invokes
-          // the callback immediately and defers only the function that callback
-          // *returns* (gsap-core: `result = func.apply(...); _isFunction(result)
-          // && self._r.push(result)`). Passing a bare remove call therefore
-          // detached the listener one tick after attaching it, and registered
-          // nothing — which is exactly what happened: it moved nowhere.
-          // So the subscription goes inside the callback and the teardown is
-          // what gets returned, and the context runs it on revert — on unmount
-          // and on a breakpoint change.
-          context.add(() => {
-            window.addEventListener("pointermove", onMove, { passive: true });
-            return () => window.removeEventListener("pointermove", onMove);
-          });
+        for (const [name, distance] of Object.entries(travel)) {
+          const el = section.querySelector(`[data-hero-layer="${name}"]`);
+          if (!el) continue;
+          // Starts at 0 and eases to `distance` with no easing, so the mapping
+          // from scroll position to offset is identical to the old multiply.
+          parallax.fromTo(el, { y: 0 }, { y: distance, duration: 1 }, 0);
         }
-      }
-    },
-    [isDesktop],
-  );
+
+        // ---- Pointer --------------------------------------------------------
+        // X only. `y` belongs to the scroll timeline, and two systems writing the
+        // same transform property would fight; verified that GSAP composes them, so
+        // the portrait settles on translate3d(x, y, 0) with both intact.
+        //
+        // `quickSetter` writes straight through on each event instead of driving a
+        // tween: the response is immediate, it does not depend on the frame ticker,
+        // and no smoothing tween is left running between events. Pointer events
+        // arrive often enough that the result reads as smooth, and a catch-up tween
+        // would feel like lag on something meant to track the cursor.
+        if (isDesktop && responsiveContext.conditions?.["hover"]) {
+          const mountainsEl = section.querySelector('[data-hero-layer="mountains"]');
+          const portraitEl = section.querySelector('[data-hero-layer="portrait"]');
+          const setMountainsX = mountainsEl
+            ? (gsap.quickSetter(mountainsEl, "x", "px") as (v: number) => void)
+            : null;
+          const setPortraitX = portraitEl
+            ? (gsap.quickSetter(portraitEl, "x", "px") as (v: number) => void)
+            : null;
+
+          if (setMountainsX || setPortraitX) {
+            const onMove = (event: PointerEvent) => {
+              const nx = (event.clientX / window.innerWidth) * 2 - 1;
+              setMountainsX?.(nx * POINTER_X.mountains);
+              setPortraitX?.(nx * POINTER_X.portrait);
+            };
+
+            // `context.add` does NOT mean "register this for cleanup". It invokes
+            // the callback immediately and defers only the function that callback
+            // *returns* (gsap-core: `result = func.apply(...); _isFunction(result)
+            // && self._r.push(result)`). Passing a bare remove call therefore
+            // detached the listener one tick after attaching it, and registered
+            // nothing — which is exactly what happened: it moved nowhere.
+            // So the subscription goes inside the callback and the teardown is
+            // what gets returned, and the context runs it on revert — on unmount
+            // and on a breakpoint change.
+            responsiveContext.add(() => {
+              window.addEventListener("pointermove", onMove, { passive: true });
+              return () => window.removeEventListener("pointermove", onMove);
+            });
+          }
+        }
+      },
+      section,
+    );
+
+    if (entranceSeen.current) {
+      gsap.set(section.querySelectorAll("[data-hero-reveal]"), {
+        opacity: 1,
+        clearProps: "willChange",
+      });
+      const portrait = section.querySelector("[data-hero-mask]");
+      portrait?.setAttribute("data-hero-mask-done", "");
+      if (portrait) gsap.set(portrait, { clearProps: "clipPath" });
+      return;
+    }
+    entranceSeen.current = true;
+    // ---- Entrance -------------------------------------------------------
+    // Both ends are stated explicitly rather than using `.from()`, which
+    // records the *current* value as its target — and the current value is
+    // already 0, because the hidden state comes from CSS.
+    const intro = gsap.timeline({ defaults: { ease: EASE.out } });
+    const arrive = (name: string, rise: number, at: number, duration: number) => {
+      const el = section.querySelector(`[data-hero-reveal="${name}"]`);
+      if (!el) return;
+      intro.fromTo(
+        el,
+        { opacity: 0, y: rise },
+        { opacity: 1, y: 0, duration, clearProps: "transform" },
+        at,
+      );
+    };
+
+    arrive("eyebrow", RISE.eyebrow, ENTRANCE.eyebrow, DURATION.fast);
+    arrive("name-1", RISE.name, ENTRANCE.name1, DURATION.reveal);
+    arrive("name-2", RISE.name, ENTRANCE.name2, DURATION.reveal);
+    arrive("statement", RISE.body, ENTRANCE.statement, DURATION.reveal);
+    arrive("background", RISE.body, ENTRANCE.background, DURATION.reveal);
+    arrive("cta-1", RISE.cta, ENTRANCE.cta1, DURATION.fast);
+    arrive("cta-2", RISE.cta, ENTRANCE.cta2, DURATION.fast);
+
+    // Atmosphere first: it is what everything else is revealed against.
+    for (const [name, at] of [
+      ["glow", ENTRANCE.glow],
+      ["mountains", ENTRANCE.mountains],
+    ] as const) {
+      const el = section.querySelector(`[data-hero-reveal="${name}"]`);
+      if (!el) continue;
+      intro.fromTo(
+        el,
+        { opacity: 0 },
+        { opacity: 1, duration: DURATION.editorial, clearProps: "willChange" },
+        at,
+      );
+    }
+
+    // The portrait is the LCP image, so its mask starts first and finishes
+    // early. A wipe from the bottom edge matches where the image already
+    // bleeds off, so the mask reads as the silhouette resolving rather than
+    // as a rectangle being revealed.
+    const portrait = section.querySelector<HTMLElement>('[data-hero-mask="portrait"]');
+    if (portrait) {
+      intro.fromTo(
+        portrait,
+        { clipPath: REVEAL.clip },
+        {
+          clipPath: "inset(0% 0% 0% 0%)",
+          duration: DURATION.editorial,
+          // Clearing clipPath alone is not enough, and would in fact be a
+          // trap: the hidden state lives in the stylesheet, so stripping the
+          // inline value would let the closed mask fall back into place the
+          // instant the reveal finished. The attribute takes the element out
+          // of that stylesheet rule, then the inline value can go.
+          onComplete: () => {
+            portrait.setAttribute("data-hero-mask-done", "");
+            gsap.set(portrait, { clearProps: "clipPath" });
+          },
+        },
+        ENTRANCE.portrait,
+      );
+    }
+  }, []);
 
   return (
     <section
@@ -321,13 +342,13 @@ export function Hero() {
       {/* Header readability scrim — keeps the nav and talk link crisp */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-[26svh] bg-gradient-to-b from-ink/90 via-ink/50 to-transparent" />
 
-      <div className="relative mx-auto flex min-h-[100svh] max-w-[1600px] flex-col justify-end px-5 pt-28 pb-12 md:px-10 lg:justify-center lg:pb-16">
+      <div className="relative mx-auto flex min-h-[100svh] max-w-[1600px] flex-col justify-end px-5 pt-24 pb-8 sm:pt-28 sm:pb-12 md:px-10 lg:justify-center lg:pb-16">
         {/* L5 giant type — sits beneath portrait in z, typographic block ~42% */}
         <div data-hero-layer="type" className="relative z-[5] lg:w-[46%]">
           <p data-hero-reveal="eyebrow" className="label-eyebrow text-bone-dim">
             {profile.role}
           </p>
-          <h1 className="display-xl mt-4 text-[clamp(4rem,11.5vw,12rem)] leading-[0.82]">
+          <h1 className="display-xl hero-name mt-4 leading-[0.82]">
             <span data-hero-reveal="name-1" className="block text-bone">
               Terry
             </span>
@@ -355,7 +376,7 @@ export function Hero() {
             <a
               href="#experiments"
               data-hero-reveal="cta-1"
-              className="link-arrow label-eyebrow text-bone transition-colors hover:text-ember"
+              className="link-arrow label-eyebrow inline-flex min-h-11 items-center text-bone transition-colors hover:text-ember"
             >
               <span className="grid size-10 place-items-center rounded-full border border-bone/40">
                 ↓
@@ -376,7 +397,7 @@ export function Hero() {
             height={941}
             sizes={PORTRAIT_SIZES}
             loading="lazy"
-            className="mx-auto w-full max-w-md object-contain"
+            className="hero-phone-portrait mx-auto object-contain"
           />
         </div>
       </div>

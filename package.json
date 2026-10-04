@@ -15,9 +15,11 @@
     "test:notify": "node --test scripts/notify-test.mjs",
     "test:deploy": "node --test scripts/deploy-guard-test.mjs",
     "test:history": "node --test scripts/history-test.mjs",
+    "test:section-navigation": "node --test scripts/section-navigation-test.mjs",
+    "test:motion-lifecycle": "node --test scripts/motion-lifecycle-test.mjs",
     "test:chat-format": "node --test scripts/chat-format-test.mjs",
     "test:frontmatter": "node --test scripts/frontmatter-test.mjs",
-    "test": "npm run test:notify && npm run test:deploy && npm run test:history && npm run test:chat-format && npm run test:frontmatter && npm run test:retrieval && npm run test:retrieval-health && npm run test:cache && npm run test:gate && npm run test:provenance && npm run test:knowledge-index && npm run test:pipeline",
+    "test": "npm run test:notify && npm run test:deploy && npm run test:history && npm run test:section-navigation && npm run test:dialog-focus && npm run test:chat-viewport && npm run test:chat-controls && npm run test:motion-lifecycle && npm run test:motion-recovery && npm run test:chat-format && npm run test:frontmatter && npm run test:retrieval && npm run test:retrieval-health && npm run test:cache && npm run test:gate && npm run test:provenance && npm run test:knowledge-index && npm run test:pipeline",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test:retrieval": "node --test scripts/retrieval-test.mjs",
@@ -26,7 +28,11 @@
     "test:gate": "node --test scripts/eval-gate-test.mjs",
     "test:provenance": "node --test scripts/retrieval-provenance-test.mjs",
     "test:knowledge-index": "node --test scripts/knowledge-index-test.mjs",
-    "test:pipeline": "node --test scripts/pipeline-test.mjs"
+    "test:pipeline": "node --test scripts/pipeline-test.mjs",
+    "test:motion-recovery": "node --test scripts/motion-recovery-test.mjs",
+    "test:dialog-focus": "node --test scripts/dialog-focus-test.mjs",
+    "test:chat-viewport": "node --test scripts/chat-viewport-test.mjs",
+    "test:chat-controls": "node --test scripts/chat-controls-test.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"

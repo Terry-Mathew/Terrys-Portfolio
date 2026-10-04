@@ -1,12 +1,18 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { ProjectClosing, ProjectNavigation } from "@/components/site/ProjectNavigation";
 
 /**
  * Layout for /projects and /projects/:projectId.
  *
- * Deliberately renders nothing but the outlet. The two children need different
- * headers — the archive opens with "← Terry Mathew", the detail page with
- * "← All projects" — so a shared header here would be wrong for one of them.
+ * Shared orientation and contact access surround each child's main landmark.
+ * Child routes own their project titles and adjacent project navigation.
  */
 export const Route = createFileRoute("/projects")({
-  component: () => <Outlet />,
+  component: () => (
+    <>
+      <ProjectNavigation />
+      <Outlet />
+      <ProjectClosing />
+    </>
+  ),
 });

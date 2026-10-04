@@ -1,0 +1,7 @@
+{
+  "conditions": "Local production Worker HTTP and parsed server HTML; no browser interaction",
+  "status": 200,
+  "mainLandmarks": 1,
+  "sectionDestinationsPresent": true,
+  "sectionLinksPresent": true
+}

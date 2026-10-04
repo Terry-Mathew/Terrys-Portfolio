@@ -1,0 +1,1378 @@
+[
+  {
+    "url": "/",
+    "width": 320,
+    "height": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 272
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 320
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 280
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 280
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 280
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-384w-C31WXxMO.avif",
+        "loaded": true,
+        "width": 264.7783203125
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 222.669921875
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 280
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 264.7783203125
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-360w-j9HPW6Jq.avif",
+        "loaded": true,
+        "width": 260.4288330078125
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 320,
+    "height": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 280
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 280
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 280
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 280
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 320,
+    "height": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 280
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 320,
+    "height": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 280
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 320,
+    "height": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 280
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 320,
+    "height": 568,
+    "scrollWidth": 320,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 280
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/",
+    "width": 375,
+    "height": 812,
+    "scrollWidth": 375,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 318.75
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 375
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 335
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 335
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 335
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-384w-C31WXxMO.avif",
+        "loaded": true,
+        "width": 321.664306640625
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 222.669921875
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 335
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 319.74481201171875
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-360w-j9HPW6Jq.avif",
+        "loaded": true,
+        "width": 315.4204406738281
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 375,
+    "height": 812,
+    "scrollWidth": 375,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 335
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 335
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 335
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 335
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 375,
+    "height": 812,
+    "scrollWidth": 375,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 335
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 375,
+    "height": 812,
+    "scrollWidth": 375,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 335
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 375,
+    "height": 812,
+    "scrollWidth": 375,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 335
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 375,
+    "height": 812,
+    "scrollWidth": 375,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 335
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 331.5
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 390
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-384w-C31WXxMO.avif",
+        "loaded": true,
+        "width": 337.17864990234375
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 222.669921875
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 334.7356872558594
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-360w-j9HPW6Jq.avif",
+        "loaded": true,
+        "width": 330.4181823730469
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 350
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 350
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 350
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 350
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 390,
+    "height": 844,
+    "scrollWidth": 390,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 350
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/",
+    "width": 414,
+    "height": 896,
+    "scrollWidth": 414,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 351.890625
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-640w-BEGM8Q4c.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-640w-BEGM8Q4c.avif",
+        "loaded": true,
+        "width": 414
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 374
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 374
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 374
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-384w-C31WXxMO.avif",
+        "loaded": true,
+        "width": 362.0016174316406
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 222.669921875
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 374
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 358.7210693359375
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-720w-MSCM7jDl.avif",
+        "loaded": true,
+        "width": 354.4145202636719
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 414,
+    "height": 896,
+    "scrollWidth": 414,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 374
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 374
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 374
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 374
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 414,
+    "height": 896,
+    "scrollWidth": 414,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 374
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 414,
+    "height": 896,
+    "scrollWidth": 414,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 374
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 414,
+    "height": 896,
+    "scrollWidth": 414,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 374
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 414,
+    "height": 896,
+    "scrollWidth": 414,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-480w-CI6Al1zE.avif",
+        "loaded": true,
+        "width": 374
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/",
+    "width": 768,
+    "height": 1024,
+    "scrollWidth": 768,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 476.15625
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-640w-BEGM8Q4c.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-640w-BEGM8Q4c.avif",
+        "loaded": true,
+        "width": 448
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 328
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 328
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 328
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-768w-CThnLAV7.avif",
+        "loaded": true,
+        "width": 372.34454345703125
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 222.669921875
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 328
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 137.04666137695312
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-720w-MSCM7jDl.avif",
+        "loaded": true,
+        "width": 130.543212890625
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 768,
+    "height": 1024,
+    "scrollWidth": 768,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-1024.webp",
+        "loaded": true,
+        "width": 688
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-1024.webp",
+        "loaded": true,
+        "width": 688
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-1024.webp",
+        "loaded": true,
+        "width": 688
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 688
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 768,
+    "height": 1024,
+    "scrollWidth": 768,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-1024.webp",
+        "loaded": true,
+        "width": 688
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 768,
+    "height": 1024,
+    "scrollWidth": 768,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-1024.webp",
+        "loaded": true,
+        "width": 688
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 768,
+    "height": 1024,
+    "scrollWidth": 768,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-1024.webp",
+        "loaded": true,
+        "width": 688
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 768,
+    "height": 1024,
+    "scrollWidth": 768,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 688
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/",
+    "width": 1024,
+    "height": 600,
+    "scrollWidth": 1024,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 409.59375
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 682.65625
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1024w-C0Wha3_t.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 456
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 456
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 456
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-384w-C31WXxMO.avif",
+        "loaded": true,
+        "width": 333.73638916015625
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 156.92123413085938
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 456
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 201.0076904296875
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-360w-j9HPW6Jq.avif",
+        "loaded": true,
+        "width": 194.53350830078125
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 1024,
+    "height": 600,
+    "scrollWidth": 1024,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 206
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 206
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 206
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 206
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 1024,
+    "height": 600,
+    "scrollWidth": 1024,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-1024.webp",
+        "loaded": true,
+        "width": 944
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 1024,
+    "height": 600,
+    "scrollWidth": 1024,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-1024.webp",
+        "loaded": true,
+        "width": 944
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 1024,
+    "height": 600,
+    "scrollWidth": 1024,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-1024.webp",
+        "loaded": true,
+        "width": 944
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 1024,
+    "height": 600,
+    "scrollWidth": 1024,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 944
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/",
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 576
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1672w-DiBwGrip.avif",
+        "loaded": true,
+        "width": 1023.453125
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-1672w-DiBwGrip.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 432
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 432
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 432
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-384w-C31WXxMO.avif",
+        "loaded": true,
+        "width": 372.3446044921875
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 287.694091796875
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 664
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 304.94439697265625
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-360w-j9HPW6Jq.avif",
+        "loaded": true,
+        "width": 298.5177001953125
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 310
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 310
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 310
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 310
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-1024.webp",
+        "loaded": true,
+        "width": 1100
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-1024.webp",
+        "loaded": true,
+        "width": 1100
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-1024.webp",
+        "loaded": true,
+        "width": 1100
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 1440,
+    "height": 900,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 1100
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/",
+    "width": 812,
+    "height": 375,
+    "scrollWidth": 812,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/hero-mountains-704w-BJRYT4y3.avif",
+        "loaded": true,
+        "width": 503.4375
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-640w-BEGM8Q4c.avif",
+        "loaded": true,
+        "width": 0
+      },
+      {
+        "src": "http://localhost:4192/assets/portrait-side-640w-BEGM8Q4c.avif",
+        "loaded": true,
+        "width": 448
+      },
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-480.webp",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/assets/iguana-768w-CThnLAV7.avif",
+        "loaded": true,
+        "width": 372.34454345703125
+      },
+      {
+        "src": "http://localhost:4192/assets/temple-320w-6ZwUnSiN.avif",
+        "loaded": true,
+        "width": 222.669921875
+      },
+      {
+        "src": "http://localhost:4192/assets/bike-sunset-660w-DgfZoYii.avif",
+        "loaded": true,
+        "width": 350
+      },
+      {
+        "src": "http://localhost:4192/assets/birds-384w-DyyPQuRB.avif",
+        "loaded": true,
+        "width": 148.04000854492188
+      },
+      {
+        "src": "http://localhost:4192/assets/mahad-trip-360w-j9HPW6Jq.avif",
+        "loaded": true,
+        "width": 141.54150390625
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects",
+    "width": 812,
+    "height": 375,
+    "scrollWidth": 812,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-1024.webp",
+        "loaded": true,
+        "width": 732
+      },
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-1024.webp",
+        "loaded": true,
+        "width": 732
+      },
+      {
+        "src": "http://localhost:4192/project-art/settle-1024.webp",
+        "loaded": true,
+        "width": 732
+      },
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 732
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/digital-twin",
+    "width": 812,
+    "height": 375,
+    "scrollWidth": 812,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/digital-twin-1024.webp",
+        "loaded": true,
+        "width": 732
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/settle",
+    "width": 812,
+    "height": 375,
+    "scrollWidth": 812,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/settle-1024.webp",
+        "loaded": true,
+        "width": 732
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/product-discovery-ai",
+    "width": 812,
+    "height": 375,
+    "scrollWidth": 812,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/project-art/product-discovery-1024.webp",
+        "loaded": true,
+        "width": 732
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  },
+  {
+    "url": "/projects/deep-research-agent",
+    "width": 812,
+    "height": 375,
+    "scrollWidth": 812,
+    "overflow": false,
+    "images": [
+      {
+        "src": "http://localhost:4192/assets/project-research-1024w-1bANmB9h.avif",
+        "loaded": true,
+        "width": 732
+      }
+    ],
+    "main": 1,
+    "h1": 1,
+    "hiddenReveals": 0
+  }
+]

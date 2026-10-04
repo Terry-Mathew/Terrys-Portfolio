@@ -1,0 +1,82 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "canonical": [
+      "https://terrymathew.com/"
+    ],
+    "og_image": "https://terrymathew.com/og-image.png"
+  },
+  {
+    "route": "/projects",
+    "status": 200,
+    "canonical": [
+      "https://terrymathew.com/projects"
+    ],
+    "og_image": "https://terrymathew.com/og-image.png"
+  },
+  {
+    "route": "/projects/digital-twin",
+    "status": 200,
+    "canonical": [
+      "https://terrymathew.com/projects/digital-twin"
+    ],
+    "og_image": "https://terrymathew.com/project-art/digital-twin-1024.webp"
+  },
+  {
+    "route": "/projects/settle",
+    "status": 200,
+    "canonical": [
+      "https://terrymathew.com/projects/settle"
+    ],
+    "og_image": "https://terrymathew.com/project-art/settle-1024.webp"
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "status": 200,
+    "canonical": [
+      "https://terrymathew.com/projects/product-discovery-ai"
+    ],
+    "og_image": "https://terrymathew.com/og-image.png"
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "status": 200,
+    "canonical": [
+      "https://terrymathew.com/projects/deep-research-agent"
+    ],
+    "og_image": "https://terrymathew.com/og-image.png"
+  },
+  {
+    "route": "/missing-design-page",
+    "status": 404,
+    "canonical": [],
+    "og_image": "https://terrymathew.com/og-image.png"
+  },
+  {
+    "route": "/projects/missing",
+    "status": 404,
+    "canonical": [],
+    "og_image": "https://terrymathew.com/og-image.png"
+  },
+  {
+    "asset": "digital-twin-480.webp",
+    "status": 200,
+    "bytes": 14508
+  },
+  {
+    "asset": "digital-twin-1024.webp",
+    "status": 200,
+    "bytes": 63214
+  },
+  {
+    "asset": "settle-480.webp",
+    "status": 200,
+    "bytes": 14486
+  },
+  {
+    "asset": "settle-1024.webp",
+    "status": 200,
+    "bytes": 45058
+  }
+]

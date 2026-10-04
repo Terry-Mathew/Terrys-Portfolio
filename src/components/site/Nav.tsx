@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { dialogFocusTargets, wrapDialogFocus } from "@/lib/dialog-focus";
 import { Menu, X } from "lucide-react";
+import { useRouter } from "@tanstack/react-router";
 import { profile } from "@/content/site";
+import { installSectionNavigation } from "@/lib/section-navigation";
 
 const links = [
   { label: "Home", href: "#top" },
@@ -10,17 +13,20 @@ const links = [
   { label: "Contact", href: "#contact" },
 ];
 export function Nav() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [onPaper, setOnPaper] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const openBtnRef = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const restoreTriggerFocusRef = useRef(true);
 
   useEffect(() => {
     if (!open) return;
+    restoreTriggerFocusRef.current = true;
     const panel = menuRef.current;
-    const focusables = () =>
-      Array.from(panel?.querySelectorAll<HTMLElement>("a[href], button") ?? []);
+    const focusables = () => (panel ? dialogFocusTargets(panel) : []);
     focusables()[0]?.focus();
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -32,20 +38,10 @@ export function Nav() {
         return;
       }
       if (e.key !== "Tab") return;
-      const items = focusables();
-      if (!items.length) return;
-      const first = items[0]!;
-      const last = items[items.length - 1]!;
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      if (panel) wrapDialogFocus(panel, e, document.activeElement);
     };
     // Close if the screen grows past the mobile breakpoint
-    const mq = window.matchMedia("(min-width: 768px)");
+    const mq = window.matchMedia("(min-width: 1024px)");
     const onMq = () => mq.matches && setOpen(false);
     document.addEventListener("keydown", onKey);
     mq.addEventListener("change", onMq);
@@ -53,44 +49,34 @@ export function Nav() {
       document.removeEventListener("keydown", onKey);
       mq.removeEventListener("change", onMq);
       document.body.style.overflow = prevOverflow;
-      openBtn?.focus();
+      if (restoreTriggerFocusRef.current && openBtn?.getClientRects().length) openBtn.focus();
     };
   }, [open]);
 
-  useEffect(() => {
-    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-    // Preserve deep links (e.g. /#experience): scroll to hash if present, else top.
-    // Same smooth-scroll behaviour as before — no visual change.
-    const hash = window.location.hash.slice(1);
-    const target =
-      hash === "" ? null : hash === "top" ? document.body : document.getElementById(hash);
-    if (target) {
-      requestAnimationFrame(() => {
-        const y =
-          target === document.body ? 0 : target.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({ top: y, behavior: "auto" });
-      });
-    } else if (!hash) {
-      window.scrollTo(0, 0);
-    }
-    const onClick = (e: MouseEvent) => {
-      const a = (e.target as HTMLElement).closest?.('a[href^="#"]') as HTMLAnchorElement | null;
-      if (!a) return;
-      // The skip link opts out of this handler. It needs the browser's own
-      // fragment navigation, which also moves focus onto #main — calling
-      // preventDefault() here would scroll but leave focus behind.
-      if (a.hasAttribute("data-skip-link")) return;
-      const id = a.getAttribute("href")!.slice(1);
-      const el = id === "top" ? document.body : document.getElementById(id);
-      if (!el) return;
-      e.preventDefault();
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const y = id === "top" ? 0 : el.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
-    };
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
-  }, []);
+  useEffect(
+    () =>
+      installSectionNavigation({
+        window,
+        document,
+        header: headerRef.current,
+        getHash: () => router.state.location.hash,
+        navigate: (hash) =>
+          router.navigate({
+            to: "/",
+            hash,
+            search: true,
+            resetScroll: false,
+            hashScrollIntoView: false,
+          }),
+        subscribe: (listener) =>
+          router.subscribe("onRendered", ({ toLocation }) => listener(toLocation.hash)),
+        onSelect: () => {
+          restoreTriggerFocusRef.current = false;
+          setOpen(false);
+        },
+      }),
+    [router],
+  );
 
   useEffect(() => {
     let frame = 0;
@@ -175,6 +161,7 @@ export function Nav() {
   return (
     <>
       <header
+        ref={headerRef}
         className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
           scrolled
             ? onPaper
@@ -183,12 +170,12 @@ export function Nav() {
             : "bg-transparent"
         }`}
       >
-        <nav className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-4 md:px-10">
-          <a href="#top" className={`hand shrink-0 whitespace-nowrap text-2xl md:text-3xl ${text}`}>
+        <nav className="mx-auto flex max-w-[1500px] min-w-0 items-center justify-between gap-4 px-5 py-4 md:px-10">
+          <a href="#top" className={`hand min-w-0 text-xl sm:text-2xl md:text-3xl ${text}`}>
             Terry Mathew
           </a>
 
-          <ul className={`hidden items-center gap-5 md:flex lg:gap-8 ${dim}`}>
+          <ul className={`hidden items-center gap-8 lg:flex ${dim}`}>
             {links.map((l) => (
               <li key={l.href}>
                 <a href={l.href} className={`label-eyebrow transition-colors ${hoverAccent}`}>
@@ -198,10 +185,10 @@ export function Nav() {
             ))}
           </ul>
 
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-4">
             <a
               href="#contact"
-              className={`link-arrow label-eyebrow hidden whitespace-nowrap rounded-full border px-4 py-2 transition-colors md:inline-flex ${
+              className={`link-arrow label-eyebrow hidden whitespace-nowrap rounded-full border px-4 py-2 transition-colors lg:inline-flex ${
                 onPaper ? "border-graphite/25 text-graphite" : "border-bone/25 text-bone"
               } ${hoverAccent}`}
             >
@@ -214,7 +201,7 @@ export function Nav() {
               aria-expanded={open}
               aria-controls="mobile-menu"
               onClick={() => setOpen(true)}
-              className={`-m-2 grid size-11 place-items-center rounded-full transition-colors focus-visible:bg-ember/15 md:hidden ${text}`}
+              className={`-m-2 grid size-11 place-items-center rounded-full transition-colors focus-visible:bg-ember/15 lg:hidden ${text}`}
             >
               <Menu className="size-6" />
             </button>
@@ -229,10 +216,10 @@ export function Nav() {
           role="dialog"
           aria-modal="true"
           aria-label="Site menu"
-          className="fixed inset-0 z-60 flex flex-col bg-ink px-6 py-5 text-bone md:hidden"
+          className="fixed inset-0 z-60 menu-safe-area flex flex-col overflow-y-auto overscroll-contain bg-ink px-6 py-5 text-bone lg:hidden"
         >
-          <div className="flex items-center justify-between">
-            <span className="hand text-2xl">Terry Mathew</span>
+          <div className="flex shrink-0 items-center justify-between">
+            <span className="hand min-w-0 text-xl sm:text-2xl">Terry Mathew</span>
             <button
               type="button"
               aria-label="Close menu"
@@ -242,13 +229,12 @@ export function Nav() {
               <X className="size-6" />
             </button>
           </div>
-          <ul className="mt-16 space-y-7">
+          <ul className="mt-10 space-y-4 short:mt-5 short:space-y-2">
             {links.map((l) => (
               <li key={l.href}>
                 <a
                   href={l.href}
-                  onClick={() => setOpen(false)}
-                  className="display-xl block text-5xl text-bone"
+                  className="display-xl flex min-h-11 items-center text-4xl text-bone short:text-3xl"
                 >
                   {l.label}
                 </a>

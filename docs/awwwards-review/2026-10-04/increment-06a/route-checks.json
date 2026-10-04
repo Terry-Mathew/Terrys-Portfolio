@@ -1,0 +1,54 @@
+{
+  "conditions": "Local production Worker, HTTP and parsed server HTML. No browser interaction checks.",
+  "routes": [
+    {
+      "route": "/projects",
+      "status": 200,
+      "mainLandmarks": 1,
+      "sharedNavigation": 1,
+      "contactActions": 2,
+      "passed": true
+    },
+    {
+      "route": "/projects/digital-twin",
+      "status": 200,
+      "mainLandmarks": 1,
+      "sharedNavigation": 1,
+      "contactActions": 2,
+      "passed": true
+    },
+    {
+      "route": "/projects/product-discovery-ai",
+      "status": 200,
+      "mainLandmarks": 1,
+      "sharedNavigation": 1,
+      "contactActions": 2,
+      "passed": true
+    },
+    {
+      "route": "/projects/settle",
+      "status": 200,
+      "mainLandmarks": 1,
+      "sharedNavigation": 1,
+      "contactActions": 2,
+      "passed": true
+    },
+    {
+      "route": "/projects/deep-research-agent",
+      "status": 200,
+      "mainLandmarks": 1,
+      "sharedNavigation": 1,
+      "contactActions": 2,
+      "passed": true
+    },
+    {
+      "route": "/projects/review-missing-project",
+      "status": 404,
+      "mainLandmarks": 1,
+      "sharedNavigation": 1,
+      "contactActions": 2,
+      "passed": true
+    }
+  ],
+  "contactDestinationPresent": true
+}

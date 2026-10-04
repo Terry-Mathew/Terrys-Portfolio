@@ -1,0 +1,55 @@
+{
+  "preview": "http://localhost:4185",
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "main_count": 1,
+      "noindex": false
+    },
+    {
+      "route": "/projects",
+      "status": 200,
+      "main_count": 1,
+      "noindex": false
+    },
+    {
+      "route": "/projects/digital-twin",
+      "status": 200,
+      "main_count": 1,
+      "noindex": false
+    },
+    {
+      "route": "/projects/settle",
+      "status": 200,
+      "main_count": 1,
+      "noindex": false
+    },
+    {
+      "route": "/projects/product-discovery-ai",
+      "status": 200,
+      "main_count": 1,
+      "noindex": false
+    },
+    {
+      "route": "/projects/deep-research-agent",
+      "status": 200,
+      "main_count": 1,
+      "noindex": false
+    },
+    {
+      "route": "/missing-phone-batch",
+      "status": 404,
+      "main_count": 1,
+      "noindex": true
+    },
+    {
+      "route": "/projects/missing-phone-batch",
+      "status": 404,
+      "main_count": 1,
+      "noindex": true
+    }
+  ],
+  "css_utilities_present": true,
+  "limits": "HTTP and compiled CSS checks do not verify phone rendering."
+}

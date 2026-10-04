@@ -1,0 +1,36 @@
+{
+  "actualWidth": 1440,
+  "results": [
+    {
+      "title": "Digital Twin",
+      "width": 1440,
+      "clipped": true,
+      "artBeforeText": true,
+      "contentFits": true,
+      "actionInside": true,
+      "font": "11px",
+      "overflow": false
+    },
+    {
+      "title": "Product Discovery AI",
+      "width": 1440,
+      "clipped": true,
+      "artBeforeText": true,
+      "contentFits": true,
+      "actionInside": true,
+      "font": "11px",
+      "overflow": false
+    },
+    {
+      "title": "Settle",
+      "width": 1440,
+      "clipped": true,
+      "artBeforeText": true,
+      "contentFits": true,
+      "actionInside": true,
+      "font": "11px",
+      "overflow": false
+    }
+  ],
+  "limits": "Only the 1440px wrapper check is valid. Attempts to change width did not produce new console results. Other widths require a new check."
+}

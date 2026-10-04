@@ -1,0 +1,90 @@
+[
+  {
+    "route": "/",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 177
+      }
+    ],
+    "passes": 28
+  },
+  {
+    "route": "/projects",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 53
+      }
+    ],
+    "passes": 23
+  },
+  {
+    "route": "/projects/digital-twin",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 67
+      }
+    ],
+    "passes": 20
+  },
+  {
+    "route": "/projects/settle",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 31
+      }
+    ],
+    "passes": 19
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 65
+      }
+    ],
+    "passes": 21
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 39
+      }
+    ],
+    "passes": 19
+  },
+  {
+    "route": "/missing-browser-review",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 5
+      }
+    ],
+    "passes": 8
+  },
+  {
+    "route": "/projects/missing-browser-review",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 5
+      }
+    ],
+    "passes": 16
+  }
+]

@@ -25,17 +25,23 @@ export function Reveal({
       setShown(true);
       return;
     }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setShown(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "-8% 0px -12% 0px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
+    try {
+      const io = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            setShown(true);
+            io.disconnect();
+          }
+        },
+        { rootMargin: "-8% 0px -12% 0px" },
+      );
+      io.observe(el);
+      return () => io.disconnect();
+    } catch (error) {
+      console.error("[reveal] setup failed; showing static content", error);
+      setShown(true);
+      return;
+    }
   }, []);
 
   const Element = Tag as "div";
@@ -54,6 +60,7 @@ export function Reveal({
       ref={ref as any}
       className={className}
       data-reveal=""
+      onFocusCapture={() => setShown(true)}
       {...(shown ? { "data-reveal-in": "" } : {})}
       style={style}
     >

@@ -1,0 +1,65 @@
+{
+  "conditions": "Fresh Chromium contexts; local unthrottled lab measurements; no field INP or real mobile hardware proof.",
+  "medians": [
+    {
+      "width": 1440,
+      "height": 900,
+      "route": "/",
+      "ttfbMs": 4.099999904632568,
+      "dclMs": 204.90000009536743,
+      "loadMs": 325.10000002384186,
+      "fcpMs": 216,
+      "lcpMs": 248
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "route": "/projects",
+      "ttfbMs": 2.399999976158142,
+      "dclMs": 212.59999990463257,
+      "loadMs": 332,
+      "fcpMs": 224,
+      "lcpMs": 224
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "route": "/projects/digital-twin",
+      "ttfbMs": 2.399999976158142,
+      "dclMs": 219.10000002384186,
+      "loadMs": 333.5,
+      "fcpMs": 232,
+      "lcpMs": 244
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "route": "/",
+      "ttfbMs": 3,
+      "dclMs": 215.89999997615814,
+      "loadMs": 342.10000002384186,
+      "fcpMs": 228,
+      "lcpMs": 228
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "route": "/projects",
+      "ttfbMs": 2.299999952316284,
+      "dclMs": 193.89999997615814,
+      "loadMs": 309.5,
+      "fcpMs": 200,
+      "lcpMs": 200
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "route": "/projects/digital-twin",
+      "ttfbMs": 2.3000000715255737,
+      "dclMs": 193.89999997615814,
+      "loadMs": 308.39999997615814,
+      "fcpMs": 200,
+      "lcpMs": 200
+    }
+  ]
+}

@@ -100,16 +100,40 @@ export function Contact() {
           data-contact-reveal="heading"
           className="mt-5 max-w-3xl font-editorial text-[clamp(2rem,5vw,3.6rem)] leading-[1.05] text-bone"
         >
-          Maybe we should build something.
+          Let’s find a practical way forward.
         </h2>
 
-        <a
-          href={`mailto:${profile.email}`}
-          data-contact-reveal="email"
-          className="link-arrow contact-email mt-6 inline-block font-sans text-base font-normal tracking-tight text-bone-dim underline decoration-bone/25 decoration-1 underline-offset-[6px] transition-colors hover:text-ember hover:decoration-ember/50 focus-visible:text-ember focus-visible:decoration-ember/50 sm:text-[1.0625rem] md:text-lg"
-        >
-          {profile.email} <span className="contact-email__arrow arrow text-ember">→</span>
-        </a>
+        <div data-contact-reveal="email" className="mt-7">
+          <p className="max-w-xl leading-relaxed text-bone-dim">
+            Discuss a role on your team or a project you want to build.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {[
+              { label: "Discuss a role", subject: "Role discussion" },
+              { label: "Discuss a project", subject: "Project discussion" },
+            ].map((action) => (
+              <a
+                key={action.subject}
+                href={`mailto:${profile.email}?subject=${encodeURIComponent(action.subject)}`}
+                className="inline-flex min-h-11 items-center rounded-full border border-bone/30 px-5 py-3 text-sm text-bone transition-colors hover:border-ember hover:text-ember"
+              >
+                {action.label}{" "}
+                <span aria-hidden="true" className="ml-3">
+                  ↗
+                </span>
+              </a>
+            ))}
+          </div>
+          <a
+            href={`mailto:${profile.email}`}
+            className="link-arrow contact-email mt-6 inline-block font-sans text-base font-normal tracking-tight text-bone-dim underline decoration-bone/25 decoration-1 underline-offset-[6px] transition-colors hover:text-ember hover:decoration-ember/50 focus-visible:text-ember focus-visible:decoration-ember/50 sm:text-[1.0625rem] md:text-lg"
+          >
+            {profile.email}{" "}
+            <span aria-hidden="true" className="contact-email__arrow arrow text-ember">
+              →
+            </span>
+          </a>
+        </div>
 
         <ul
           data-contact-reveal="socials"
@@ -121,7 +145,7 @@ export function Contact() {
                 href={l.href}
                 target="_blank"
                 rel="noreferrer"
-                className="label-eyebrow text-bone-dim transition-colors hover:text-ember focus-visible:text-ember"
+                className="label-eyebrow inline-flex min-h-11 items-center text-bone-dim transition-colors hover:text-ember focus-visible:text-ember"
               >
                 {l.label}
               </a>

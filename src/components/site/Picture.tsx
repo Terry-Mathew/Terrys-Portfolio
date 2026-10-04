@@ -23,7 +23,7 @@ import type { CSSProperties } from "react";
 
 export interface PictureProps {
   /** AVIF candidates, narrowest first. */
-  avif: string;
+  avif?: string | undefined;
   /** WebP candidates, narrowest first. Same widths as `avif`. */
   webp: string;
   /** Original file. Also the intrinsic aspect-ratio source. */
@@ -57,7 +57,7 @@ export function Picture({
 }: PictureProps) {
   return (
     <picture className="contents">
-      <source type="image/avif" srcSet={avif} sizes={sizes} />
+      {avif && <source type="image/avif" srcSet={avif} sizes={sizes} />}
       <source type="image/webp" srcSet={webp} sizes={sizes} />
       <img
         src={fallback}

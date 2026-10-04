@@ -1,0 +1,51 @@
+{
+  "preview": "http://localhost:4186",
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/digital-twin",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/settle",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/product-discovery-ai",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/deep-research-agent",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/missing-batch",
+      "status": 404,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/missing-batch",
+      "status": 404,
+      "checks": "pass"
+    }
+  ],
+  "tests": {
+    "pass": 276,
+    "fail": 0,
+    "skipped": 3
+  },
+  "limits": "HTTP checks do not establish browser appearance or email application behavior."
+}

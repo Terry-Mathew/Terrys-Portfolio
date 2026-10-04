@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { resetChatIfIdle, shouldSendOnEnter } from "@/lib/chat-controls";
+import { usePrimaryTouchInput } from "@/lib/motion-hooks";
+import { observeChatViewport } from "@/lib/chat-viewport";
+import { wrapDialogFocus } from "@/lib/dialog-focus";
 import { ArrowUp } from "lucide-react";
 
 import { parseChatMarkdown, type ChatNode } from "@/components/site/chat-markdown";
@@ -176,7 +180,13 @@ const newId = () =>
 // chunk counts, retrieval mode, cache state — stays in the console, because
 // "Found 4 relevant sections" is instrumentation, not conversation.
 export function ChatWidget() {
+  const touchInput = usePrimaryTouchInput();
   const [open, setOpen] = useState(false);
+  const viewportRootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open || !viewportRootRef.current) return;
+    return observeChatViewport(viewportRootRef.current, window);
+  }, [open]);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
@@ -353,20 +363,7 @@ export function ChatWidget() {
 
       const panel = panelRef.current;
       if (!panel) return;
-      const focusable = panel.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), textarea, a[href], summary, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      const active = document.activeElement;
-      if (e.shiftKey && (active === first || !panel.contains(active))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      wrapDialogFocus(panel, e, document.activeElement);
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -412,6 +409,7 @@ export function ChatWidget() {
       { id: botId, role: "bot", text: "", pending: true },
     ]);
     setInput("");
+    if (composerRef.current) composerRef.current.style.height = "auto";
     setBusy(true);
     setState("sending");
     pinnedToBottom.current = true;
@@ -632,11 +630,12 @@ export function ChatWidget() {
   };
 
   const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      // On a phone the soft keyboard's Enter is a newline by platform
-      // convention, and overriding it is hostile — so the send path is also on
-      // the button, and the hint below the composer says which is which.
-      if (e.nativeEvent.isComposing) return;
+    if (
+      shouldSendOnEnter(
+        { key: e.key, shiftKey: e.shiftKey, isComposing: e.nativeEvent.isComposing },
+        window.matchMedia("(pointer: coarse)").matches,
+      )
+    ) {
       e.preventDefault();
       void send();
     }
@@ -644,6 +643,7 @@ export function ChatWidget() {
 
   return (
     <div
+      ref={viewportRootRef}
       className={`safe-fab fixed z-40 transition-[opacity,visibility] duration-300 ${
         docked ? "invisible opacity-0" : "visible opacity-100"
       }`}
@@ -664,35 +664,38 @@ export function ChatWidget() {
                 degraded ? "bg-bone-dim/50" : "bg-ember"
               }`}
             />
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <p className="text-sm text-bone-dim">Ask about Terry&rsquo;s work.</p>
               {/* Diagnostic only. What it buys is the absence of a lie: a chat
                   that is answering from a keyword table and a model that is
                   rate-limited still renders, and without this the visitor has
                   no way to tell a good answer from a fallback one. */}
-              <p className="mt-0.5 text-[0.6875rem] text-bone-dim/50">
+              <p className="mt-0.5 text-[0.6875rem] text-bone-dim">
                 {degraded ? "● Limited mode" : "● Available"}
               </p>
             </div>
-            <div className="-mt-0.5 flex shrink-0 items-center gap-3 text-xs text-bone-dim/50">
+            <div className="-mt-0.5 flex shrink-0 items-center gap-1 text-xs text-bone-dim">
               {messages.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setMessages([]);
-                    setState("idle");
-                    clearStatus();
-                  }}
-                  className="transition-colors hover:text-ember"
+                  disabled={busy}
+                  onClick={() =>
+                    resetChatIfIdle(busy || abortRef.current !== null, () => {
+                      setMessages([]);
+                      setState("idle");
+                      clearStatus();
+                    })
+                  }
+                  className="inline-flex min-h-11 min-w-11 max-w-full items-center justify-center break-all rounded-sm px-2 transition-colors hover:text-ember disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  New
+                  New chat
                 </button>
               )}
               <button
                 type="button"
                 onClick={close}
                 aria-label="Close chat"
-                className="transition-colors hover:text-ember"
+                className="inline-flex min-h-11 min-w-11 max-w-full items-center justify-center break-all rounded-sm px-2 transition-colors hover:text-ember"
               >
                 ✕
               </button>
@@ -707,7 +710,7 @@ export function ChatWidget() {
             aria-live="polite"
             aria-relevant="additions text"
             aria-label="Conversation"
-            className="flex-1 space-y-5 overflow-y-auto px-5 py-3"
+            className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto px-5 py-3"
           >
             {messages.length === 0 ? (
               <div className="pt-2">
@@ -724,7 +727,7 @@ export function ChatWidget() {
                       <button
                         type="button"
                         onClick={() => void send(chip)}
-                        className="w-full rounded-sm border border-bone/12 px-3 py-2 text-left text-sm text-bone-dim transition-colors hover:border-ember/50 hover:text-bone"
+                        className="min-h-11 w-full rounded-sm border border-bone/12 px-3 py-2 text-left text-sm text-bone-dim transition-colors hover:border-ember/50 hover:text-bone"
                       >
                         {chip}
                       </button>
@@ -737,24 +740,24 @@ export function ChatWidget() {
                 m.role === "user" ? (
                   <p
                     key={m.id}
-                    className="font-editorial text-[0.9375rem] leading-snug text-bone/90"
+                    className="break-words font-editorial text-[0.9375rem] leading-snug text-bone/90"
                   >
                     <RichText text={m.text} />
                   </p>
                 ) : (
                   <div key={m.id}>
-                    <div className="max-w-[40ch] font-editorial text-[0.9375rem] leading-relaxed text-bone-dim">
+                    <div className="max-w-[40ch] break-words font-editorial text-[0.9375rem] leading-relaxed text-bone-dim">
                       <RichText text={m.text} streaming={m.pending === true} />
                       {m.pending && (
                         <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-ember/60" />
                       )}
                     </div>
                     {m.failed && (
-                      <p className="mt-2 text-xs text-bone-dim/50">
+                      <p className="mt-2 text-xs text-bone-dim">
                         <button
                           type="button"
                           onClick={retry}
-                          className="transition-colors hover:text-ember"
+                          className="inline-flex min-h-11 min-w-11 max-w-full items-center justify-center break-all rounded-sm px-2 transition-colors hover:text-ember"
                         >
                           Retry
                         </button>
@@ -766,12 +769,16 @@ export function ChatWidget() {
                         them the moment anything was asked again. */}
                     {m.sources && m.sources.length > 0 && (
                       <details className="mt-2 group">
-                        <summary className="cursor-pointer list-none text-xs text-bone-dim/40 transition-colors hover:text-ember">
+                        <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-bone-dim transition-colors hover:text-ember">
                           Sources ({m.sources.length})
                         </summary>
-                        <p className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-bone-dim/40">
+                        <p className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-bone-dim">
                           {m.sources.map((s) => (
-                            <a key={s} href={s} className="transition-colors hover:text-ember">
+                            <a
+                              key={s}
+                              href={s}
+                              className="inline-flex min-h-11 min-w-11 max-w-full items-center justify-center break-all rounded-sm px-2 transition-colors hover:text-ember"
+                            >
                               {s.replace(/^#/, "").replace(/^\//, "")}
                             </a>
                           ))}
@@ -788,11 +795,7 @@ export function ChatWidget() {
           {/* Status line. `aria-live` so the state of the turn is announced, and
               separate from the conversation log so a screen-reader user is not
               interrupted by "Sending…" between every pair of messages. */}
-          <p
-            aria-live="polite"
-            aria-atomic="true"
-            className="min-h-5 px-5 text-xs text-bone-dim/60"
-          >
+          <p aria-live="polite" aria-atomic="true" className="min-h-5 px-5 text-xs text-bone-dim">
             {statusLabel}
           </p>
 
@@ -821,14 +824,14 @@ export function ChatWidget() {
                 onKeyDown={onComposerKeyDown}
                 placeholder="Ask, or follow up…"
                 aria-label="Ask about Terry's work"
-                className="max-h-36 min-h-[2.25rem] flex-1 resize-none overflow-y-auto rounded-sm bg-transparent py-1.5 text-sm text-bone placeholder:text-bone-dim/40"
+                className="max-h-36 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-sm bg-transparent py-1.5 text-sm text-bone placeholder:text-bone-dim"
               />
               {busy ? (
                 <button
                   type="button"
                   onClick={cancel}
                   aria-label="Stop generating"
-                  className="grid size-9 shrink-0 place-items-center rounded-full border border-bone/25 text-xs text-bone-dim transition-colors hover:border-ember hover:text-ember"
+                  className="grid size-11 shrink-0 place-items-center rounded-full border border-bone/25 text-xs text-bone-dim transition-colors hover:border-ember hover:text-ember"
                 >
                   Stop
                 </button>
@@ -837,7 +840,7 @@ export function ChatWidget() {
                   type="submit"
                   disabled={!input.trim()}
                   aria-label="Send message"
-                  className="grid size-9 shrink-0 place-items-center rounded-full text-bone-dim transition-opacity hover:text-ember disabled:cursor-default disabled:opacity-30 disabled:hover:text-bone-dim"
+                  className="grid size-11 shrink-0 place-items-center rounded-full text-bone-dim transition-opacity hover:text-ember disabled:cursor-default disabled:opacity-30 disabled:hover:text-bone-dim"
                 >
                   {/* The label carries the action at desktop widths, where the
                       glyph alone read as "submit" in a form with no other
@@ -847,8 +850,10 @@ export function ChatWidget() {
                 </button>
               )}
             </div>
-            <p className="mt-1.5 text-[0.6875rem] text-bone-dim/35">
-              Enter to send · Shift+Enter newline
+            <p className="mt-1.5 text-[0.6875rem] text-bone-dim">
+              {touchInput
+                ? "Enter for a new line · Tap the arrow to send"
+                : "Enter to send · Shift+Enter newline"}
             </p>
           </form>
         </div>

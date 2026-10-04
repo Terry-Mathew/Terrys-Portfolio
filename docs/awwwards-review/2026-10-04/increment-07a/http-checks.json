@@ -1,0 +1,7 @@
+{
+  "conditions": "Local production HTTP and compiled CSS checks, not browser rendering",
+  "status": 200,
+  "serverHeroMarkupPresent": true,
+  "reducedMotionCSSPresent": true,
+  "limits": "No first-load, CSS cascade, rendered visibility, preference change, or real engine check."
+}

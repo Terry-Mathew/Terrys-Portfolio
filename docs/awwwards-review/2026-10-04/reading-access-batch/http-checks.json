@@ -1,0 +1,51 @@
+{
+  "preview": "http://localhost:4187",
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/digital-twin",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/settle",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/product-discovery-ai",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/deep-research-agent",
+      "status": 200,
+      "checks": "pass"
+    },
+    {
+      "route": "/missing-reading-batch",
+      "status": 404,
+      "checks": "pass"
+    },
+    {
+      "route": "/projects/missing-reading-batch",
+      "status": 404,
+      "checks": "pass"
+    }
+  ],
+  "tests": {
+    "pass": 276,
+    "fail": 0,
+    "skipped": 3
+  },
+  "limits": "Markup and compiled CSS checks do not prove keyboard behavior or printed page layout."
+}

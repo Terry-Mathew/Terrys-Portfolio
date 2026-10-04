@@ -1,27 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+function useMediaQuery(query: string, serverValue: boolean) {
+  const subscribe = useCallback(
+    (notify: () => void) => {
+      const media = window.matchMedia(query);
+      media.addEventListener("change", notify);
+      return () => media.removeEventListener("change", notify);
+    },
+    [query],
+  );
+  const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query]);
+  const getServerSnapshot = useCallback(() => serverValue, [serverValue]);
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
 
 export function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
+  // Hydration starts conservatively; the client snapshot reads the real preference.
+  return useMediaQuery("(prefers-reduced-motion: reduce)", true);
 }
 
 export function useIsDesktop(minWidth = 1024) {
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(`(min-width: ${minWidth}px)`);
-    setIsDesktop(mq.matches);
-    const onChange = () => setIsDesktop(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, [minWidth]);
-  return isDesktop;
+  return useMediaQuery(`(min-width: ${minWidth}px)`, false);
 }
 
 /**
@@ -64,4 +63,8 @@ export function useSmoothPointer() {
   }, [reduced, isDesktop]);
 
   return pos;
+}
+
+export function usePrimaryTouchInput() {
+  return useMediaQuery("(pointer: coarse)", false);
 }

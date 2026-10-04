@@ -1,0 +1,54 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "robots": [],
+    "main_count": 1
+  },
+  {
+    "route": "/projects",
+    "status": 200,
+    "robots": [],
+    "main_count": 1
+  },
+  {
+    "route": "/projects/digital-twin",
+    "status": 200,
+    "robots": [],
+    "main_count": 1
+  },
+  {
+    "route": "/projects/settle",
+    "status": 200,
+    "robots": [],
+    "main_count": 1
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "status": 200,
+    "robots": [],
+    "main_count": 1
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "status": 200,
+    "robots": [],
+    "main_count": 1
+  },
+  {
+    "route": "/missing-batch-2",
+    "status": 404,
+    "robots": [
+      "noindex"
+    ],
+    "main_count": 1
+  },
+  {
+    "route": "/projects/missing-batch-2",
+    "status": 404,
+    "robots": [
+      "noindex"
+    ],
+    "main_count": 1
+  }
+]

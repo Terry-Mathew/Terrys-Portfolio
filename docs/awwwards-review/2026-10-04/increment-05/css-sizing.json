@@ -1,0 +1,47 @@
+{
+  "kind": "compiled CSS verification and formula evaluation, not browser rendering",
+  "rows": [
+    {
+      "viewportHeightPx": 400,
+      "rootFontPx": 16,
+      "imageHeightPx": 192,
+      "stickyAtDesktopWidth": false
+    },
+    {
+      "viewportHeightPx": 500,
+      "rootFontPx": 16,
+      "imageHeightPx": 192,
+      "stickyAtDesktopWidth": false
+    },
+    {
+      "viewportHeightPx": 600,
+      "rootFontPx": 16,
+      "imageHeightPx": 192,
+      "stickyAtDesktopWidth": false
+    },
+    {
+      "viewportHeightPx": 768,
+      "rootFontPx": 16,
+      "imageHeightPx": 240,
+      "stickyAtDesktopWidth": true
+    },
+    {
+      "viewportHeightPx": 900,
+      "rootFontPx": 16,
+      "imageHeightPx": 352,
+      "stickyAtDesktopWidth": true
+    },
+    {
+      "viewportHeightPx": 960,
+      "rootFontPx": 16,
+      "imageHeightPx": 368,
+      "stickyAtDesktopWidth": true
+    },
+    {
+      "viewportHeightPx": 1080,
+      "rootFontPx": 16,
+      "imageHeightPx": 368,
+      "stickyAtDesktopWidth": true
+    }
+  ]
+}

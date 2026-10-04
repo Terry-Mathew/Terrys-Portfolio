@@ -22,7 +22,7 @@
 import { useLayoutEffect, useRef, type DependencyList, type RefObject } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { usePrefersReducedMotion } from "./motion-hooks";
+import { revealMotionFallback } from "./motion-recovery";
 
 /**
  * `registerPlugin` is idempotent but not free, and the module may be evaluated
@@ -46,7 +46,7 @@ type MotionScope = HTMLElement | null;
  *
  * `setup` is not called when the user prefers reduced motion — the animation is
  * never constructed, so it costs nothing and there is no possibility of a
- * leftover inline style. Use {@link useIsDesktop} plus `matchMedia` inside
+ * leftover inline style. Use GSAP `matchMedia` inside
  * `setup` when behaviour also depends on the viewport.
  *
  * @param scopeRef attach the returned ref to the element that owns the animated
@@ -60,34 +60,52 @@ export function useGsapContext(
 ): RefObject<HTMLDivElement | null> {
   const localRef = useRef<HTMLDivElement | null>(null);
   const ref = scopeRef ?? localRef;
-  const reduced = usePrefersReducedMotion();
 
   useLayoutEffect(() => {
     const scope: MotionScope = ref.current;
     if (!scope) return;
-    if (reduced) return;
-
-    ensureScrollTrigger();
-
-    const context = gsap.context((self) => {
-      setup?.(self);
-    }, scope);
-
-    // ScrollTrigger measures the document, so anything that changes layout
-    // after this point needs a refresh. Called once here rather than on every
-    // scroll frame.
-    ScrollTrigger.refresh();
-
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let context: gsap.Context | undefined;
+    const sync = () => {
+      context?.revert();
+      context = undefined;
+      // Read synchronously before constructing any timeline, including hydration.
+      if (preference.matches || document.documentElement.hasAttribute("data-motion-failed")) return;
+      const fail = (error: unknown) => {
+        revealMotionFallback(document.documentElement);
+        console.error("[motion] setup failed; showing static content", error);
+      };
+      try {
+        ensureScrollTrigger();
+        let failed = false;
+        context = gsap.context((self) => {
+          // Catch inside the callback so GSAP can restore its context bookkeeping.
+          try {
+            setup?.(self);
+          } catch (error) {
+            failed = true;
+            fail(error);
+            self.revert();
+          }
+        }, scope);
+        if (!failed) ScrollTrigger.refresh();
+      } catch (error) {
+        fail(error);
+        context?.revert();
+        context = undefined;
+      }
+    };
+    preference.addEventListener("change", sync);
+    sync();
     return () => {
-      // `revert()` is the important part: it kills the tweens and restores the
-      // inline styles GSAP wrote. A `kill()` alone would leave them behind.
-      context.revert();
+      preference.removeEventListener("change", sync);
+      context?.revert();
     };
     // `setup` is intentionally not a dependency. Callers pass the animation
     // arguments they want to vary, and re-running on an identity change of a
     // closure would rebuild every animation on every parent render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced, ref, ...deps]);
+  }, [ref, ...deps]);
 
   return ref;
 }

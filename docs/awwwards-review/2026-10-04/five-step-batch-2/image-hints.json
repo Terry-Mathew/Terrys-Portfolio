@@ -1,0 +1,18 @@
+{
+  "case_at_768": {
+    "old_hint": 728,
+    "new_hint": 688,
+    "layout_width": 688
+  },
+  "archive_at_1024": {
+    "old_hint": 216,
+    "new_hint": 206,
+    "layout_width": 206
+  },
+  "archive_at_container_cap": {
+    "old_hint": 355,
+    "new_hint": 345,
+    "layout_width": 345
+  },
+  "limit": "Grid and padding calculation, not network or performance measurement"
+}

@@ -159,36 +159,34 @@ export function About() {
       id="about"
       ref={scopeRef}
       data-tone="light"
-      className="paper-texture torn-edge-top relative bg-paper px-5 py-24 text-graphite md:px-10 md:py-32"
+      className="paper-texture torn-edge-top relative bg-paper section-reading-padding px-5 text-graphite md:px-10"
     >
       <div className="relative z-10 mx-auto max-w-[1500px]">
         <div data-about-reveal="label">
           <SectionLabel tone="light">About</SectionLabel>
         </div>
         <p data-about-reveal="tagline" className="display-xl mt-6 text-[clamp(2rem,5vw,3.5rem)]">
-          Not just a portfolio.
+          A practical way forward.
         </p>
 
-        <div className="mt-16 grid gap-16 lg:grid-cols-12 lg:gap-20">
+        <div className="mt-10 grid gap-10 sm:mt-16 sm:gap-16 lg:grid-cols-12 lg:gap-20">
           <div className="lg:col-span-7">
             <h2
               data-about-reveal="thesis"
               className="font-editorial text-[clamp(1.7rem,3vw,2.6rem)] leading-[1.2]"
             >
-              I work at the intersection of product, data, and business systems, usually where the
-              problem is still unclear and the path forward is not obvious.
+              I turn unclear business problems into products, data systems, and tools people can
+              use.
             </h2>
-            <div className="mt-10 max-w-xl space-y-6 border-l border-ember/60 pl-6 text-[1.05rem] leading-[1.75] text-graphite-dim">
+            <div className="mt-7 max-w-xl space-y-5 border-l border-ember/60 pl-4 text-base sm:mt-10 sm:space-y-6 sm:pl-6 sm:text-[1.05rem] leading-[1.75] text-graphite-dim">
               <p data-about-reveal="paragraph">
-                My career has taken me through operations, analytics, team leadership, and product
-                management. Over time, the work became less about producing reports and more about
-                understanding how information, processes, and people fit together.
+                My work spans operations, analytics, team leadership, and product management. I
+                connect the requirements, data, and people behind a useful system.
               </p>
               <p data-about-reveal="paragraph">
-                I&rsquo;ve worked on global partner systems, analytics products, operational
-                workflows, and decision tools used across different teams and functions. The common
-                thread has been the same: take something complicated, create structure around it,
-                and make it easier to use or act on.
+                I&rsquo;ve worked on global partner systems, analytics products, and operational
+                workflows. The aim is consistent: make complicated information easier to understand
+                and act on.
               </p>
               <p data-about-reveal="paragraph">
                 Outside work, I build my own product ideas and experiment with AI. This site is a
@@ -199,7 +197,7 @@ export function About() {
             <a
               href="#experiments"
               data-about-reveal="link"
-              className="link-arrow label-eyebrow mt-10 inline-flex text-graphite-dim transition-colors hover:text-ember-ink"
+              className="link-arrow label-eyebrow mt-8 inline-flex min-h-11 items-center text-graphite-dim sm:mt-10 transition-colors hover:text-ember-ink"
             >
               See what I&rsquo;m building <span className="arrow">→</span>
             </a>

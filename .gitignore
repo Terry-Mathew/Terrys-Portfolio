@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 .output
+# Local design review captures; keep Markdown reports and measurement records.
+docs/awwwards-review/**/*.png
+docs/awwwards-review/**/*.txt
 .vinxi
 .tanstack/**
 .nitro
@@ -36,3 +39,4 @@ private/
 *.njsproj
 *.sln
 *.sw?
+.gstack/

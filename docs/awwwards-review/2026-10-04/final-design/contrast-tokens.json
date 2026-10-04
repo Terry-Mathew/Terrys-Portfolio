@@ -1,0 +1,38 @@
+[
+  {
+    "foreground": "bone",
+    "background": "ink",
+    "ratio": 16.6,
+    "kind": "opaque CSS token calculation; not rendered-surface verification"
+  },
+  {
+    "foreground": "bone-dim",
+    "background": "ink",
+    "ratio": 9.18,
+    "kind": "opaque CSS token calculation; not rendered-surface verification"
+  },
+  {
+    "foreground": "ember",
+    "background": "ink",
+    "ratio": 6.12,
+    "kind": "opaque CSS token calculation; not rendered-surface verification"
+  },
+  {
+    "foreground": "graphite",
+    "background": "paper",
+    "ratio": 14.56,
+    "kind": "opaque CSS token calculation; not rendered-surface verification"
+  },
+  {
+    "foreground": "graphite-dim",
+    "background": "paper",
+    "ratio": 5.26,
+    "kind": "opaque CSS token calculation; not rendered-surface verification"
+  },
+  {
+    "foreground": "ember-ink",
+    "background": "paper",
+    "ratio": 5.04,
+    "kind": "opaque CSS token calculation; not rendered-surface verification"
+  }
+]

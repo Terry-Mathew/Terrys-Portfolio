@@ -1,0 +1,58 @@
+[
+  {
+    "viewport_height": 320,
+    "bottom_safe_inset": 0,
+    "old_panel_top": -64,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  },
+  {
+    "viewport_height": 320,
+    "bottom_safe_inset": 34,
+    "old_panel_top": -98,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  },
+  {
+    "viewport_height": 480,
+    "bottom_safe_inset": 0,
+    "old_panel_top": -64,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  },
+  {
+    "viewport_height": 480,
+    "bottom_safe_inset": 34,
+    "old_panel_top": -98,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  },
+  {
+    "viewport_height": 600,
+    "bottom_safe_inset": 0,
+    "old_panel_top": -64,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  },
+  {
+    "viewport_height": 600,
+    "bottom_safe_inset": 34,
+    "old_panel_top": -98,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  },
+  {
+    "viewport_height": 800,
+    "bottom_safe_inset": 0,
+    "old_panel_top": 0,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  },
+  {
+    "viewport_height": 800,
+    "bottom_safe_inset": 34,
+    "old_panel_top": -34,
+    "new_panel_top": 40,
+    "kind": "CSS geometry model at 16px root; not browser rendering"
+  }
+]

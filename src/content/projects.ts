@@ -168,8 +168,7 @@ export const projects: Project[] = [
       "A multi-agent prototype that organizes competitor research, customer problems, market sizing, risk review, and strategy into a structured report.",
     problem:
       "Early product decisions need evidence about competitors, customer problems, market size, and risk. Collecting and combining that research can take time. A single research prompt can also miss important questions.",
-    role:
-      "I shaped the product direction and research workflow. I designed the system around separate research roles and a review step for the combined report.",
+    role: "I shaped the product direction and research workflow. I designed the system around separate research roles and a review step for the combined report.",
     approach:
       "The workflow separates research into five roles: market landscape, customer pain, opportunity sizing, risk review, and strategy synthesis. A Gradio interface presents the stages and their outputs.\n\nA quality-audit step flags claims that need stronger evidence. The report gives a structured view of the research for human review.",
     challenges:

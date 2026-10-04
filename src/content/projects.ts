@@ -51,24 +51,24 @@ export const projects: Project[] = [
         "Generated concept illustration. A portrait connected to source material represents the project's idea; this is not a product screen.",
     },
     title: "Digital Twin",
-    subtitle: "A conversational introduction to my work",
+    subtitle: "A portfolio assistant that answers with sources",
     description:
-      "The AI assistant built into this portfolio. It finds relevant passages from my knowledge base, answers visitor questions, and links answers to their sources.",
+      "The assistant searches selected career and project information, then streams an answer with links to its sources. It gives visitors another way to explore my work.",
     problem:
-      "Visitors arrive with different questions about my work. A hiring manager may want career context. A potential client may want to understand a project. I wanted a conversational way to find relevant information without making visitors search every section.",
+      "Visitors may want different details about my work. A hiring team may look for role experience. A project client may want to understand how I approach a problem. I wanted visitors to find relevant information through a conversation.",
     role: "I defined the product direction and designed the portfolio experience. I used AI-assisted development to build the interface, knowledge pipeline, and server safeguards. The work includes testing how the assistant finds evidence and handles contact requests.",
     approach:
-      "The interface uses TanStack Start and React. Cloudflare Workers runs the application and API. Curated Markdown files provide career and project facts. An authenticated ingestion pipeline splits those files into passages. Vectorize searches by meaning. D1 searches by keywords. The server combines both rankings before preparing an answer.\n\nOpenRouter supplies answer generation. Workers AI creates search embeddings, not answers. The response streams into the chat interface with source links. Follow-up questions become standalone search queries so the conversation can retain its context.",
+      "The assistant searches a curated knowledge base. Semantic search finds passages by meaning. Keyword search finds direct term matches. The server combines both result sets before sending selected evidence to the language model.\n\nThe interface streams the answer with source links. Follow-up questions are rewritten as standalone search queries, so the assistant can use conversation context during retrieval.",
     challenges:
-      "Finding a relevant document is not enough. The answer needs the matching passage, not unrelated text from the same document. Follow-up questions also need context before search.\n\nContact tools need a separate trust boundary. Server checks compare submitted contact details with visitor messages. Rate limits and duplicate checks reduce abuse. The assistant must not claim a successful contact action when delivery fails. These checks do not prove email ownership.",
+      "The assistant needs the right passage, not only the right document. Follow-up questions also need context before search.\n\nContact actions need server-side checks. The assistant must report whether an action succeeds. Input checks do not prove that an email address belongs to the visitor.",
     learnings:
-      "Reliable answers depend on the whole path from source material to retrieval, generation, and presentation. Each stage needs its own checks.\n\nI separated answer generation from embeddings. I added an extractive fallback for provider failure. KV caches retrieval results and eligible first-question answers. Cache keys track knowledge and prompt versions so old answers do not silently survive content changes.",
+      "A reliable answer depends on every step from source material to retrieval and display. Each step needs its own checks.\n\nI separated search embeddings from answer generation. I added a fallback for generation failures and versioned caching, so content changes do not keep serving old answers.",
     outcomes:
-      "This codebase contains the portfolio chat interface, hybrid retrieval, streamed responses, source links, guarded tools, and versioned caching. Automated checks cover retrieval, conversation history, caching, and contact safeguards.\n\nThese code checks do not establish current provider availability, notification delivery, visitor conversion, or response quality in live use. Those outcomes need separate service checks and visitor feedback.",
+      "The portfolio includes a chat interface, hybrid search, streamed answers, source links, guarded contact tools, and versioned caching. Automated checks cover retrieval, conversation history, caching, and contact safeguards.\n\nThese checks do not prove live answer quality, provider availability, notification delivery, or visitor conversion.",
     evidence: {
       title: "Find the evidence. Then write the answer.",
       summary:
-        "The assistant separates source material, search, and response generation. This diagram explains the implementation in this portfolio codebase.",
+        "The assistant separates source material, search, and answer generation. This diagram shows the implementation in this portfolio.",
       stages: [
         {
           title: "Curated knowledge",
@@ -87,17 +87,17 @@ export const projects: Project[] = [
         },
       ],
       caption:
-        "Implementation diagram for this portfolio assistant. The generated artwork is conceptual; the diagram describes the code, not a measured live result.",
+        "This diagram shows the assistant implementation. The generated artwork is conceptual, not a product screen or a measured result.",
       decisions: [
         {
           title: "Evidence before generation",
           description:
-            "Use selected passages instead of full documents. Combine meaning and keyword search so different question styles can find relevant facts.",
+            "Search selected passages. Combine semantic and keyword search so different question styles can find relevant facts.",
         },
         {
           title: "Checks outside the model",
           description:
-            "Validate tool input on the server. Keep delivery results separate from model promises. Use fallback answers when generation is unavailable.",
+            "Validate tool input on the server. Report delivery results accurately. Use a fallback when answer generation fails.",
         },
       ],
     },
@@ -129,9 +129,9 @@ export const projects: Project[] = [
         "Generated concept illustration. Separate research cards combine into a brief; this is not a product screen or a real research result.",
     },
     evidence: {
-      title: "Turn a product question into a structured research brief.",
+      title: "Turn a product question into a research brief.",
       summary:
-        "The public repository describes specialized research roles. This diagram explains that workflow; it is not a real research result.",
+        "The workflow gathers signals, challenges assumptions, and combines findings. This diagram explains the project design, not a research result.",
       stages: [
         {
           title: "Collect signals",
@@ -147,7 +147,7 @@ export const projects: Project[] = [
         },
       ],
       caption:
-        "Explanatory workflow based on the public README. Generated reports still need independent source review.",
+        "This diagram explains the workflow. Generated reports need independent source review.",
       decisions: [
         {
           title: "Separate the research roles",
@@ -157,25 +157,27 @@ export const projects: Project[] = [
         {
           title: "Keep results open to review",
           description:
-            "A structured report helps inspection. Structure alone does not prove that its claims or estimates are correct.",
+            "A structured report helps people inspect the research. Its claims and estimates still need review.",
         },
       ],
       source: "https://github.com/Terry-Mathew/product-discovery-ai",
     },
     title: "Product Discovery AI",
-    subtitle: "Multi-agent market research automation",
+    subtitle: "A structured workflow for early product research",
     description:
-      "A CrewAI-powered system that automates end-to-end product discovery, from competitive intelligence to market sizing, using specialised AI agents.",
+      "A multi-agent prototype that organizes competitor research, customer problems, market sizing, risk review, and strategy into a structured report.",
     problem:
-      "Product managers and founders spend weeks researching competitors, mining customer pain points, sizing markets and synthesising findings before making go or no-go decisions. The process is slow, biased and often driven by instinct rather than structured analysis.",
+      "Early product decisions need evidence about competitors, customer problems, market size, and risk. Collecting and combining that research can take time. A single research prompt can also miss important questions.",
+    role:
+      "I shaped the product direction and research workflow. I designed the system around separate research roles and a review step for the combined report.",
     approach:
-      "The public project describes five roles: market landscape, customer pain, opportunity sizing, risk review, and strategy synthesis. A Gradio interface presents the research stages. Each stage contributes to the final report.",
+      "The workflow separates research into five roles: market landscape, customer pain, opportunity sizing, risk review, and strategy synthesis. A Gradio interface presents the stages and their outputs.\n\nA quality-audit step flags claims that need stronger evidence. The report gives a structured view of the research for human review.",
     challenges:
-      "Generic prompts produced shallow analysis, so expert personas and explicit constraints were added. A quality-audit agent flags unsourced claims. The pipeline was also changed to collect every agent's output rather than only the final task.",
+      "Generic prompts produced shallow analysis. I added role-specific instructions and constraints. I also changed the pipeline to collect each role's output, so the final report could use more than the last result.",
     learnings:
-      "Expert framing produces stronger output than generic instructions. Explicit reasoning structures improve reliability. Triangulating across sources catches weak claims early, and a final quality gate is essential.",
+      "Separate roles can broaden the questions a workflow examines. A review step can make weak evidence easier to spot. A structured report still needs a person to check its sources and conclusions.",
     outcomes:
-      "The prototype organizes research into structured reports covering competitors, customer problems, market sizing, and risks. This case study does not establish measured time savings or report accuracy.",
+      "The working prototype organizes research into reports about competitors, customer problems, opportunity size, and risks. The project has no verified measure of time saved or report accuracy. Reports need independent source review.",
     tech: ["CrewAI", "Python 3.12", "OpenAI GPT-4o", "Serper API", "Reddit API", "Gradio"],
     github: "https://github.com/Terry-Mathew/product-discovery-ai",
     youtube: "https://www.youtube.com/watch?v=w0kSLkXuY-E&t=64s",
@@ -195,17 +197,17 @@ export const projects: Project[] = [
         "Generated concept illustration. Branching paths represent choices to explore; this is not a product screen or a forecast.",
     },
     problem:
-      "Financial choices connect to more than one number. A purchase can affect savings, debt, and the room left for everyday costs.",
+      "A purchase can affect more than its monthly payment. It can change available savings, debt, and money left for regular expenses.",
     approach:
-      "Settle is an ongoing personal finance project. The intended experience connects a person's financial position with scenarios they can explore before making their own decision.",
+      "Settle is an in-progress personal finance scenario tool. The planned experience connects a person's financial information with choices they want to explore.",
     learnings:
-      "A decision tool needs clear assumptions. A useful scenario explains its limits instead of presenting one outcome as a promise.",
+      "A decision tool needs clear assumptions. A scenario should show its limits so people can judge the result for themselves.",
     outcomes:
-      "The project is in progress. This page describes its direction, not a completed product or measured user result. Product screens and release evidence will follow when available.",
+      "Settle is in development. This case study describes the project direction. It does not claim a completed product or measured user result.",
     title: "Settle",
-    subtitle: "A personal finance decision simulator",
+    subtitle: "A personal finance scenario tool in development",
     description:
-      "It connects income, expenses, savings, debts, investments, assets, and planned purchases in one financial picture — helping people understand their current position and explore how a decision could affect it. Settle doesn't provide financial advice or tell people what to do. It helps them explore scenarios before making their own decisions.",
+      "Settle is designed to connect income, spending, savings, debt, and planned purchases. It will help people explore how a decision could affect their finances.",
     tech: [],
     category: "Personal Finance",
     year: "Now",
@@ -215,19 +217,19 @@ export const projects: Project[] = [
   {
     id: "deep-research-agent",
     title: "Deep Research Agent",
-    subtitle: "Multi-agent orchestration for mastery-level research",
+    subtitle: "A research workflow for complex questions",
     description:
-      "An autonomous research system that creates citation-backed reports through strategic planning, parallel retrieval and structured synthesis.",
+      "This project explores how planning, parallel search, evidence review, and structured writing can produce detailed research reports with citations.",
     problem:
-      "Language models rely on static training data and tend toward brief answers. Simple search pipelines also use narrow queries that miss the many dimensions of difficult topics. The goal was a system that actively investigates a question and produces a deep report without manual coordination.",
+      "Complex research questions can need several search paths. A single query may miss useful evidence. Search snippets may lack enough context for a strong report.",
     approach:
-      "Designed a three-stage pipeline: a planner breaks the topic into 12–15 search vectors, retrieval runs searches concurrently, and a writer synthesises the evidence into a structured report with summaries, comparisons and citations.",
+      "A planning stage divides a topic into search directions. Retrieval runs searches in parallel. An analysis stage filters and organizes the evidence before a writing stage creates a structured report with citations.",
     challenges:
-      "Comprehensive research increased latency, so searches were parallelised. Search snippets lacked context, so an analyst pass filters noise before synthesis. Strict schemas and formatting rules keep large source sets coherent.",
+      "More research can increase wait time. Parallel searches help manage that work. Search snippets can lack context, so the workflow includes an analysis stage before writing.",
     learnings:
-      "Prompt structure is part of the architecture. Asynchronous execution is essential for usable agent workflows, and pre-processing evidence can produce better synthesis than sending everything directly to the final model.",
+      "The structure of the research prompt affects the result. Parallel retrieval can support broader research. Reviewing evidence before writing can help keep the report coherent.",
     outcomes:
-      "The project explores parallel retrieval and structured report synthesis. This case study does not establish measured speed gains, citation accuracy, or production readiness.",
+      "The project explores parallel retrieval and structured report writing. It is in development. It has no verified measures for speed, citation accuracy, or production readiness.",
     tech: ["Python 3.10+", "OpenAI Agents SDK", "Serper.dev", "Pydantic", "Asyncio", "Gradio"],
     github: "https://github.com/Terry-Mathew/Deep-Research-Agent",
     youtube: null,

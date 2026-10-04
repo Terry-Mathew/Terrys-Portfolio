@@ -100,12 +100,13 @@ export function Contact() {
           data-contact-reveal="heading"
           className="mt-5 max-w-3xl font-editorial text-[clamp(2rem,5vw,3.6rem)] leading-[1.05] text-bone"
         >
-          Let’s find a practical way forward.
+          Start a conversation about the work.
         </h2>
 
         <div data-contact-reveal="email" className="mt-7">
           <p className="max-w-xl leading-relaxed text-bone-dim">
-            Discuss a role on your team or a project you want to build.
+            For hiring teams, discuss a role in product, data, analytics, or applied AI. For project
+            clients, discuss a data product, workflow, or AI prototype.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             {[

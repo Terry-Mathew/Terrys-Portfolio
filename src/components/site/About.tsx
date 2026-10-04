@@ -166,7 +166,7 @@ export function About() {
           <SectionLabel tone="light">About</SectionLabel>
         </div>
         <p data-about-reveal="tagline" className="display-xl mt-6 text-[clamp(2rem,5vw,3.5rem)]">
-          A practical way forward.
+          Where product, data, and operations meet.
         </p>
 
         <div className="mt-10 grid gap-10 sm:mt-16 sm:gap-16 lg:grid-cols-12 lg:gap-20">
@@ -175,22 +175,18 @@ export function About() {
               data-about-reveal="thesis"
               className="font-editorial text-[clamp(1.7rem,3vw,2.6rem)] leading-[1.2]"
             >
-              I turn unclear business problems into products, data systems, and tools people can
-              use.
+              I define requirements, data logic, reporting, and workflows for systems that help
+              teams understand their work and make decisions.
             </h2>
             <div className="mt-7 max-w-xl space-y-5 border-l border-ember/60 pl-4 text-base sm:mt-10 sm:space-y-6 sm:pl-6 sm:text-[1.05rem] leading-[1.75] text-graphite-dim">
               <p data-about-reveal="paragraph">
-                My work spans operations, analytics, team leadership, and product management. I
-                connect the requirements, data, and people behind a useful system.
+                My experience includes partner analytics, commercial operations, and data products.
               </p>
               <p data-about-reveal="paragraph">
-                I&rsquo;ve worked on global partner systems, analytics products, and operational
-                workflows. The aim is consistent: make complicated information easier to understand
-                and act on.
+                I also build independent projects in applied AI and decision tools.
               </p>
               <p data-about-reveal="paragraph">
-                Outside work, I build my own product ideas and experiment with AI. This site is a
-                mix of both.
+                Each project starts with a specific problem. I show its approach and limits.
               </p>
             </div>
 

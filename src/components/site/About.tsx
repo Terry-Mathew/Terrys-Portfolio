@@ -189,14 +189,6 @@ export function About() {
                 Each project starts with a specific problem. I show its approach and limits.
               </p>
             </div>
-
-            <a
-              href="#experiments"
-              data-about-reveal="link"
-              className="link-arrow label-eyebrow mt-8 inline-flex min-h-11 items-center text-graphite-dim sm:mt-10 transition-colors hover:text-ember-ink"
-            >
-              See what I&rsquo;m building <span className="arrow">→</span>
-            </a>
           </div>
 
           {/* `data-about-reveal` as well as `data-about-column`: the column is

@@ -66,8 +66,8 @@ function Index() {
       />
       <Nav />
       <Hero />
-      <Experiments />
       <About />
+      <Experiments />
       <Experience />
       <Capabilities />
       <Credentials />

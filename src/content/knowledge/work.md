@@ -6,103 +6,82 @@ updated: 2026-10
 aliases:
   - selected work
   - case studies
-  - PCMS
-  - Partner Credit Management System
-  - assessment analytics
-  - deal registration
-  - partner analytics
+  - partner analytics work
+  - partner credit system
+  - incentive eligibility analysis
+  - development and test reporting
 ---
 
 # Terry Mathew — Selected Work
 
-## Partner Credit Management System (PCMS)
+## Partner Credit Management System
 
 ### Problem
 
-Partner-credit rules, balances, approvals, transactions, and reporting needed to be represented consistently in an operational system used by multiple business teams.
+Partner-credit policies, partner relationships, transactions, balances, and reporting needed to work consistently in an operational system. A change in one area could affect historical records or downstream reports.
 
-The rules involved Finance, Sales Operations, partner structures, credit policies, and operational exceptions.
+### Terry's contribution
 
-### Terry's role
+Terry translated business policies into requirements, functional specifications, reporting needs, and Oracle APEX logic. He worked with the developer on priorities, led user acceptance testing with business stakeholders, and created SQL reporting for teams that used the system.
 
-Terry translated business and credit policies into product requirements, functional specifications, reporting requirements, and Oracle APEX logic.
+### Approach
 
-He worked with the lead developer on backlog and delivery priorities.
+He investigated how partner hierarchy, credit records, orders, and catalog data related to one another. He used prechecks and validation queries to distinguish a reporting issue from a change that could affect transactional history.
 
-He led user acceptance testing with Finance and Sales Operations.
+### Supported outcome
 
-He also built reporting and SQL queries used by stakeholders across Finance, Sales Operations, and the Strategic Partner Group.
+The work clarified system behaviour, improved traceability in reporting, and gave stakeholders a safer way to review proposed data changes.
 
-### Scope
-
-The work covered more than 300 partners and approximately 1.2 billion consumed credits.
-
-Capabilities included balance visibility, approval workflows, transaction history, and reporting.
-
-### Why the work mattered
-
-The goal was to make partner-credit information easier to trace from business policy through system behaviour and reporting.
-
-## Business and Technical Assessment Analytics
+## Partner Incentive Eligibility Analytics
 
 ### Problem
 
-Leadership needed a consistent view of partner opportunities moving through assessment, approval, and Proof of Performance stages.
+Eligibility decisions depended on agreement history and partner relationships. A row-by-row review could miss activity connected to a wider partner group.
 
-Different stages and approval conditions had to be combined into a usable funnel.
+### Terry's contribution
 
-### Terry's role
+Terry helped translate the policy into analytics logic. He preserved detail-level evidence while supporting a partner-group decision. He validated results against stakeholder examples and worked with partner operations and Finance stakeholders.
 
-Terry built the leadership analytics view and defined the business logic used to classify opportunity status.
+### Approach
 
-He combined assessment approvals, Proof of Performance approvals, and opportunity status into qualified-booking logic.
+He used agreement history and partner relationships to make the decision logic traceable. He checked the analysis with stakeholder examples.
 
-He also corrected funnel logic and introduced reason-coded data-quality flags.
+### Supported outcome
 
-### Scope
+The analysis made the decision logic more consistent and easier to inspect. Internal eligibility windows and policy details are not included here.
 
-The reporting tracked more than 220 submitted opportunities.
-
-The resulting logic supported tracking of more than USD 1.5 million in qualified bookings across more than 86 partners.
-
-### Why the work mattered
-
-The work gave leadership a clearer way to understand where opportunities were in the process and why individual records were or were not counted.
-
-## Deal Registration and Partner Analytics
+## Partner Development and Test Reporting
 
 ### Problem
 
-Partner reporting covered areas such as registrations, pipeline, bookings, operations, and cloud consumption.
+Recurring partner reporting required manual preparation across finance, credit-consumption, and membership data. Partner identities and order lines could appear in more than one way.
 
-Metrics needed consistent definitions before the dashboards could be used reliably across teams.
+### Terry's contribution
 
-### Terry's role
+Terry built a Power Query model that cleaned and connected the data, mapped partner relationships, applied reporting rules, and checked order-level counts against detailed records.
 
-Terry worked with stakeholders and data engineers to define metrics and reporting logic.
+### Approach
 
-He validated early designs, built and maintained dashboards, and supported production adoption.
+He checked the joins and partner mappings against order-level records. This helped distinguish valid multi-line orders from duplication caused by joins or mappings.
 
-### Scope
+### Supported outcome
 
-The analytics served more than 60 users and recorded more than 50,000 queries per quarter.
+The model made reporting logic more traceable and helped identify duplication risks before reporting.
 
-### Why the work mattered
-
-The objective was to give stakeholders a common set of metrics for recurring operational and leadership questions.
-
-## GSI Development and Test Reporting
+## Partner Analytics and Assessment Reporting
 
 ### Problem
 
-Recurring reporting for Global Systems Integrator development and test activity took approximately two weeks to produce.
+Stakeholders needed consistent views of partner activity, opportunity stages, and operational reporting. Teams needed shared metric definitions and status rules before they could interpret trends.
 
-### Terry's role
+### Terry's contribution
 
-Terry redesigned the reporting workflow using AI-assisted tooling.
+Terry worked with stakeholders and data engineers to define metrics, build reporting logic, validate dashboard designs, investigate data issues, and explain results in business terms.
 
-### Outcome
+### Approach
 
-The production cycle was reduced from approximately two weeks to two or three days.
+He connected stakeholder definitions with data logic, then checked the resulting reports against operational examples.
 
-The work demonstrated where automation could remove repetitive preparation without removing the analyst from validation and interpretation.
+### Supported outcome
+
+The work gave teams shared reporting for operational and leadership questions.

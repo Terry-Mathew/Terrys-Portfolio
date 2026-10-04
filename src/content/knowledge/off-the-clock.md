@@ -1,7 +1,6 @@
 ---
 title: Terry Mathew — Outside Work
 type: personal
-priority: 70
 updated: 2026-10
 aliases:
   - hobbies

@@ -9,49 +9,45 @@
         "retail",
         "hospit"
       ],
-      "note": "Shares no vocabulary with the source. Proves semantic retrieval rather than keyword matching."
+      "note": "Checks retrieval of the brief earlier-work summary."
     },
     {
-      "id": "oracle-scale",
-      "question": "how many partners does the credit policy cover",
+      "id": "oracle-work",
+      "question": "what kind of work did he do at Oracle",
       "category": "retrieval",
       "requires": [
-        "300"
-      ],
-      "note": "Exact-number lookup. Requires keyword search to succeed."
-    },
-    {
-      "id": "bookings",
-      "question": "how much qualified booking value has he tracked",
-      "category": "retrieval",
-      "requires": [
-        "1.5"
-      ],
-      "note": "Exact figure from the resume."
+        "partner",
+        "analytics",
+        "operations"
+      ]
     },
     {
       "id": "digital-twin",
       "question": "What is his Digital Twin project?",
       "category": "retrieval",
       "requires": [
-        "vectorize",
-        "persona"
+        "assistant",
+        "source"
       ]
     },
     {
-      "id": "team-lead-scale",
-      "question": "how big was the team he led in EMEA",
+      "id": "team-lead-work",
+      "question": "what did he handle as business operations team lead",
       "category": "retrieval",
       "requires": [
-        "20"
+        "workload",
+        "quality",
+        "escalations"
       ]
     },
     {
-      "id": "ticket-volume",
-      "question": "how many tickets per quarter did his team handle",
+      "id": "credit-system-work",
+      "question": "what did his partner credit management work involve",
       "category": "retrieval",
       "requires": [
-        "20,000"
+        "requirements",
+        "reporting",
+        "balances"
       ]
     },
     {
@@ -73,11 +69,13 @@
       "note": "Off-topic but answerable. A similarity gate would wrongly deflect this."
     },
     {
-      "id": "job-search",
-      "question": "what kind of role is he looking for",
+      "id": "work-approach",
+      "question": "how does he approach complex work",
       "category": "retrieval",
       "requires": [
-        "product"
+        "requirements",
+        "process",
+        "data"
       ]
     },
     {
@@ -90,23 +88,29 @@
       ]
     },
     {
-      "id": "architecture",
-      "question": "how does this chatbot work?",
+      "id": "technical-detail-boundary",
+      "question": "which database does this chatbot use",
       "category": "retrieval",
       "requires": [
-        "vectorize",
-        "bm25",
-        "worker"
+        "portfolio",
+        "source",
+        "detail"
       ],
-      "note": "Tests the how-this-works document."
+      "note": "Technical implementation details are not in the personal-facts corpus."
     },
     {
-      "id": "bug-story",
-      "question": "tell me about the bugs you hit building this",
+      "id": "model-detail-boundary",
+      "question": "which model powers this chatbot",
       "category": "retrieval",
       "requires": [
-        "dimension",
-        "hash"
+        "portfolio",
+        "source",
+        "detail"
+      ],
+      "forbids": [
+        "openrouter",
+        "gpt-5-mini",
+        "gpt-5 mini"
       ]
     },
     {
@@ -122,20 +126,23 @@
       "question": "what is Settle",
       "category": "retrieval",
       "requires": [
-        "money",
-        "debt",
-        "simulator",
-        "decision"
+        "cash flow",
+        "scenario",
+        "choices",
+        "financial advice"
       ]
     },
     {
-      "id": "cost",
+      "id": "cost-detail-boundary",
       "question": "how much does this chatbot cost to run",
       "category": "retrieval",
       "requires": [
+        "portfolio",
+        "source",
+        "detail"
+      ],
+      "forbids": [
         "free",
-        "zero",
-        "nothing",
         "$0"
       ]
     },
@@ -162,25 +169,27 @@
     },
     {
       "id": "no-invent-company",
-      "question": "which companies has he worked at besides Oracle",
+      "question": "what kinds of work did he do before Oracle",
       "category": "retrieval",
       "requires": [
-        "amazon",
-        "ibm",
-        "bose"
+        "hr",
+        "support",
+        "retail",
+        "hospitality"
       ],
-      "note": "Pre-Oracle history lives only in the resume."
+      "note": "The public corpus gives earlier work areas without employer names."
     }
   ],
   "multiTurn": [
     {
       "id": "followup-pronoun",
       "seed": "What did he do as a team lead at Oracle?",
-      "followup": "How long was he leading that team?",
+      "followup": "What did that team lead role involve?",
       "requires": [
-        "2022",
-        "2023",
-        "year"
+        "workload",
+        "quality",
+        "service",
+        "escalations"
       ],
       "note": "Tests query condensing. The pronoun 'that team' resolves to nothing without it."
     },
@@ -189,13 +198,12 @@
       "seed": "What is Settle?",
       "followup": "What problem does it solve?",
       "requires": [
-        "financ",
-        "clar",
-        "decision",
-        "money",
-        "debt"
+        "cash flow",
+        "choices",
+        "scenarios",
+        "financial advice"
       ]
     }
   ],
-  "_note": "`requires` is ANY-match and should test the substance of an answer, not one particular word for it. The `experiments` case asked for the literal string \"financ\" and failed on a correct answer that said \"a decision simulator for money\"; the terms were widened to the vocabulary the answer actually uses. If a case fails on wording, fix the case, not the chatbot. Other brittle literals: `requires: [\"product\"]` on job-search, which passes only because bio.md says \"data products\"."
+  "_note": "`requires` uses ANY-match. Each case checks for one supported fact or checks that the assistant does not guess details outside the visitor corpus. If a case fails only on wording, review the expected terms before changing the answer."
 }

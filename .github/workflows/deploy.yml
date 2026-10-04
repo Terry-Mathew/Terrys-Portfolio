@@ -61,14 +61,6 @@ jobs:
 
       - run: npm ci
 
-      # The prebuild hook runs scripts/extract-cv.mjs, which shells out to
-      # pdftotext. Poppler must be present BEFORE the first build or the résumé
-      # silently does not get converted.
-      - name: Install poppler (résumé → Markdown step)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y poppler-utils
-
       - name: Build
         run: npm run build
 

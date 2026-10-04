@@ -9,7 +9,7 @@ aliases:
   - LinkedIn
   - Instagram
   - YouTube
-  - resume
+  - resume access
   - CV
 ---
 
@@ -23,6 +23,6 @@ Instagram: https://www.instagram.com/tedssy/
 
 YouTube: https://www.youtube.com/@terrymathew-p
 
-Portfolio: https://www.terrymathew.com
+Portfolio: https://terrymathew.com
 
-Resume: Available on request by email.
+The public portfolio does not show a résumé link. Email Terry to ask about access.

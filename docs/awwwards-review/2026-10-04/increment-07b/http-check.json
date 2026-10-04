@@ -1,0 +1,9 @@
+{
+  "local_http": 200,
+  "recovery_event_in_html": true,
+  "deadline_in_html": true,
+  "failed_flag_in_html": true,
+  "main_count": 1,
+  "compiled_recovery_selector": true,
+  "kind": "HTTP and compiled source checks; not browser rendering"
+}

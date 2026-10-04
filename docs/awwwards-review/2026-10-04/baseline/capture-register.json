@@ -1,0 +1,380 @@
+[
+  {
+    "route": "/",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/",
+      "\t\t\t\t\t\t19 heading TERRY MATHEW, Value: 1",
+      "The focused UI element is 12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/"
+    ]
+  },
+  {
+    "route": "/#experiments",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experiments",
+      "\t\t\t\t\t\t19 heading TERRY MATHEW, Value: 1"
+    ]
+  },
+  {
+    "route": "/#experience",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experience",
+      "\t\t\t\t\t\t19 heading TERRY MATHEW, Value: 1"
+    ]
+  },
+  {
+    "route": "/projects",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Projects — Terry Mathew, URL: localhost:4174/projects",
+      "\t\t\t\t\t\t17 heading THINGS I'VE BUILT., Value: 1",
+      "The focused UI element is 12 HTML content Description: Projects — Terry Mathew, URL: localhost:4174/projects"
+    ]
+  },
+  {
+    "route": "/projects/digital-twin",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Digital Twin — Terry Mathew, URL: localhost:4174/projects/digital-twin",
+      "\t\t\t\t\t\t17 heading DIGITAL TWIN, Value: 1",
+      "The focused UI element is 12 HTML content Description: Digital Twin — Terry Mathew, URL: localhost:4174/projects/digital-twin"
+    ]
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Product Discovery AI — Terry Mathew, URL: localhost:4174/projects/product-discovery-ai",
+      "\t\t\t\t\t\t17 heading PRODUCT DISCOVERY AI, Value: 1",
+      "The focused UI element is 12 HTML content Description: Product Discovery AI — Terry Mathew, URL: localhost:4174/projects/product-discovery-ai"
+    ]
+  },
+  {
+    "route": "/projects/settle",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Settle — Terry Mathew, URL: localhost:4174/projects/settle",
+      "\t\t\t\t\t\t17 heading SETTLE, Value: 1",
+      "The focused UI element is 12 HTML content Description: Settle — Terry Mathew, URL: localhost:4174/projects/settle"
+    ]
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Deep Research Agent — Terry Mathew, URL: localhost:4174/projects/deep-research-agent",
+      "\t\t\t\t\t\t17 heading DEEP RESEARCH AGENT, Value: 1",
+      "The focused UI element is 12 HTML content Description: Deep Research Agent — Terry Mathew, URL: localhost:4174/projects/deep-research-agent"
+    ]
+  },
+  {
+    "route": "/projects/review-missing-project",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Project not found — Terry Mathew, URL: localhost:4174/projects/review-missing-project",
+      "\t\t\t\t\t\t15 heading PROJECT NOT FOUND., Value: 1",
+      "The focused UI element is 12 HTML content Description: Project not found — Terry Mathew, URL: localhost:4174/projects/review-missing-project"
+    ]
+  },
+  {
+    "route": "/review-missing-page",
+    "width": 375,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 375",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew, URL: localhost:4174/review-missing-page",
+      "\t\t\t\t\t\t15 heading 404, Value: 1",
+      "The focused UI element is 12 HTML content Description: Terry Mathew, URL: localhost:4174/review-missing-page"
+    ]
+  },
+  {
+    "route": "/",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/"
+    ]
+  },
+  {
+    "route": "/#experiments",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experiments"
+    ]
+  },
+  {
+    "route": "/#experience",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experience"
+    ]
+  },
+  {
+    "route": "/projects",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Projects — Terry Mathew, URL: localhost:4174/projects"
+    ]
+  },
+  {
+    "route": "/projects/digital-twin",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Digital Twin — Terry Mathew, URL: localhost:4174/projects/digital-twin"
+    ]
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Product Discovery AI — Terry Mathew, URL: localhost:4174/projects/product-discovery-ai"
+    ]
+  },
+  {
+    "route": "/projects/settle",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Settle — Terry Mathew, URL: localhost:4174/projects/settle"
+    ]
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Deep Research Agent — Terry Mathew, URL: localhost:4174/projects/deep-research-agent"
+    ]
+  },
+  {
+    "route": "/projects/review-missing-project",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Project not found — Terry Mathew, URL: localhost:4174/projects/review-missing-project"
+    ]
+  },
+  {
+    "route": "/review-missing-page",
+    "width": 768,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 768",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew, URL: localhost:4174/review-missing-page"
+    ]
+  },
+  {
+    "route": "/",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/"
+    ]
+  },
+  {
+    "route": "/#experiments",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experiments"
+    ]
+  },
+  {
+    "route": "/#experience",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experience"
+    ]
+  },
+  {
+    "route": "/projects",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Projects — Terry Mathew, URL: localhost:4174/projects"
+    ]
+  },
+  {
+    "route": "/projects/digital-twin",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Digital Twin — Terry Mathew, URL: localhost:4174/projects/digital-twin"
+    ]
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Product Discovery AI — Terry Mathew, URL: localhost:4174/projects/product-discovery-ai"
+    ]
+  },
+  {
+    "route": "/projects/settle",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Settle — Terry Mathew, URL: localhost:4174/projects/settle"
+    ]
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Deep Research Agent — Terry Mathew, URL: localhost:4174/projects/deep-research-agent"
+    ]
+  },
+  {
+    "route": "/projects/review-missing-project",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Project not found — Terry Mathew, URL: localhost:4174/projects/review-missing-project"
+    ]
+  },
+  {
+    "route": "/review-missing-page",
+    "width": 1024,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1024",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew, URL: localhost:4174/review-missing-page"
+    ]
+  },
+  {
+    "route": "/",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/"
+    ]
+  },
+  {
+    "route": "/#experiments",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experiments"
+    ]
+  },
+  {
+    "route": "/#experience",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew — Product, Data, AI & Systems, URL: localhost:4174/#experience"
+    ]
+  },
+  {
+    "route": "/projects",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Projects — Terry Mathew, URL: localhost:4174/projects"
+    ]
+  },
+  {
+    "route": "/projects/digital-twin",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Projects — Terry Mathew, URL: localhost:4174/projects"
+    ]
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Product Discovery AI — Terry Mathew, URL: localhost:4174/projects/product-discovery-ai"
+    ]
+  },
+  {
+    "route": "/projects/settle",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Settle — Terry Mathew, URL: localhost:4174/projects/settle"
+    ]
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Deep Research Agent — Terry Mathew, URL: localhost:4174/projects/deep-research-agent"
+    ]
+  },
+  {
+    "route": "/projects/review-missing-project",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Project not found — Terry Mathew, URL: localhost:4174/projects/review-missing-project"
+    ]
+  },
+  {
+    "route": "/review-missing-page",
+    "width": 1440,
+    "state": [
+      "\t\t\t5 text field (settable) Description: Width, Value: 1440",
+      "\t\t\t7 text field (settable) Description: Height, Value: 900",
+      "\t\t\t\t12 HTML content Description: Terry Mathew, URL: localhost:4174/review-missing-page"
+    ]
+  }
+]

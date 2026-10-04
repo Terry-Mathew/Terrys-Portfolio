@@ -29,7 +29,7 @@ export function Credentials() {
     <section
       id="credentials"
       data-tone="light"
-      className="paper-texture relative bg-paper px-5 py-24 text-graphite md:px-10 md:py-32"
+      className="paper-texture relative bg-paper section-reading-padding px-5 text-graphite md:px-10"
     >
       <div className="relative z-10 mx-auto max-w-[1500px]">
         <Reveal>
@@ -40,7 +40,7 @@ export function Credentials() {
                 Continuous learning.
               </h2>
             </div>
-            <div className="flex gap-3">
+            <div className="hidden gap-3 sm:flex">
               <button
                 type="button"
                 onClick={() => scrollBy(-1)}
@@ -63,23 +63,25 @@ export function Credentials() {
 
         <div
           ref={railRef}
-          className="mt-14 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4"
+          id="credentials-list"
+          data-credentials-rail
+          className="mt-10 flex flex-col gap-4 pb-4 sm:mt-14 sm:flex-row sm:snap-x sm:snap-mandatory sm:overflow-x-auto"
           // The rail is a scroll container, so the focus ring belongs on it too.
           tabIndex={0}
           role="group"
-          aria-label="Certifications, scrollable"
+          aria-label="Certifications"
         >
           {visible.map((cert, i) => (
             <Reveal
               key={cert.url}
               delay={i * 60}
-              className="w-[19rem] shrink-0 snap-start sm:w-[22rem]"
+              className="w-full min-w-0 shrink-0 snap-start sm:w-[22rem]"
             >
               <a
                 href={cert.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex h-full flex-col border border-graphite/15 bg-paper-2 p-7 transition-colors hover:border-ember-ink/50"
+                className="group flex h-full flex-col border border-graphite/15 bg-paper-2 p-5 transition-colors sm:p-7 hover:border-ember-ink/50"
               >
                 <div className="flex items-center gap-4">
                   <span
@@ -109,7 +111,9 @@ export function Credentials() {
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              className="link-arrow label-eyebrow mt-10 inline-flex rounded-full border border-graphite/25 px-5 py-3 text-graphite transition-colors hover:border-ember-ink hover:text-ember-ink"
+              aria-expanded={showAll}
+              aria-controls="credentials-list"
+              className="link-arrow label-eyebrow mt-8 inline-flex min-h-11 items-center rounded-full sm:mt-10 border border-graphite/25 px-5 py-3 text-graphite transition-colors hover:border-ember-ink hover:text-ember-ink"
             >
               {showAll ? "Show fewer" : `View all ${certifications.length} credentials`}
               <span className="arrow">→</span>

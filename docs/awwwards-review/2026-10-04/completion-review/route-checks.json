@@ -1,0 +1,78 @@
+{
+  "preview": "http://localhost:4191",
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "main": 1,
+      "h1": 1,
+      "canonical": "https://terrymathew.com/",
+      "result": "pass"
+    },
+    {
+      "route": "/projects",
+      "status": 200,
+      "main": 1,
+      "h1": 1,
+      "canonical": "https://terrymathew.com/projects",
+      "result": "pass"
+    },
+    {
+      "route": "/projects/digital-twin",
+      "status": 200,
+      "main": 1,
+      "h1": 1,
+      "canonical": "https://terrymathew.com/projects/digital-twin",
+      "result": "pass"
+    },
+    {
+      "route": "/projects/settle",
+      "status": 200,
+      "main": 1,
+      "h1": 1,
+      "canonical": "https://terrymathew.com/projects/settle",
+      "result": "pass"
+    },
+    {
+      "route": "/projects/product-discovery-ai",
+      "status": 200,
+      "main": 1,
+      "h1": 1,
+      "canonical": "https://terrymathew.com/projects/product-discovery-ai",
+      "result": "pass"
+    },
+    {
+      "route": "/projects/deep-research-agent",
+      "status": 200,
+      "main": 1,
+      "h1": 1,
+      "canonical": "https://terrymathew.com/projects/deep-research-agent",
+      "result": "pass"
+    },
+    {
+      "route": "/missing-final-review",
+      "status": 404,
+      "main": 1,
+      "h1": 1,
+      "canonical": null,
+      "result": "pass"
+    },
+    {
+      "route": "/projects/missing-final-review",
+      "status": 404,
+      "main": 1,
+      "h1": 1,
+      "canonical": null,
+      "result": "pass"
+    }
+  ],
+  "sitemap": "all 6 public routes",
+  "robots": "correct sitemap URL",
+  "local_fragment_targets": "pass",
+  "tests": {
+    "pass": 276,
+    "fail": 0,
+    "skipped": 3
+  },
+  "limits": "No browser layout, provider availability, visitor results, or field performance is established."
+}

@@ -13,6 +13,5 @@ Allow: /
 User-agent: *
 Allow: /
 
-# TODO: replace with the production domain once deployed
-# Sitemap: https://example.com/sitemap.xml
+Sitemap: https://terrymathew.com/sitemap.xml
 

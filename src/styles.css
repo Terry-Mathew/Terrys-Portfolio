@@ -217,6 +217,18 @@
     clip-path: inset(0% 0% 100% 0%);
   }
 
+  /* Startup recovery also overrides styles from interrupted animation setup. */
+  html[data-motion-failed]
+    :is([data-reveal], [data-hero-reveal], [data-about-reveal], [data-contact-reveal]) {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  html[data-motion-failed] [data-hero-mask] {
+    clip-path: none !important;
+  }
+
   :is([data-about-failed], [data-contact-failed]) :is([data-about-reveal], [data-contact-reveal]) {
     opacity: 1 !important;
     transform: none !important;
@@ -583,11 +595,11 @@
  * The 20px/40px steps match the inset the widget used before. */
 @utility safe-fab {
   right: calc(1.25rem + env(safe-area-inset-right, 0px));
-  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px) + var(--chat-keyboard-inset, 0px));
 
   @media (min-width: 48rem) {
     right: calc(2.5rem + env(safe-area-inset-right, 0px));
-    bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px) + var(--chat-keyboard-inset, 0px));
   }
 }
 
@@ -612,7 +624,10 @@
  */
 @utility chat-sheet {
   width: calc(100vw - 2.5rem);
-  height: min(45rem, calc(100dvh - 1rem));
+  height: min(
+    45rem,
+    calc(var(--chat-viewport-height, 100dvh) - 7.5rem - env(safe-area-inset-bottom, 0px))
+  );
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -620,16 +635,25 @@
   /* 24rem = 384px. The window was 368px and cramped on a laptop; the plan
    * band is 360–400px, so this is the midpoint rather than either edge. */
   width: min(24rem, calc(100vw - 5rem));
-  height: min(37.5rem, 72dvh);
+  height: min(
+    37.5rem,
+    72dvh,
+    calc(var(--chat-viewport-height, 100dvh) - 8.5rem - env(safe-area-inset-bottom, 0px))
+  );
+}
+
+@utility experience-sticky {
+  /* Short screens need normal flow so the complete column stays reachable. */
+  @media (min-width: 64rem) and (min-height: 48rem) {
+    position: sticky;
+    top: 6rem;
+  }
 }
 
 @utility experience-print {
   @media (min-width: 64rem) {
-    /* The subtraction keeps the whole sticky column on one screen. It was set
-       so tightly that a 900px-tall laptop got 17rem, which read as a
-       thumbnail rather than a print. Cap raised and the reserved header space
-       trimmed, so the usual case lands near 19-20rem. */
-    --print-h: min(23rem, calc(100svh - 37rem));
+    /* Keep a readable print when the reserved column space exceeds the viewport. */
+    --print-h: clamp(12rem, calc(100svh - 37rem), 23rem);
     width: calc(var(--print-h) * 0.8 + 1.5rem);
 
     & img {
@@ -639,7 +663,7 @@
     }
 
     @media (height < 60rem) {
-      --print-h: min(22rem, calc(100svh - 33rem));
+      --print-h: clamp(12rem, calc(100svh - 33rem), 22rem);
     }
   }
 }
@@ -672,4 +696,132 @@
   [data-skip-target]:focus-visible {
     outline: none;
   }
+}
+
+/* A two-tone ring stays distinct on both editorial page surfaces. */
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--bone);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px var(--graphite);
+}
+
+@utility hero-name {
+  font-size: clamp(3rem, 14vw, 6rem);
+  @media (min-width: 64rem) {
+    font-size: clamp(4rem, 11.5vw, 12rem);
+  }
+}
+
+@utility hero-phone-portrait {
+  width: min(100%, 28rem);
+  height: auto;
+  max-height: 38svh;
+}
+
+@utility menu-safe-area {
+  padding-top: max(1.25rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Keyboard access must never wait for a scroll entrance or inline tween. */
+html.js
+  :is([data-reveal], [data-hero-reveal], [data-about-reveal], [data-contact-reveal]):focus-within {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+@media print {
+  @page {
+    margin: 15mm;
+  }
+
+  [data-evidence-intro] {
+    break-inside: avoid;
+    break-after: avoid;
+  }
+
+  [data-print-hide],
+  [data-skip-link] {
+    display: none !important;
+  }
+
+  html,
+  body,
+  [data-case-study],
+  [data-case-study] :is(header, article, section, li) {
+    background: white !important;
+    color: black !important;
+  }
+
+  [data-case-study] * {
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  [data-case-study]
+    :is([data-reveal], [data-hero-reveal], [data-about-reveal], [data-contact-reveal]) {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  [data-case-study] :is(.film-grain, .paper-texture)::before,
+  [data-case-study] :is(.film-grain, .paper-texture)::after {
+    display: none !important;
+  }
+
+  [data-case-study] :is(header, article) {
+    padding: 1rem 0 !important;
+  }
+
+  [data-case-study] :is(h1, h2, h3) {
+    break-after: avoid;
+  }
+
+  [data-case-study] :is(figure, li) {
+    break-inside: avoid;
+  }
+
+  [data-case-study] p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  [data-case-study] figure > div {
+    aspect-ratio: auto !important;
+  }
+
+  [data-case-study] figure img {
+    max-height: 6in;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+}
+
+/* Reading sections use a smaller rhythm where phone space is limited. */
+@utility section-reading-padding {
+  padding-block: 3.5rem;
+  @media (min-width: 40rem) {
+    padding-block: 5rem;
+  }
+  @media (min-width: 48rem) {
+    padding-block: 8rem;
+  }
+}
+
+/* Short desktop screens must not pin a full reading column. */
+@utility reading-sticky {
+  @media (min-width: 64rem) and (min-height: 48rem) {
+    position: sticky;
+    top: 6rem;
+  }
+}
+
+[data-credentials-rail]:focus-visible {
+  outline: 2px solid var(--bone);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px var(--graphite);
 }

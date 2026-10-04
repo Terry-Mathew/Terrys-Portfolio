@@ -41,7 +41,7 @@ export function Experience() {
 
     try {
       // One trigger for the whole list, not one per row. It carries no `pin`:
-      // the left column is already `lg:sticky`, and adding a second competing
+      // the left column already uses experience-sticky, and adding a second competing
       // pin is the double-pinning bug.
       let centres: number[] = [];
       let active = -2;
@@ -101,12 +101,12 @@ export function Experience() {
     <section
       id="experience"
       data-tone="light"
-      className="paper-texture relative bg-paper-2 px-5 py-24 text-graphite md:px-10 md:py-32"
+      className="paper-texture relative bg-paper-2 section-reading-padding px-5 text-graphite md:px-10"
     >
       <div ref={scopeRef} className="relative z-10 mx-auto max-w-[1500px]">
-        <div className="grid gap-14 lg:grid-cols-12 lg:gap-20">
+        <div className="grid gap-10 sm:gap-14 lg:grid-cols-12 lg:gap-20">
           <div className="lg:col-span-5">
-            <div className="lg:sticky lg:top-24">
+            <div className="experience-sticky">
               <Reveal>
                 <SectionLabel tone="light">Experience</SectionLabel>
                 <h2 className="display-xl mt-6 text-[clamp(2.6rem,6vw,5rem)] short:mt-4 short:text-[clamp(2.2rem,5vw,4rem)]">
@@ -145,19 +145,21 @@ export function Experience() {
           </div>
 
           <div className="lg:col-span-7">
-            <ol className="relative border-l border-graphite/20 pl-8">
+            <ol className="relative min-w-0 border-l border-graphite/20 pl-6 sm:pl-8">
               {timeline.map((role, i) => (
-                <Reveal as="li" key={role.period} delay={i * 70} className="relative pb-11">
-                  <span className="exp-dot absolute top-2 -left-[2.15rem] size-2 rounded-full bg-ember" />
+                <Reveal as="li" key={role.period} delay={i * 70} className="relative pb-8 sm:pb-11">
+                  <span className="exp-dot absolute top-2 -left-[1.65rem] sm:-left-[2.15rem] size-2 rounded-full bg-ember" />
                   <p className="label-eyebrow text-graphite-dim">{role.period}</p>
-                  <h3 className="mt-2 font-editorial text-2xl md:text-3xl">{role.title}</h3>
+                  <h3 className="mt-2 break-words font-editorial text-xl sm:text-2xl md:text-3xl">
+                    {role.title}
+                  </h3>
                   <p className="label-eyebrow mt-2 text-ember-ink">{role.org}</p>
                   <p className="mt-3 max-w-lg leading-relaxed text-graphite-dim">{role.note}</p>
                 </Reveal>
               ))}
 
               <Reveal as="li" className="relative">
-                <span className="absolute top-2 -left-[2.15rem] size-2 rounded-full bg-graphite/40" />
+                <span className="absolute top-2 -left-[1.65rem] sm:-left-[2.15rem] size-2 rounded-full bg-graphite/40" />
                 <p className="label-eyebrow text-graphite-dim">Before Oracle</p>
                 <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 font-editorial text-xl">
                   {beforeOracle.map((step, i) => (
@@ -169,10 +171,15 @@ export function Experience() {
                 </p>
                 <p className="hand mt-8 text-2xl text-graphite-dim">
                   There were dashboards, systems, stakeholders… and apparently this.
-                  <span tabIndex={0} className="reveal-on-hover mt-2 block max-w-[10rem] text-base">
-                    (that story stays offline — ask me in person)
-                  </span>
                 </p>
+                <details className="mt-3 max-w-sm border-t border-graphite/20 pt-2">
+                  <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm text-graphite-dim underline decoration-graphite/25 underline-offset-4 hover:text-ember-ink">
+                    About this story
+                  </summary>
+                  <p className="mt-2 text-sm leading-relaxed text-graphite-dim">
+                    That story stays offline. Ask me in person.
+                  </p>
+                </details>
               </Reveal>
             </ol>
           </div>

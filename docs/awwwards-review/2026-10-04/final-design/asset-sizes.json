@@ -1,0 +1,297 @@
+[
+  {
+    "path": ".output/public/project-art/digital-twin-1024.webp",
+    "bytes": 63214,
+    "gzip_bytes": 63252
+  },
+  {
+    "path": ".output/public/project-art/settle-1024.webp",
+    "bytes": 45058,
+    "gzip_bytes": 45091
+  },
+  {
+    "path": ".output/public/project-art/settle-480.webp",
+    "bytes": 14486,
+    "gzip_bytes": 14509
+  },
+  {
+    "path": ".output/public/project-art/digital-twin-480.webp",
+    "bytes": 14508,
+    "gzip_bytes": 14531
+  },
+  {
+    "path": ".output/public/assets/Reveal-iRaDl-J-.js",
+    "bytes": 1014,
+    "gzip_bytes": 609
+  },
+  {
+    "path": ".output/public/assets/project-discovery-1024w-DfoGdwEE.avif",
+    "bytes": 25430,
+    "gzip_bytes": 25426
+  },
+  {
+    "path": ".output/public/assets/project-settle-480w-o_HMx_l6.webp",
+    "bytes": 4510,
+    "gzip_bytes": 4533
+  },
+  {
+    "path": ".output/public/assets/mahad-trip-B5xgJx5D.webp",
+    "bytes": 209032,
+    "gzip_bytes": 209115
+  },
+  {
+    "path": ".output/public/assets/mahad-trip-360w-j9HPW6Jq.avif",
+    "bytes": 46515,
+    "gzip_bytes": 46512
+  },
+  {
+    "path": ".output/public/assets/portrait-side-1672w-BpQ_d2kl.webp",
+    "bytes": 141808,
+    "gzip_bytes": 140623
+  },
+  {
+    "path": ".output/public/assets/project-research-480w-tYkkOD6_.webp",
+    "bytes": 7742,
+    "gzip_bytes": 7765
+  },
+  {
+    "path": ".output/public/assets/portrait-side-1024w-C0Wha3_t.avif",
+    "bytes": 37818,
+    "gzip_bytes": 37764
+  },
+  {
+    "path": ".output/public/assets/temple-320w-DZR0WgwJ.webp",
+    "bytes": 49500,
+    "gzip_bytes": 49538
+  },
+  {
+    "path": ".output/public/assets/birds-BJI25mM3.webp",
+    "bytes": 202808,
+    "gzip_bytes": 202891
+  },
+  {
+    "path": ".output/public/assets/projects._projectId-BZllmGGF.js",
+    "bytes": 6814,
+    "gzip_bytes": 2031
+  },
+  {
+    "path": ".output/public/assets/iguana-768w-CThnLAV7.avif",
+    "bytes": 82627,
+    "gzip_bytes": 82631
+  },
+  {
+    "path": ".output/public/assets/routes-Dnd7N67S.js",
+    "bytes": 157027,
+    "gzip_bytes": 57483
+  },
+  {
+    "path": ".output/public/assets/mahad-trip-720w-MSCM7jDl.avif",
+    "bytes": 159922,
+    "gzip_bytes": 159958
+  },
+  {
+    "path": ".output/public/assets/birds-384w-Ckr5-XgQ.webp",
+    "bytes": 94014,
+    "gzip_bytes": 94062
+  },
+  {
+    "path": ".output/public/assets/projects-DkgXknSE.js",
+    "bytes": 2221,
+    "gzip_bytes": 804
+  },
+  {
+    "path": ".output/public/assets/hero-mountains-704w-BJRYT4y3.avif",
+    "bytes": 28289,
+    "gzip_bytes": 28289
+  },
+  {
+    "path": ".output/public/assets/project-discovery-480w-ajsQDnCQ.webp",
+    "bytes": 8994,
+    "gzip_bytes": 9017
+  },
+  {
+    "path": ".output/public/assets/jsx-runtime-Dk72oS4N.js",
+    "bytes": 8774,
+    "gzip_bytes": 3346
+  },
+  {
+    "path": ".output/public/assets/bike-sunset-660w-DOr0FB2K.webp",
+    "bytes": 145642,
+    "gzip_bytes": 145705
+  },
+  {
+    "path": ".output/public/assets/bike-sunset-1098w-ZFuAMvWZ.webp",
+    "bytes": 255874,
+    "gzip_bytes": 255972
+  },
+  {
+    "path": ".output/public/assets/portrait-side-1024w-DeoGw_Hn.webp",
+    "bytes": 66678,
+    "gzip_bytes": 66402
+  },
+  {
+    "path": ".output/public/assets/project-research-1024w-C3kJ6M1V.webp",
+    "bytes": 38334,
+    "gzip_bytes": 38367
+  },
+  {
+    "path": ".output/public/assets/project-research-1024w-1bANmB9h.avif",
+    "bytes": 33255,
+    "gzip_bytes": 33255
+  },
+  {
+    "path": ".output/public/assets/mahad-trip-720w-BWVWgG6d.webp",
+    "bytes": 264120,
+    "gzip_bytes": 264223
+  },
+  {
+    "path": ".output/public/assets/birds-752w-B_3A2JJU.avif",
+    "bytes": 97076,
+    "gzip_bytes": 97084
+  },
+  {
+    "path": ".output/public/assets/index-Bdwrn9B6.js",
+    "bytes": 384407,
+    "gzip_bytes": 119153
+  },
+  {
+    "path": ".output/public/assets/bike-sunset-CepRPZCa.webp",
+    "bytes": 211256,
+    "gzip_bytes": 211339
+  },
+  {
+    "path": ".output/public/assets/project-settle-480w-CZOWS2Pc.avif",
+    "bytes": 4360,
+    "gzip_bytes": 4359
+  },
+  {
+    "path": ".output/public/assets/portrait-side-640w-D6D5Rapb.webp",
+    "bytes": 31290,
+    "gzip_bytes": 31305
+  },
+  {
+    "path": ".output/public/assets/styles-DBd6TLgc.css",
+    "bytes": 53981,
+    "gzip_bytes": 10263
+  },
+  {
+    "path": ".output/public/assets/bike-sunset-1098w-BuUqdqm3.avif",
+    "bytes": 123704,
+    "gzip_bytes": 123724
+  },
+  {
+    "path": ".output/public/assets/iguana-768w-DdEq87ov.webp",
+    "bytes": 212152,
+    "gzip_bytes": 212235
+  },
+  {
+    "path": ".output/public/assets/project-research-480w-CI6Al1zE.avif",
+    "bytes": 5863,
+    "gzip_bytes": 5861
+  },
+  {
+    "path": ".output/public/assets/project-discovery-480w-Bkk_5OH3.avif",
+    "bytes": 6937,
+    "gzip_bytes": 6932
+  },
+  {
+    "path": ".output/public/assets/temple-320w-6ZwUnSiN.avif",
+    "bytes": 21616,
+    "gzip_bytes": 21610
+  },
+  {
+    "path": ".output/public/assets/portrait-side-1672w-DiBwGrip.avif",
+    "bytes": 78137,
+    "gzip_bytes": 78096
+  },
+  {
+    "path": ".output/public/assets/bike-sunset-660w-DgfZoYii.avif",
+    "bytes": 62774,
+    "gzip_bytes": 62777
+  },
+  {
+    "path": ".output/public/assets/hero-mountains-704w-_E2klYPi.webp",
+    "bytes": 29802,
+    "gzip_bytes": 29830
+  },
+  {
+    "path": ".output/public/assets/iguana-384w-C31WXxMO.avif",
+    "bytes": 31620,
+    "gzip_bytes": 31609
+  },
+  {
+    "path": ".output/public/assets/createLucideIcon-C_LCJTxh.js",
+    "bytes": 1195,
+    "gzip_bytes": 693
+  },
+  {
+    "path": ".output/public/assets/portrait-side-640w-BEGM8Q4c.avif",
+    "bytes": 17940,
+    "gzip_bytes": 17887
+  },
+  {
+    "path": ".output/public/assets/project-settle-1024w-CjL6DcN6.avif",
+    "bytes": 16254,
+    "gzip_bytes": 16248
+  },
+  {
+    "path": ".output/public/assets/iguana-384w-DrHorMoL.webp",
+    "bytes": 73276,
+    "gzip_bytes": 73319
+  },
+  {
+    "path": ".output/public/assets/birds-384w-DyyPQuRB.avif",
+    "bytes": 38865,
+    "gzip_bytes": 38859
+  },
+  {
+    "path": ".output/public/assets/Picture-CCkDwb6L.js",
+    "bytes": 490,
+    "gzip_bytes": 288
+  },
+  {
+    "path": ".output/public/assets/project-settle-1024w-6-dr62M4.webp",
+    "bytes": 17436,
+    "gzip_bytes": 17464
+  },
+  {
+    "path": ".output/public/assets/birds-752w-BwEbV51S.webp",
+    "bytes": 230112,
+    "gzip_bytes": 230205
+  },
+  {
+    "path": ".output/public/assets/mahad-trip-360w-BdvQTtRh.webp",
+    "bytes": 104754,
+    "gzip_bytes": 104807
+  },
+  {
+    "path": ".output/public/assets/iguana-CU7dtb-Z.webp",
+    "bytes": 242040,
+    "gzip_bytes": 242133
+  },
+  {
+    "path": ".output/public/assets/temple-Dm038rMh.webp",
+    "bytes": 160472,
+    "gzip_bytes": 160540
+  },
+  {
+    "path": ".output/public/assets/projects._projectId-C_TKggYz.js",
+    "bytes": 558,
+    "gzip_bytes": 371
+  },
+  {
+    "path": ".output/public/assets/ChatWidget-BfxU65Mm.js",
+    "bytes": 14251,
+    "gzip_bytes": 5427
+  },
+  {
+    "path": ".output/public/assets/project-discovery-1024w-BXLDYeMY.webp",
+    "bytes": 34340,
+    "gzip_bytes": 34373
+  },
+  {
+    "path": ".output/public/assets/projects.index-D8iXPo_2.js",
+    "bytes": 4102,
+    "gzip_bytes": 1597
+  }
+]

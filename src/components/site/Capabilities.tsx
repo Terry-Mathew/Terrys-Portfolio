@@ -16,12 +16,12 @@ export function Capabilities() {
     <section
       id="capabilities"
       data-tone="light"
-      className="paper-texture relative bg-paper-2 px-5 py-24 text-graphite md:px-10 md:py-32"
+      className="paper-texture relative bg-paper-2 section-reading-padding px-5 text-graphite md:px-10"
     >
       <div className="relative z-10 mx-auto max-w-[1500px]">
-        <div className="grid gap-14 lg:grid-cols-12 lg:gap-20">
+        <div className="grid gap-10 sm:gap-14 lg:grid-cols-12 lg:gap-20">
           <div className="lg:col-span-4">
-            <div className="lg:sticky lg:top-24">
+            <div className="reading-sticky">
               <Reveal>
                 <SectionLabel tone="light">Capabilities</SectionLabel>
                 <h2 className="display-xl mt-6 text-[clamp(2.2rem,5vw,3.6rem)] leading-[1.05]">
@@ -42,15 +42,18 @@ export function Capabilities() {
                   <Reveal
                     key={group.title}
                     delay={i * 70}
-                    className="grid gap-x-8 gap-y-3 border-b border-graphite/20 py-6 sm:grid-cols-[9rem_1fr] sm:py-7"
+                    className="grid min-w-0 gap-x-8 gap-y-3 border-b border-graphite/20 py-6 sm:grid-cols-[9rem_1fr] sm:py-7"
                   >
                     <dt className="flex items-center gap-3">
                       <Icon className="size-4 shrink-0 text-ember-ink" aria-hidden />
                       <span className="label-eyebrow text-graphite">{group.title}</span>
                     </dt>
-                    <dd className="flex flex-wrap gap-x-2 gap-y-1.5">
+                    <dd className="flex min-w-0 flex-wrap gap-x-2 gap-y-1.5">
                       {group.skills.map((skill) => (
-                        <span key={skill} className="label-eyebrow text-graphite-dim">
+                        <span
+                          key={skill}
+                          className="label-eyebrow max-w-full break-words text-graphite-dim"
+                        >
                           {skill}
                           <span className="ml-2.5 text-ember/40" aria-hidden>
                             ·

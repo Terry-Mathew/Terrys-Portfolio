@@ -1,0 +1,173 @@
+[
+  {
+    "run": 1,
+    "route": "/",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 18.000000000000004,
+        "dclMs": 69,
+        "loadMs": 93
+      }
+    ],
+    "fcpMs": 84,
+    "clsSupported": false,
+    "lcpMs": 152
+  },
+  {
+    "run": 2,
+    "route": "/",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 10,
+        "dclMs": 74,
+        "loadMs": 107
+      }
+    ],
+    "fcpMs": 94,
+    "clsSupported": false,
+    "lcpMs": 132
+  },
+  {
+    "run": 3,
+    "route": "/",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 10,
+        "dclMs": 67,
+        "loadMs": 90
+      }
+    ],
+    "fcpMs": 81,
+    "clsSupported": false,
+    "lcpMs": 104.00000000000001
+  },
+  {
+    "run": 1,
+    "route": "/projects",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 7,
+        "dclMs": 68,
+        "loadMs": 83
+      }
+    ],
+    "fcpMs": 75,
+    "clsSupported": false,
+    "lcpMs": 91
+  },
+  {
+    "run": 2,
+    "route": "/projects",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 12,
+        "dclMs": 39,
+        "loadMs": 53
+      }
+    ],
+    "fcpMs": 48,
+    "clsSupported": false,
+    "lcpMs": 79
+  },
+  {
+    "run": 3,
+    "route": "/projects",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 7,
+        "dclMs": 36.00000000000001,
+        "loadMs": 48
+      }
+    ],
+    "fcpMs": 43,
+    "clsSupported": false,
+    "lcpMs": 71.00000000000001
+  },
+  {
+    "run": 1,
+    "route": "/projects/digital-twin",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 8,
+        "dclMs": 36.00000000000001,
+        "loadMs": 49
+      }
+    ],
+    "fcpMs": 44,
+    "clsSupported": false,
+    "lcpMs": 80
+  },
+  {
+    "run": 2,
+    "route": "/projects/digital-twin",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 8,
+        "dclMs": 33,
+        "loadMs": 46
+      }
+    ],
+    "fcpMs": 41,
+    "clsSupported": false,
+    "lcpMs": 68
+  },
+  {
+    "run": 3,
+    "route": "/projects/digital-twin",
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "navigation": [
+      {
+        "ttfbMs": 6,
+        "dclMs": 29,
+        "loadMs": 45
+      }
+    ],
+    "fcpMs": 37,
+    "clsSupported": false,
+    "lcpMs": 75
+  }
+]

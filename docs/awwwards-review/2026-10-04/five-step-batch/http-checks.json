@@ -1,0 +1,42 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "main_count": 1
+  },
+  {
+    "route": "/projects",
+    "status": 200,
+    "main_count": 1
+  },
+  {
+    "route": "/projects/digital-twin",
+    "status": 200,
+    "main_count": 1
+  },
+  {
+    "route": "/projects/product-discovery-ai",
+    "status": 200,
+    "main_count": 1
+  },
+  {
+    "route": "/projects/settle",
+    "status": 200,
+    "main_count": 1
+  },
+  {
+    "route": "/projects/deep-research-agent",
+    "status": 200,
+    "main_count": 1
+  },
+  {
+    "route": "/missing-five-step-page",
+    "status": 404,
+    "main_count": 1
+  },
+  {
+    "route": "/projects/missing-five-step",
+    "status": 404,
+    "main_count": 1
+  }
+]

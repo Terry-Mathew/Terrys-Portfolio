@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
+import { SITE_URL } from "@/content/site";
 import { Nav } from "@/components/site/Nav";
 import { MotionSelfTest } from "@/components/site/MotionSelfTest";
 import { Hero } from "@/components/site/Hero";
@@ -24,9 +25,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     // og:image / twitter:image are owned by the root route so the share card is
     // defined in exactly one place.
+    links: [{ rel: "canonical", href: `${SITE_URL}/` }],
     meta: [
       { title },
       { name: "description", content: description },
+      { property: "og:url", content: `${SITE_URL}/` },
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { name: "twitter:title", content: title },
@@ -63,9 +66,9 @@ function Index() {
       />
       <Nav />
       <Hero />
+      <Experiments />
       <About />
       <Experience />
-      <Experiments />
       <Capabilities />
       <Credentials />
       <OffTheClock />

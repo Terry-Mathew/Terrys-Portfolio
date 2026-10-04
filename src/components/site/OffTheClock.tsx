@@ -37,7 +37,7 @@ export function OffTheClock() {
     <section
       id="beyond-work"
       data-tone="light"
-      className="paper-texture torn-edge-top relative overflow-x-clip bg-paper-2 px-5 py-24 text-graphite md:px-10 md:py-32"
+      className="paper-texture torn-edge-top relative overflow-x-clip bg-paper-2 section-reading-padding px-5 text-graphite md:px-10"
     >
       <div className="relative z-10 mx-auto max-w-[1500px]">
         <Reveal>
@@ -45,10 +45,12 @@ export function OffTheClock() {
           <h2 className="mt-6 font-editorial text-[clamp(2.6rem,6vw,5rem)] leading-none">
             Off The Clock.
           </h2>
-          <p className="hand mt-5 text-3xl text-graphite-dim">Different places. Same curiosity.</p>
+          <p className="hand mt-5 text-2xl text-graphite-dim sm:text-3xl">
+            Different places. Same curiosity.
+          </p>
         </Reveal>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-12 md:gap-8">
+        <div className="mt-8 grid gap-6 sm:mt-12 md:grid-cols-12 md:gap-8">
           <Reveal className="md:col-span-6">
             <figure className="photo-zoom relative shadow-[0_30px_60px_-32px_oklch(0_0_0/0.4)]">
               <Picture
@@ -116,7 +118,7 @@ export function OffTheClock() {
             href={profile.instagram}
             target="_blank"
             rel="noreferrer"
-            className="link-arrow label-eyebrow mt-10 inline-flex text-graphite transition-colors hover:text-ember-ink md:mt-12"
+            className="link-arrow label-eyebrow mt-8 inline-flex min-h-11 items-center text-graphite transition-colors hover:text-ember-ink md:mt-12"
           >
             More life → Instagram <span className="arrow">↗</span>
           </a>

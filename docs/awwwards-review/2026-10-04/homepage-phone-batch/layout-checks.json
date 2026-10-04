@@ -1,0 +1,22 @@
+{
+  "preview": "http://localhost:4189",
+  "sections": [
+    "top",
+    "experiments",
+    "about",
+    "experience",
+    "capabilities",
+    "credentials",
+    "beyond-work",
+    "contact"
+  ],
+  "shared_phone_padding": "present",
+  "credential_target": "valid",
+  "compiled_layout_rules": "present",
+  "tests": {
+    "pass": 276,
+    "fail": 0,
+    "skipped": 3
+  },
+  "limits": "Source and HTTP checks do not establish phone rendering or horizontal overflow."
+}

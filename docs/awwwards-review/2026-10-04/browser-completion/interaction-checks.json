@@ -1,0 +1,50 @@
+{
+  "target": "http://localhost:4192/",
+  "menu": {
+    "opens": true,
+    "initial_focus": "Close menu",
+    "escape_closes": true,
+    "restore_focus": "Open menu"
+  },
+  "chat": {
+    "stream": "synthetic browser-only response; no provider call or notification",
+    "desktop_enter_sends": true,
+    "new_chat_disabled_during_stream": true,
+    "completed_response_can_reset": true,
+    "shift_enter_newline": true,
+    "escape_closes": true,
+    "restore_focus": "Ask about Terry's work",
+    "touch_enter_newline": "passed with simulated coarse-pointer media query",
+    "touch_newline_does_not_start_another_request": true,
+    "empty_composer_height_after_send_px": 44
+  },
+  "defects_found": [
+    {
+      "id": "long-user-message",
+      "before": {
+        "log_client_width": 333,
+        "log_scroll_width": 1837
+      },
+      "repair": "add break-words to user message paragraph",
+      "recheck": {
+        "log_client_width": 333,
+        "log_scroll_width": 333,
+        "passed": true
+      }
+    }
+  ],
+  "final_target": "http://localhost:4194/",
+  "archive_filter": {
+    "filter": "Personal Finance",
+    "visible_articles": 1,
+    "status": "1 project \u00b7 Personal Finance",
+    "passed": true
+  },
+  "final_case": {
+    "viewport_width": 375,
+    "document_width": 375,
+    "broken_images": 0,
+    "evidence_intro_count": 1,
+    "console_errors": 0
+  }
+}

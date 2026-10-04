@@ -8,36 +8,15 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { MissingPage } from "@/components/site/MissingPage";
+import { MOTION_BOOTSTRAP, markMotionReady } from "@/lib/motion-recovery";
 
 import appCss from "../styles.css?url";
 import { SITE_URL } from "@/content/site";
 import { reportError } from "../lib/error-reporting";
 
 function NotFoundComponent() {
-  return (
-    <div
-      id="main"
-      data-skip-target
-      tabIndex={-1}
-      className="flex min-h-screen items-center justify-center bg-background px-4"
-    >
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+  return <MissingPage />;
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
@@ -48,38 +27,37 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div
+    <main
       id="main"
       data-skip-target
       tabIndex={-1}
-      className="flex min-h-screen items-center justify-center bg-background px-4"
+      className="film-grain flex min-h-screen items-center justify-center bg-ink px-5 text-bone"
     >
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <h1 className="display-xl text-3xl text-bone">This page didn't load</h1>
+        <p className="mt-4 leading-relaxed text-bone-dim">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
+            type="button"
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="label-eyebrow inline-flex min-h-11 items-center justify-center rounded-full border border-ember px-6 py-3 text-bone transition-colors hover:bg-ember hover:text-ink"
           >
             Try again
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="label-eyebrow inline-flex min-h-11 items-center justify-center rounded-full border border-bone/30 px-6 py-3 text-bone transition-colors hover:border-ember"
           >
             Go home
           </a>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -140,7 +118,7 @@ function RootShell({ children }: { children: ReactNode }) {
         {/*
           Must be a parser-blocking inline script in <head>. It sets the class
           that [data-reveal]'s hidden state in styles.css is gated on, so the
-          hidden state is only ever applied when something can undo it.
+          independent deadline removes the gate if client startup fails.
 
           React reorders HeadContent's links ahead of this element, so it is not
           actually first in <head> — and it does not need to be. Body content is
@@ -149,9 +127,7 @@ function RootShell({ children }: { children: ReactNode }) {
           Without this script the hidden state is never applied at all, which is
           what keeps the page fully readable with JavaScript unavailable.
         */}
-        <script
-          dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: MOTION_BOOTSTRAP }} />
         <HeadContent />
       </head>
       <body>
@@ -171,6 +147,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => markMotionReady(document), []);
 
   return (
     <QueryClientProvider client={queryClient}>

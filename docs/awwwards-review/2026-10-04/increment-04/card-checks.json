@@ -1,0 +1,138 @@
+[
+  {
+    "requestedWidth": 375,
+    "viewport": [
+      374,
+      900
+    ],
+    "overflow": false,
+    "cards": [
+      {
+        "title": "Digital Twin",
+        "width": 334,
+        "height": 556.5,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Product Discovery AI",
+        "width": 334,
+        "height": 614.5,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Settle",
+        "width": 334,
+        "height": 638.5,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      }
+    ]
+  },
+  {
+    "requestedWidth": 768,
+    "viewport": [
+      768,
+      900
+    ],
+    "overflow": false,
+    "cards": [
+      {
+        "title": "Digital Twin",
+        "width": 328,
+        "height": 610,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Product Discovery AI",
+        "width": 328,
+        "height": 610,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Settle",
+        "width": 328,
+        "height": 634,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      }
+    ]
+  },
+  {
+    "requestedWidth": 1024,
+    "viewport": [
+      1024,
+      900
+    ],
+    "overflow": false,
+    "cards": [
+      {
+        "title": "Digital Twin",
+        "width": 456,
+        "height": 620,
+        "contentFits": true,
+        "imageBeforeText": false,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Product Discovery AI",
+        "width": 456,
+        "height": 620,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Settle",
+        "width": 456,
+        "height": 686,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      }
+    ]
+  },
+  {
+    "requestedWidth": 1440,
+    "viewport": [
+      1440,
+      900
+    ],
+    "overflow": false,
+    "cards": [
+      {
+        "title": "Digital Twin",
+        "width": 432,
+        "height": 668,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Product Discovery AI",
+        "width": 432,
+        "height": 668,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      },
+      {
+        "title": "Settle",
+        "width": 432,
+        "height": 668,
+        "contentFits": true,
+        "imageBeforeText": true,
+        "actionInsideCard": true
+      }
+    ]
+  }
+]

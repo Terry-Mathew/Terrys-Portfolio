@@ -5,6 +5,15 @@
 // silently demotes whichever project you add last, and the Digital Twin — the
 // project this site is built around — was exactly the one that fell off.
 
+export interface ProjectEvidence {
+  title: string;
+  summary: string;
+  stages: { title: string; description: string }[];
+  caption: string;
+  decisions: { title: string; description: string }[];
+  source?: string;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -12,10 +21,14 @@ export interface Project {
   description: string;
   /** Case-study fields. Optional: a personal project may have none. */
   problem?: string;
+  role?: string;
   approach?: string;
   challenges?: string;
   learnings?: string;
   outcomes?: string;
+  evidence?: ProjectEvidence;
+  progress?: boolean;
+  illustration?: { src: string; webp: string; alt: string; caption: string };
   tech: string[];
   github?: string;
   /** null or omitted hides the demo button. */
@@ -30,38 +43,125 @@ export interface Project {
 export const projects: Project[] = [
   {
     id: "digital-twin",
+    illustration: {
+      src: "/project-art/digital-twin-1024.webp",
+      webp: "/project-art/digital-twin-480.webp 480w, /project-art/digital-twin-1024.webp 1024w",
+      alt: "Concept illustration: a layered paper portrait connected to three archive cards",
+      caption:
+        "Generated concept illustration. A portrait connected to source material represents the project's idea; this is not a product screen.",
+    },
     title: "Digital Twin",
-    subtitle: "AI persona for portfolio engagement and lead capture",
+    subtitle: "A conversational introduction to my work",
     description:
-      "A serverless AI chatbot that answers visitor questions, qualifies leads and sends real-time notifications as a digital representative.",
+      "The AI assistant built into this portfolio. It finds relevant passages from my knowledge base, answers visitor questions, and links answers to their sources.",
     problem:
-      "Static portfolios make visitors scan documents or wait for replies to specific questions. That gap between interest and contact creates friction and missed opportunities.",
+      "Visitors arrive with different questions about my work. A hiring manager may want career context. A potential client may want to understand a project. I wanted a conversational way to find relevant information without making visitors search every section.",
+    role: "I defined the product direction and designed the portfolio experience. I used AI-assisted development to build the interface, knowledge pipeline, and server safeguards. The work includes testing how the assistant finds evidence and handles contact requests.",
     approach:
-      "Built a serverless conversational assistant grounded in a curated biography and work history. Structured tools capture verified contact details and record unknown questions, while server-side guards, rate limiting and strict input handling reduce abuse and fabricated submissions.",
+      "The interface uses TanStack Start and React. Cloudflare Workers runs the application and API. Curated Markdown files provide career and project facts. An authenticated ingestion pipeline splits those files into passages. Vectorize searches by meaning. D1 searches by keywords. The server combines both rankings before preparing an answer.\n\nOpenRouter supplies answer generation. Workers AI creates search embeddings, not answers. The response streams into the chat interface with source links. Follow-up questions become standalone search queries so the conversation can retain its context.",
     challenges:
-      "Early versions fabricated placeholder emails, free models failed on tool calls, and a raw forwarded-IP header could be spoofed. Deterministic email checks, a reliable model and trusted platform IP values corrected those weaknesses.",
+      "Finding a relevant document is not enough. The answer needs the matching passage, not unrelated text from the same document. Follow-up questions also need context before search.\n\nContact tools need a separate trust boundary. Server checks compare submitted contact details with visitor messages. Rate limits and duplicate checks reduce abuse. The assistant must not claim a successful contact action when delivery fails. These checks do not prove email ownership.",
     learnings:
-      "For a small knowledge base, full context can be simpler and more accurate than retrieval. Deterministic server checks are stronger than prompt-only rules, and infrastructure-provided identity signals should replace client-controlled headers.",
+      "Reliable answers depend on the whole path from source material to retrieval, generation, and presentation. Each stage needs its own checks.\n\nI separated answer generation from embeddings. I added an extractive fallback for provider failure. KV caches retrieval results and eligible first-question answers. Cache keys track knowledge and prompt versions so old answers do not silently survive content changes.",
     outcomes:
-      "The assistant runs continuously, answers portfolio questions immediately and can notify Terry when a visitor provides verified contact details. The architecture remains inexpensive and security-conscious.",
+      "This codebase contains the portfolio chat interface, hybrid retrieval, streamed responses, source links, guarded tools, and versioned caching. Automated checks cover retrieval, conversation history, caching, and contact safeguards.\n\nThese code checks do not establish current provider availability, notification delivery, visitor conversion, or response quality in live use. Those outcomes need separate service checks and visitor feedback.",
+    evidence: {
+      title: "Find the evidence. Then write the answer.",
+      summary:
+        "The assistant separates source material, search, and response generation. This diagram explains the implementation in this portfolio codebase.",
+      stages: [
+        {
+          title: "Curated knowledge",
+          description:
+            "Markdown facts become indexed passages through an authenticated ingestion pipeline.",
+        },
+        {
+          title: "Hybrid search",
+          description:
+            "Vectorize matches meaning. D1 matches keywords. The server combines their rankings to select relevant passages.",
+        },
+        {
+          title: "Grounded response",
+          description:
+            "OpenRouter writes the answer from selected context. The interface streams the response with source links. Guarded tools handle contact actions separately.",
+        },
+      ],
+      caption:
+        "Implementation diagram for this portfolio assistant. The generated artwork is conceptual; the diagram describes the code, not a measured live result.",
+      decisions: [
+        {
+          title: "Evidence before generation",
+          description:
+            "Use selected passages instead of full documents. Combine meaning and keyword search so different question styles can find relevant facts.",
+        },
+        {
+          title: "Checks outside the model",
+          description:
+            "Validate tool input on the server. Keep delivery results separate from model promises. Use fallback answers when generation is unavailable.",
+        },
+      ],
+    },
     tech: [
-      "React",
+      "TanStack Start",
+      "React 19",
       "TypeScript",
-      "Python",
-      "DeepSeek",
+      "Cloudflare Workers",
+      "Vectorize",
+      "D1",
+      "KV",
+      "Workers AI",
       "OpenRouter",
-      "Vercel Serverless",
       "Pushover API",
     ],
-    github: "https://github.com/Terry-Mathew/Digital-Twin",
-    youtube: "https://www.youtube.com/watch?v=rz2NKI9NG9U&t=352s",
+    youtube: null,
     category: "AI Agents",
-    year: "2025",
-    status: "Live",
+    year: "2026",
+    status: "Portfolio assistant",
     featured: true,
   },
   {
     id: "product-discovery-ai",
+    illustration: {
+      src: "/project-art/product-discovery-1024.webp",
+      webp: "/project-art/product-discovery-480.webp 480w, /project-art/product-discovery-1024.webp 1024w",
+      alt: "Concept illustration: five layered paper research cards join through orange ribbons into one research brief",
+      caption:
+        "Generated concept illustration. Separate research cards combine into a brief; this is not a product screen or a real research result.",
+    },
+    evidence: {
+      title: "Turn a product question into a structured research brief.",
+      summary:
+        "The public repository describes specialized research roles. This diagram explains that workflow; it is not a real research result.",
+      stages: [
+        {
+          title: "Collect signals",
+          description: "Research competitors and customer problems using search and Reddit tools.",
+        },
+        {
+          title: "Challenge assumptions",
+          description: "Sizing and risk roles examine the opportunity and its unknowns.",
+        },
+        {
+          title: "Synthesize a brief",
+          description: "Combine the research into a structured recommendation and roadmap.",
+        },
+      ],
+      caption:
+        "Explanatory workflow based on the public README. Generated reports still need independent source review.",
+      decisions: [
+        {
+          title: "Separate the research roles",
+          description:
+            "Each role examines a different part of the product question before synthesis.",
+        },
+        {
+          title: "Keep results open to review",
+          description:
+            "A structured report helps inspection. Structure alone does not prove that its claims or estimates are correct.",
+        },
+      ],
+      source: "https://github.com/Terry-Mathew/product-discovery-ai",
+    },
     title: "Product Discovery AI",
     subtitle: "Multi-agent market research automation",
     description:
@@ -69,13 +169,13 @@ export const projects: Project[] = [
     problem:
       "Product managers and founders spend weeks researching competitors, mining customer pain points, sizing markets and synthesising findings before making go or no-go decisions. The process is slow, biased and often driven by instinct rather than structured analysis.",
     approach:
-      "Built a multi-agent system with specialised roles for market landscape analysis, customer pain research, opportunity sizing, risk assessment, strategy synthesis and quality audit. Each agent uses an explicit framework and produces structured outputs for the final report.",
+      "The public project describes five roles: market landscape, customer pain, opportunity sizing, risk review, and strategy synthesis. A Gradio interface presents the research stages. Each stage contributes to the final report.",
     challenges:
       "Generic prompts produced shallow analysis, so expert personas and explicit constraints were added. A quality-audit agent flags unsourced claims. The pipeline was also changed to collect every agent's output rather than only the final task.",
     learnings:
       "Expert framing produces stronger output than generic instructions. Explicit reasoning structures improve reliability. Triangulating across sources catches weak claims early, and a final quality gate is essential.",
     outcomes:
-      "Reduced a multi-week discovery process to minutes. The system automates competitor research, customer-pain mining and market sizing, producing structured reports with risk analysis and practical roadmaps.",
+      "The prototype organizes research into structured reports covering competitors, customer problems, market sizing, and risks. This case study does not establish measured time savings or report accuracy.",
     tech: ["CrewAI", "Python 3.12", "OpenAI GPT-4o", "Serper API", "Reddit API", "Gradio"],
     github: "https://github.com/Terry-Mathew/product-discovery-ai",
     youtube: "https://www.youtube.com/watch?v=w0kSLkXuY-E&t=64s",
@@ -86,6 +186,22 @@ export const projects: Project[] = [
   },
   {
     id: "settle",
+    progress: true,
+    illustration: {
+      src: "/project-art/settle-1024.webp",
+      webp: "/project-art/settle-480.webp 480w, /project-art/settle-1024.webp 1024w",
+      alt: "Concept illustration: branching paths around a balanced charcoal sculpture",
+      caption:
+        "Generated concept illustration. Branching paths represent choices to explore; this is not a product screen or a forecast.",
+    },
+    problem:
+      "Financial choices connect to more than one number. A purchase can affect savings, debt, and the room left for everyday costs.",
+    approach:
+      "Settle is an ongoing personal finance project. The intended experience connects a person's financial position with scenarios they can explore before making their own decision.",
+    learnings:
+      "A decision tool needs clear assumptions. A useful scenario explains its limits instead of presenting one outcome as a promise.",
+    outcomes:
+      "The project is in progress. This page describes its direction, not a completed product or measured user result. Product screens and release evidence will follow when available.",
     title: "Settle",
     subtitle: "A personal finance decision simulator",
     description:
@@ -111,7 +227,7 @@ export const projects: Project[] = [
     learnings:
       "Prompt structure is part of the architecture. Asynchronous execution is essential for usable agent workflows, and pre-processing evidence can produce better synthesis than sending everything directly to the final model.",
     outcomes:
-      "Parallel execution cut the research stage dramatically. The system consistently produces detailed reports covering mechanisms, limitations and trends, with robust source handling and a clear interface.",
+      "The project explores parallel retrieval and structured report synthesis. This case study does not establish measured speed gains, citation accuracy, or production readiness.",
     tech: ["Python 3.10+", "OpenAI Agents SDK", "Serper.dev", "Pydantic", "Asyncio", "Gradio"],
     github: "https://github.com/Terry-Mathew/Deep-Research-Agent",
     youtube: null,
@@ -144,6 +260,7 @@ export const projectCategories = ["All", ...Array.from(new Set(projects.map((p) 
 /** The case-study blocks, in reading order. Optional fields are skipped. */
 export const CASE_STUDY_SECTIONS = [
   { key: "problem", label: "The problem" },
+  { key: "role", label: "My role" },
   { key: "approach", label: "The approach" },
   { key: "challenges", label: "Challenges" },
   { key: "learnings", label: "What I learned" },

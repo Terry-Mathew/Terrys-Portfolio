@@ -1,0 +1,7 @@
+{
+  "origin": "http://localhost:4194",
+  "routes": 6,
+  "imageAssets": 44,
+  "result": "pass",
+  "limits": "HTTP checks do not prove browser decoding or rendered visibility."
+}

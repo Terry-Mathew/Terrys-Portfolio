@@ -41,9 +41,10 @@ Full architecture: [`src/content/knowledge/how-this-works.md`](src/content/knowl
 
 ### Content pipeline
 
-Knowledge lives as Markdown in `src/content/knowledge/`. Files are discovered at
-build time — adding one requires no code change. The PDF résumé is converted to
-Markdown on every build, so it is searchable rather than just downloadable.
+Visitor-facing knowledge lives as Markdown in `src/content/knowledge/`. The
+build discovers these files automatically. Internal technical notes and the
+private résumé are excluded from the visitor knowledge corpus. The build may
+create a private local text copy of the résumé for separate use.
 
 To publish content changes:
 
@@ -52,8 +53,8 @@ npm run build && npx nitro deploy --prebuilt
 curl -X POST "https://terrymathew.com/api/ingest?force=1" -H "x-ingest-key: $INGEST_KEY"
 ```
 
-Bump `corpusVersion` in `src/server/chat.config.ts` first, or the KV semantic
-cache will keep serving pre-update retrieval.
+Bump `corpusVersion` in `src/server/chat.config.ts` before publishing content,
+or the KV semantic cache can keep serving pre-update retrieval.
 
 ---
 

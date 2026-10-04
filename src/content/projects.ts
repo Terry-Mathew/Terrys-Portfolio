@@ -198,7 +198,7 @@ export const projects: Project[] = [
     problem:
       "A purchase can affect more than its monthly payment. It can change available savings, debt, and money left for regular expenses.",
     approach:
-      "Settle is an in-progress personal finance scenario tool. The planned experience connects a person's financial information with choices they want to explore.",
+      "Settle is a personal finance scenario tool in development. The planned experience connects a person's financial information with choices they want to explore.",
     learnings:
       "A decision tool needs clear assumptions. A scenario should show its limits so people can judge the result for themselves.",
     outcomes:
@@ -210,7 +210,7 @@ export const projects: Project[] = [
     tech: [],
     category: "Personal Finance",
     year: "Now",
-    status: "In progress",
+    status: "In development",
     featured: true,
   },
   {

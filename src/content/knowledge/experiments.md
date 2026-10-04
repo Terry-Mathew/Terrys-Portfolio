@@ -4,130 +4,67 @@ type: personal_projects
 priority: 95
 updated: 2026-10
 aliases:
+  - independent projects
   - side projects
   - AI projects
   - portfolio projects
   - what is Terry building
-  - digital twin
+  - Digital Twin
   - Settle
   - Product Discovery AI
   - Deep Research Agent
+  - Work Intelligence Assistant
+  - Sales Outreach Agent
 ---
 
 # Terry Mathew — Personal Projects
 
-Terry builds independent projects to explore product ideas, data systems, and applied AI.
-
-He defines the product direction and design himself and uses AI-assisted development where useful.
+These are independent projects. They are separate from Terry's professional employment.
 
 ## Digital Twin
 
-### Status: Live
+Status: Live portfolio project.
 
-The Digital Twin is the AI assistant running on terrymathew.com.
+Terry designed and built a portfolio assistant that retrieves selected information about his experience and projects, then answers with source links. The project explores how retrieval, answer generation, and safeguards can work together in a small portfolio product.
 
-It answers questions about Terry's professional background, experience, projects, skills, and interests.
-
-It can also capture a visitor's contact information for follow-up.
-
-The application is built with TanStack Start, React 19 and Vite, and is deployed to Cloudflare Workers.
-
-Its architecture uses Workers for the application and API layer, Vectorize for semantic retrieval, D1 for document and keyword data, and KV for caching.
-
-Retrieval combines semantic vector search with BM25 keyword retrieval.
-
-The results are combined using Reciprocal Rank Fusion.
-
-The embeddings are 768-dimensional, and Workers AI is used for those embeddings only. It does not write answers.
-
-OpenRouter writes answers with the pinned `openai/gpt-5-mini` model. The same model rewrites follow-up questions and handles tool calls. If OpenRouter fails, the chatbot uses its extractive fallback.
-
-The answer is streamed back to the browser over server-sent events, so the text appears while it is being written rather than appearing all at once at the end.
-
-Follow-up questions are rewritten into standalone search queries before retrieval so that conversational references such as "how long was he a lead?" can be resolved using the previous conversation.
-
-Knowledge is loaded through an authenticated ingestion endpoint that chunks each document, embeds it, writes the vectors, stores the passage text, and removes anything left behind by files that were deleted or shortened.
-
-Two tools are guarded rather than exposed directly to the model: one captures a visitor's contact details, and one records a question the knowledge base could not answer. Both validate their input before anything is stored or sent anywhere.
-
-Retrieval results and complete answers for self-contained first questions are cached in KV.
-
-A golden set of real questions is scored against the deployed chatbot after each release, covering both retrieval and conversation behaviour.
-
-The project is both a portfolio experience and an experiment in building a practical RAG system with limited infrastructure cost.
+Terry's role: He shaped the product, built the assistant, and connected the visitor experience with source-backed answers.
 
 ## Product Discovery AI
 
-### Status: Working prototype
+Status: Working prototype.
 
-Product Discovery AI is a multi-agent system designed to support early product discovery.
+Terry designed a research workflow that separates competitor research, customer-problem analysis, opportunity sizing, risk review, and synthesis. The prototype includes a quality-review step. Its reports still need independent source checking. No measured accuracy or time-saving claim is established.
 
-Different agents handle tasks such as competitor research, customer-pain synthesis, opportunity sizing, risk analysis, and strategy synthesis.
-
-A separate quality-audit step reviews the combined output before it is presented to the user.
-
-One of the main design problems was preventing multiple agents from simply reinforcing one another's assumptions.
-
-The audit stage exists to challenge unsupported claims, inconsistencies, and weak evidence before the final output reaches a human.
+Terry's role: He designed the workflow and quality-review approach for an independent product-discovery prototype.
 
 ## Deep Research Agent
 
-### Status: In development
+Status: In development.
 
-The Deep Research Agent is an autonomous research workflow built around the OpenAI Agents SDK.
+This project explores a research workflow that plans search directions, gathers evidence, reviews findings, and produces a structured report. It is an experiment in research workflow design, not a claim of production deployment.
 
-A planning agent decomposes a research topic into multiple search directions.
-
-Retrieval tasks can then run in parallel.
-
-An analysis stage filters and organises the evidence before a writing stage produces a structured, citation-backed report.
-
-The project explores the trade-off between research depth, latency, source quality, and synthesis.
+Terry's role: He is developing the research workflow and report structure.
 
 ## Settle
 
-### Status: In progress
+Status: In development.
 
-Settle is a personal-finance decision simulator.
+Settle is a personal-finance scenario tool under development. It is intended to help people explore how choices could affect cash flow. The project is not a financial-advice service. Planned features are not complete features.
 
-Its central question is:
-
-"What happens to my money if I do this?"
-
-A user can model income, regular expenses, savings, existing debt, EMIs, planned purchases, and other commitments.
-
-Settle is designed to show how a decision affects future monthly cash flow rather than looking only at the immediate monthly EMI or purchase price.
-
-Planned capabilities include debt payoff projections, prepayment scenarios, savings projections, recurring and irregular expenses, planned purchases, travel spending, and credit-card commitments.
-
-Settle is not intended to provide financial advice.
-
-Its role is to make the consequences of different scenarios easier to see before someone makes a decision.
-
-## Sales Outreach Agent
-
-### Status: Prototype
-
-The Sales Outreach Agent experiments with LLM-assisted outbound communication.
-
-It combines generated drafts with rules for tone, structure, and follow-up sequencing.
-
-The purpose is to explore how generative AI can assist outreach without giving the model complete control over messaging.
+Terry's role: He is shaping the product and developing the scenario workflow.
 
 ## Work Intelligence Assistant
 
-### Status: Prototype
+Status: Personal prototype.
 
-The Work Intelligence Assistant explores how incoming work requests can be converted into structured next actions.
+This concept explores how incoming requests can be sorted into trackable actions, with context and approval checks. It is independent project work. It is not an Oracle production system or a deployed workplace assistant.
 
-The concept classifies requests from tools such as Slack, Outlook, and Jira into trackable tasks or actions.
+Terry's role: He developed the concept for turning incoming work requests into structured next actions.
 
-It is designed around the idea that work often arrives as messages before it becomes organised work.
+## Sales Outreach Agent
 
-## What the projects have in common
+Status: Prototype.
 
-Most of Terry's projects start with a workflow or decision problem rather than with a particular AI model.
+This project explores AI-assisted message drafting with rules for tone and follow-up. It tests how generated outreach can stay within a defined structure.
 
-AI is used where interpretation, synthesis, or generation is useful.
-
-Rules, structured data, validation, and deterministic logic are used where consistency matters more than creativity.
+Terry's role: He designed the drafting experiment and its message rules.

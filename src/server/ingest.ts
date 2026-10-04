@@ -7,13 +7,13 @@
 // module entrypoint) for no operational gain. Content changes are rare and
 // always human-triggered.
 //
-// After deploying a build that changed src/content/knowledge/*.md:
+// After deploying a build that changed visitor-facing knowledge files:
 //   curl -X POST https://<your-host>/api/ingest -H "x-ingest-key: <INGEST_KEY>"
 //
 // Requires the INGEST_KEY secret.
 
-// To add content: drop a new .md file in src/content/knowledge/ and redeploy.
-// No code change needed — see SOURCES below.
+// Add visitor-facing content in src/content/knowledge/ and redeploy.
+// Technical notes and the private resume are excluded below.
 
 import { CHAT_CONFIG } from "@/server/chat.config";
 import type { CloudflareEnvShape } from "@/server/env";
@@ -27,20 +27,30 @@ function requireBindings(env: CloudflareEnvShape): RagEnv | undefined {
   return REQUIRED.every((key) => Boolean(env[key])) ? (env as RagEnv) : undefined;
 }
 
-// Every .md in the knowledge folder is ingested automatically. To add content,
-// create a file there — do not edit this list.
+// Visitor-facing Markdown is discovered automatically. To add content, create
+// a file there — do not edit this list.
 //
 // Naming:
 //   bio.md, off-the-clock.md, skills.md ...  → ingested
 //   _draft.md  (leading underscore)          → skipped, for work in progress
 //   README.md, RAG-ARCHITECTURE.md           → skipped, internal docs
+//   how-this-works.md                        → skipped, technical case study
+//   ingestion-notes.md, chatbot-rules.md       → skipped, internal docs
+//   resume.md                                → skipped, duplicate private source
 const rawModules = import.meta.glob("../content/knowledge/*.md", {
   query: "?raw",
   import: "default",
   eager: true,
 }) as Record<string, string>;
 
-const SKIP = new Set(["README.md", "RAG-ARCHITECTURE.md"]);
+const SKIP = new Set([
+  "README.md",
+  "RAG-ARCHITECTURE.md",
+  "how-this-works.md",
+  "ingestion-notes.md",
+  "chatbot-rules.md",
+  "resume.md",
+]);
 
 /**
  * Where the chatbot's source links point.
@@ -49,22 +59,8 @@ const SKIP = new Set(["README.md", "RAG-ARCHITECTURE.md"]);
  * route. Both are resolved by {@link anchorFor} in knowledge.ts, which prefixes
  * a bare id with `#` and leaves a path alone.
  *
- * Three of these were wrong, and all of them shipped:
- *  - "off-the-clock" — no element on the site carries that id. The section is
- *    `id="beyond-work"` (OffTheClock.tsx), so every citation to Terry's
- *    hobbies was a link to nowhere.
- *  - "how-this-works" — no route and no element with that id at all. The
- *    document explaining the chatbot pointed at nothing. It is now the Digital
- *    Twin case study, which is the real page that describes it.
- *  - "resume" — resume details stay in chatbot knowledge. Citations point to
- *    the public Experience section because the downloadable PDF is removed.
- *
- * "approach" and "speaking" used to be listed here too, and both were wrong:
- * neither `approach.md` nor `speaking.md` is in the corpus, and no element
- * carries either id. They are removed rather than pointed somewhere plausible —
- * an inert mapping for a file that does not exist is dead code that will
- * quietly mislabel the day someone adds one. scripts/pipeline-test.mjs checks
- * every remaining entry against the ids and routes that actually exist.
+ * Each value must match a section or route that exists.
+ * scripts/pipeline-test.mjs checks every entry against the current site.
  *
  * Anything unknown falls back to "knowledge", which has no anchor either. That
  * is deliberate: a dead `#knowledge` link is visible and fixable, whereas
@@ -92,8 +88,6 @@ const CATEGORY: Record<string, string> = {
   "skills.md": "capabilities",
   "contact.md": "contact",
   "off-the-clock.md": "beyond-work",
-  "resume.md": "experience",
-  "how-this-works.md": "/projects/digital-twin",
 };
 
 const humanize = (name: string) =>

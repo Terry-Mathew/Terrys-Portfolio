@@ -1,32 +1,31 @@
-// Converts the private CV source into chatbot knowledge.
+// Converts the private CV source into a private local text copy.
 //
 // Runs automatically on `npm run build` (see the "prebuild" script in
-// package.json). The output is a normal knowledge file, so the existing
-// import.meta.glob in src/server/ingest.ts picks it up with no other change.
+// package.json). The output stays outside the public chatbot knowledge corpus.
 //
 // Requires `pdftotext` (poppler-utils). On macOS: brew install poppler
 // If it is missing the script warns and exits 0, leaving any previously
 // generated file in place, so a build on a machine without poppler still
-// succeeds — it just ships a stale resume.
+// succeeds — it leaves the previous private text copy in place.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pdfPath = join(root, "private", "Terry-Mathew-CV.pdf");
-const outPath = join(root, "src", "content", "knowledge", "resume.md");
+const outPath = join(root, "private", "generated", "Terry-Mathew-CV.md");
 
 if (!existsSync(pdfPath)) {
-  console.log("[extract-cv] private source not present; keeping checked-in chatbot knowledge.");
+  console.log("[extract-cv] private source not present; no private text copy was updated.");
   process.exit(0);
 }
 
 // Skip regeneration when the output is already newer than the PDF. Keeps local
 // dev builds fast and avoids needless file churn.
 if (existsSync(outPath) && statSync(outPath).mtimeMs >= statSync(pdfPath).mtimeMs) {
-  console.log("[extract-cv] resume.md is up to date.");
+  console.log("[extract-cv] private text copy is up to date.");
   process.exit(0);
 }
 
@@ -38,7 +37,7 @@ try {
   });
 } catch (error) {
   console.warn("[extract-cv] pdftotext is not available. Install poppler (brew install poppler).");
-  console.warn("[extract-cv] The chatbot will use a stale or missing resume.");
+  console.warn("[extract-cv] The private text copy is stale or missing.");
   process.exit(0);
 }
 
@@ -69,17 +68,18 @@ const cleaned = text
   .trim();
 
 if (cleaned.length < 200) {
-  console.warn("[extract-cv] extracted text looks empty — leaving existing file alone.");
+  console.warn("[extract-cv] extracted text looks empty — leaving the private file alone.");
   process.exit(0);
 }
 
 const body = `# Resume
 
-<!-- Chatbot knowledge generated from private/Terry-Mathew-CV.pdf.
+<!-- Private text copy generated from private/Terry-Mathew-CV.pdf.
      Edit the PDF, not this file — this file is overwritten on every build. -->
 
 ${cleaned}
 `;
 
+mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, body, "utf8");
 console.log(`[extract-cv] wrote ${outPath} (${cleaned.length} chars from the PDF)`);

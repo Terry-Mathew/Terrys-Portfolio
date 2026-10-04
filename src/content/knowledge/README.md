@@ -1,9 +1,14 @@
-# Placeholder knowledge base for the future Cloudflare RAG chatbot.
-# Mirrors src/content/site.ts — edit these MDs and the ingest script will chunk them.
+# Visitor-facing knowledge sources for the portfolio chatbot.
+# Technical notes and the private resume are not part of this corpus.
 
-- bio.md — one-paragraph bio + pillars
-- experience.md — Oracle timeline, 8.5 years
-- work.md — anonymised enterprise work (chatbot context; not a page section)
-- experiments.md — the four projects (Digital Twin, Product Discovery AI, Deep Research Agent, Settle)
-- skills.md — capabilities + certifications
-- contact.md — email + socials
+- bio.md — professional background and approach
+- facts.md — canonical identity and broad experience facts
+- experience.md — role summaries and responsibilities
+- skills.md — professional practice, project work, and active learning
+- work.md — public-safe case studies
+- experiments.md — independent project descriptions and status
+- contact.md — current contact details
+- off-the-clock.md — optional personal interests
+
+Each source file is discovered at build time. Content edits need a deploy and a
+new authenticated ingestion run before visitors receive the updated passages.

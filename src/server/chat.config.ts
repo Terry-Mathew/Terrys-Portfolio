@@ -99,7 +99,9 @@ export const CHAT_CONFIG = {
   // match the implementation.
   // 7 → 8: contact knowledge now directs resume requests to email.
   // 8 → 9: indexed architecture notes now describe the GPT-5 Mini setup.
-  corpusVersion: 9,
+  // 9 → 10: refresh the visitor corpus, exclude technical notes and the
+  // duplicate resume source, and remove résumé metrics from public answers.
+  corpusVersion: 10,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,
@@ -240,5 +242,7 @@ export const CHAT_CONFIG = {
   // reply says "Done. Terry will reach out." on the strength of instructions
   // that no longer apply, and the model keeps asking only for an email.
   // 4 → 5: the pinned generation model changed. Retire answers from Sonnet.
-  promptVersion: 5,
+  // 5 → 6: update the portfolio voice and add source, project-status, and
+  // public résumé-metric rules. Retire answers written under the old prompt.
+  promptVersion: 6,
 } as const;

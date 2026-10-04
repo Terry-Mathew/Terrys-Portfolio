@@ -48,7 +48,7 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
     anchor: "#about",
     triggers: ["who", "about", "bio", "background", "terry", "yourself", "pillars", "role"],
     answer:
-      "Terry Mathew is a Product, Data & AI builder with 8+ years across analytics, enterprise platforms and product management. He turns complex business problems into products, data systems and decision tools people can actually use. Pillars: Product Strategy, Data Products, AI Prototyping, Analytics, Business Systems.",
+      "Terry Mathew works across data product management, partner and commercial analytics, and revenue operations. He connects business questions with requirements, data logic, reporting, and internal tools. He is based in Bengaluru, India.",
   },
   {
     id: "oracle",
@@ -64,7 +64,7 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
       "analyst",
     ],
     answer:
-      "Terry spent 8.5 years at Oracle: Senior Data Product Manager for Partner Analytics (2024–2026), Insights Analyst II for Partner Insights & Revenue Operations (2023–2024), Business Operations Team Lead for EMEA Operations leading 20 people on 20k+ transactions/quarter and cutting turnaround from 20 days to 3–4 (2022–2023), Business Operations Specialist (2021–2022), and Business Operations Analyst (2018–2021). Before Oracle: HR, IT Support, Retail, Hospitality.",
+      "Terry's Oracle experience spans partner transactions, commercial operations, team leadership, partner analytics, and data product management. His work included requirements, reporting, metric definitions, user acceptance testing, and operational workflows. Before Oracle, he worked in HR shared services, enterprise technical support, retail, and hospitality.",
   },
   {
     id: "work",
@@ -79,21 +79,21 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
       "portfolio",
     ],
     answer:
-      "Partner systems work at Oracle: (1) Global Partner Systems — turned fragmented partner operations into usable systems; (2) Trusted Partner Analytics — one shared metrics model and vocabulary for reviews and planning; (3) From Reports to Decisions — self-serve answers for recurring questions. Enterprise details are intentionally limited — ask over email.",
+      "Terry's selected work includes partner credit management, incentive eligibility analytics, partner reporting, and assessment reporting. He translated business rules into requirements and data logic, checked reports against operational examples, and worked with business and technical teams. Public sources do not include internal policies or partner details.",
   },
   {
     id: "projects",
     anchor: "#experiments",
     triggers: ["project", "projects", "side project", "building", "portfolio", "build"],
     answer:
-      "Four projects. Digital Twin — a serverless AI persona on this site that answers questions and captures verified leads (live). Product Discovery AI — a CrewAI multi-agent system for competitor research, customer-pain mining and market sizing (working prototype). Deep Research Agent — an autonomous research pipeline that produces citation-backed reports (in development). Settle — a personal finance decision simulator for exploring debt, savings and purchases (in progress). Each has a full case study at terrymathew.com/projects.",
+      "Terry's independent projects include the live Digital Twin portfolio assistant, the Product Discovery AI working prototype, the Deep Research Agent in development, Settle in development, the Work Intelligence Assistant personal prototype, and the Sales Outreach Agent prototype. They are separate from his professional employment.",
   },
   {
     id: "settle",
     anchor: "/projects/settle",
     triggers: ["settle", "finance", "money", "debt", "emi", "savings"],
     answer:
-      "Settle is a personal finance decision simulator. It connects income, expenses, savings, debts, investments, assets and planned purchases in one picture, so you can see what a decision looks like over time before you make it. It does not give financial advice or tell you what to do — it helps you explore the scenarios.",
+      "Settle is a personal-finance scenario tool in development. It is intended to help people explore how choices could affect cash flow. It is not a financial-advice service, and planned features are not complete.",
   },
   {
     id: "digital-twin",
@@ -107,14 +107,14 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
       "how does this work",
     ],
     answer:
-      "The Digital Twin is the AI persona running on this site. It is a serverless assistant grounded in Terry's biography and work history, so it can answer questions about his experience, projects and skills. It runs on Cloudflare Workers with Vectorize, D1 and Workers AI, uses hybrid retrieval, and is built to capture contact details without letting anyone fabricate them.",
+      "The Digital Twin is Terry's live portfolio assistant. It retrieves selected information about his experience and projects, then answers with source links. The project explores source-backed answers and safeguards in a small portfolio product.",
   },
   {
     id: "capabilities",
     anchor: "#capabilities",
     triggers: ["skill", "skills", "stack", "tool", "tools", "technology", "capabilit", "good at"],
     answer:
-      "Terry works across four areas. Product: strategy, roadmapping, user research, cross-functional leadership. Data: SQL, analytics, KPI definition, data pipelines, Oracle Analytics Cloud. AI: prompt engineering, multi-agent systems, RAG architecture, AI prototyping, AI ethics. Building: Python, CrewAI, LangChain, Supabase, Vercel, n8n.",
+      "Terry's professional practice includes product requirements, functional specifications, user acceptance testing, SQL analysis, reporting logic, data reconciliation, and commercial operations. His independent projects explore retrieval-augmented generation, hybrid search, AI-assisted development, agent workflows, prompt design, and evaluation. Active learning is separate from production experience.",
   },
   {
     id: "contact",
@@ -132,7 +132,7 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
       "talk",
     ],
     answer:
-      "You can reach Terry at terry.perangat@gmail.com, on LinkedIn (linkedin.com/in/terry-mathew), Instagram (@tedssy), or YouTube (@terrymathew-p). Email Terry to request his resume.",
+      "You can reach Terry at terry.perangat@gmail.com, on LinkedIn (linkedin.com/in/terry-mathew), Instagram (@tedssy), or YouTube (@terrymathew-p). The public portfolio does not show a resume link. Email Terry to ask about access.",
   },
 ];
 
@@ -165,14 +165,13 @@ export function retrieveStatic(question: string, topK = 3): RetrievalResult[] {
  * Turn a stored `documents.category` into a link the widget can render.
  *
  * A category is either a section id on the home page ("about") or a path to a
- * real route ("/projects/digital-twin"). Both shapes are needed: `how-this-works`
- * documents a project and has no section anywhere, while `bio` has a section and
- * no page of its own.
+ * project route ("/projects/digital-twin"). `bio` uses a section anchor. A
+ * project result uses its case-study route.
  *
  * This previously always prefixed `#`, which turned a route into
  * `#/projects/digital-twin` — a fragment on the current page, not a link to the
  * case study. Two dead source links shipped that way before anything checked
- * that a citation pointed at something real.
+ * that a citation pointed at something real. Technical notes are not indexed.
  */
 export function anchorFor(category: string | null | undefined): string {
   const value = category?.trim();

@@ -115,9 +115,9 @@ export function Experience() {
                   at Oracle.
                 </h2>
                 <p className="mt-6 max-w-sm text-graphite-dim short:mt-4">
-                  My work moved from partner transactions to team leadership, analytics, and data
-                  products. The common thread was getting to the bottom of a problem and making the
-                  answer useful.
+                  My work has moved across commercial operations, team leadership, analytics, and
+                  data products. The common thread is turning business rules and activity into
+                  systems teams can use and trust.
                 </p>
               </Reveal>
 

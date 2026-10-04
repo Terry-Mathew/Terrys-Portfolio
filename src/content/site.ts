@@ -6,11 +6,11 @@ export const SITE_URL = "https://terrymathew.com";
 
 export const profile = {
   name: "Terry Mathew",
-  role: "Product, Data & AI Builder",
+  role: "Product, Data & Applied AI",
   statement:
-    "I turn complex business problems into products, data systems and decision tools that people can actually use.",
+    "I turn complex commercial and operational problems into clear requirements, useful data products, and working tools.",
   background:
-    "8+ years across analytics, enterprise platforms and product management, with experience working across global teams, operations, finance and partner ecosystems.",
+    "My work spans product management, analytics, revenue operations, and applied AI. I bring business and technical teams together around the problem, the data, and the decisions a system needs to support.",
   pillars: ["Product Strategy", "Data Products", "AI Prototyping", "Analytics", "Business Systems"],
   email: "terry.perangat@gmail.com",
   linkedin: "https://www.linkedin.com/in/terry-mathew",
@@ -35,7 +35,7 @@ export const timeline = [
     period: "2022–2023",
     title: "Business Operations Team Lead",
     org: "EMEA Operations",
-    note: "Led the full opportunity-to-cash process, approved deal registrations, supported complex deals, and improved how the EMEA team handled transactions and exceptions.",
+    note: "Led a 20-person EMEA team through quote-to-cash, approving deal registrations, supporting complex deals, and improving transaction handling.",
   },
   {
     period: "2021–2022",

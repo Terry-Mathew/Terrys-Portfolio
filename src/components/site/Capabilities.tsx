@@ -24,9 +24,7 @@ export function Capabilities() {
             <div className="reading-sticky">
               <Reveal>
                 <SectionLabel tone="light">Capabilities</SectionLabel>
-                <h2 className="display-xl mt-6 text-[clamp(2rem,5vw,3.5rem)]">
-                  What I work with
-                </h2>
+                <h2 className="display-xl mt-6 text-[clamp(2rem,5vw,3.5rem)]">What I work with</h2>
                 <p className="mt-6 max-w-sm leading-relaxed text-graphite-dim">
                   My experience spans analytics, business operations, and working with people to
                   solve practical problems. Alongside my professional background, I&apos;ve been

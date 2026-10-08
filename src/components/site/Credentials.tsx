@@ -35,7 +35,7 @@ export function Credentials() {
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <SectionLabel tone="light">Credentials</SectionLabel>
+              <SectionLabel tone="light">Continuous Learning</SectionLabel>
               <h2 className="display-xl mt-6 text-[clamp(2.2rem,5vw,3.8rem)]">
                 Continuous learning.
               </h2>

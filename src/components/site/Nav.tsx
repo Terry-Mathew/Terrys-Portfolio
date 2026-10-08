@@ -7,9 +7,9 @@ import { installSectionNavigation } from "@/lib/section-navigation";
 
 const links = [
   { label: "Home", href: "#top" },
-  { label: "Projects", href: "#experiments" },
   { label: "About", href: "#about" },
   { label: "Experience", href: "#experience" },
+  { label: "Projects", href: "#experiments" },
   { label: "Contact", href: "#contact" },
 ];
 export function Nav() {

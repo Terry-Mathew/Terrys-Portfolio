@@ -17,9 +17,9 @@ const ChatWidget = lazy(() =>
   import("@/components/site/ChatWidget").then((m) => ({ default: m.ChatWidget })),
 );
 
-const title = "Terry Mathew — Product, Data & Applied AI";
+const title = "Terry Mathew — Business Intelligence, Analytics & Independent Projects";
 const description =
-  "Product and data work for commercial and operational problems. Explore analytics, data products, and applied AI projects.";
+  "A personal portfolio spanning business operations, team leadership, business intelligence, analytics, and independent projects in technology and AI.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -54,7 +54,7 @@ function Index() {
             "@context": "https://schema.org",
             "@type": "Person",
             name: "Terry Mathew",
-            jobTitle: "Product, Data & Applied AI",
+            jobTitle: "Business Intelligence and Analytics",
             email: "mailto:terry.perangat@gmail.com",
             sameAs: [
               "https://www.linkedin.com/in/terry-mathew",
@@ -67,8 +67,8 @@ function Index() {
       <Nav />
       <Hero />
       <About />
-      <Experiments />
       <Experience />
+      <Experiments />
       <Capabilities />
       <Credentials />
       <OffTheClock />

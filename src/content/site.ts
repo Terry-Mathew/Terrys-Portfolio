@@ -6,11 +6,9 @@ export const SITE_URL = "https://terrymathew.com";
 
 export const profile = {
   name: "Terry Mathew",
-  role: "Product, Data & Applied AI",
-  statement:
-    "I turn complex commercial and operational problems into clear requirements, useful data products, and working tools.",
-  background:
-    "My work spans product management, analytics, revenue operations, and applied AI. I bring business and technical teams together around the problem, the data, and the decisions a system needs to support.",
+  role: "Business intelligence, analytics, and operations",
+  statement: "Hi, I’m Terry. My career has taken me through different industries, from business operations and team leadership to business intelligence and analytics.",
+  background: "Along the way, I’ve developed an interest in technology, AI, and building things of my own.",
   pillars: ["Product Strategy", "Data Products", "AI Prototyping", "Analytics", "Business Systems"],
   email: "terry.perangat@gmail.com",
   linkedin: "https://www.linkedin.com/in/terry-mathew",

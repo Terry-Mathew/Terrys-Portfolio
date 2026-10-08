@@ -7,8 +7,10 @@ export const SITE_URL = "https://terrymathew.com";
 export const profile = {
   name: "Terry Mathew",
   role: "Business intelligence, analytics, and operations",
-  statement: "Hi, I’m Terry. My career has taken me through different industries, from business operations and team leadership to business intelligence and analytics.",
-  background: "Along the way, I’ve developed an interest in technology, AI, and building things of my own.",
+  statement:
+    "Hi, I’m Terry. My career has taken me through different industries, from business operations and team leadership to business intelligence and analytics.",
+  background:
+    "Along the way, I’ve developed an interest in technology, AI, and building things of my own.",
   pillars: ["Product Strategy", "Data Products", "AI Prototyping", "Analytics", "Business Systems"],
   email: "terry.perangat@gmail.com",
   linkedin: "https://www.linkedin.com/in/terry-mathew",

@@ -166,27 +166,33 @@ export function About() {
           <SectionLabel tone="light">About</SectionLabel>
         </div>
         <p data-about-reveal="tagline" className="display-xl mt-6 text-[clamp(2rem,5vw,3.5rem)]">
-          Where product, data, and operations meet.
+          A path shaped by curiosity.
         </p>
 
         <div className="mt-10 grid gap-10 sm:mt-16 sm:gap-16 lg:grid-cols-12 lg:gap-20">
           <div className="lg:col-span-7">
-            <h2
-              data-about-reveal="thesis"
-              className="font-editorial text-[clamp(1.7rem,3vw,2.6rem)] leading-[1.2]"
-            >
-              I define requirements, data logic, reporting, and workflows for systems that help
-              teams understand their work and make decisions.
-            </h2>
-            <div className="mt-7 max-w-xl space-y-5 border-l border-ember/60 pl-4 text-base sm:mt-10 sm:space-y-6 sm:pl-6 sm:text-[1.05rem] leading-[1.75] text-graphite-dim">
-              <p data-about-reveal="paragraph">
-                My experience includes partner analytics, commercial operations, and data products.
+            <div className="mt-7 max-w-xl space-y-5 border-l border-ember/60 pl-4 text-base leading-[1.75] sm:mt-10 sm:space-y-6 sm:pl-6 sm:text-[1.05rem] text-graphite-dim">
+              <p data-about-reveal="thesis">
+                My career hasn&apos;t followed a conventional path. I&apos;ve worked in hospitality,
+                retail, technical support, business operations, and analytics. Each experience has
+                given me a different view of people, businesses, and the systems they rely on.
               </p>
               <p data-about-reveal="paragraph">
-                I also build independent projects in applied AI and decision tools.
+                At Oracle, I started in commercial operations, then moved into team leadership,
+                business intelligence, and analytics. My work grew from learning processes firsthand
+                to building analytics solutions and helping global teams understand business
+                performance.
               </p>
               <p data-about-reveal="paragraph">
-                Each project starts with a specific problem. I show its approach and limits.
+                I learned that understanding the business problem matters as much as understanding
+                the technology. A dashboard needs trusted numbers. A process change or automation
+                needs to make someone&apos;s work easier.
+              </p>
+              <p data-about-reveal="paragraph">
+                Outside my career, I build websites, web applications, and mobile apps. I use
+                AI-assisted tools to turn ideas into working products while I grow my technical
+                skills. I remain curious about how things work, why they fail, and what could work
+                better.
               </p>
             </div>
           </div>
@@ -214,7 +220,7 @@ export function About() {
                 data-about-reveal="caption"
                 className="hand mt-3 text-2xl text-graphite-dim"
               >
-                Different contexts.
+                A close encounter with an iguana.
               </figcaption>
             </figure>
           </div>

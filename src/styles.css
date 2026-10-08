@@ -129,8 +129,8 @@
   }
 
   ::selection {
-    background-color: var(--color-ember);
-    color: var(--color-ink);
+    background-color: var(--bone-dim);
+    color: var(--ink);
   }
 }
 
@@ -824,4 +824,10 @@ html.js
   outline: 2px solid var(--bone);
   outline-offset: 3px;
   box-shadow: 0 0 0 5px var(--graphite);
+}
+
+/* Keep link text stable on hover. Focus styles remain available to keyboard users. */
+a:hover,
+a:hover * {
+  color: inherit;
 }

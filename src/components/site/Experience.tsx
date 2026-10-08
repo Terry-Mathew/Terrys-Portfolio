@@ -110,14 +110,14 @@ export function Experience() {
               <Reveal>
                 <SectionLabel tone="light">Experience</SectionLabel>
                 <h2 className="display-xl mt-6 text-[clamp(2.6rem,6vw,5rem)] short:mt-4 short:text-[clamp(2.2rem,5vw,4rem)]">
-                  8.5 years
+                  A career across
                   <br />
-                  at Oracle.
+                  operations and analytics.
                 </h2>
                 <p className="mt-6 max-w-sm text-graphite-dim short:mt-4">
-                  My work has moved across commercial operations, team leadership, analytics, and
-                  data products. The common thread is turning business rules and activity into
-                  systems teams can use and trust.
+                  I have worked across customer-facing businesses, commercial operations, team
+                  leadership, business intelligence, and analytics. Each role shaped how I
+                  understand organizations, solve problems, and work with people.
                 </p>
               </Reveal>
 
@@ -136,9 +136,6 @@ export function Experience() {
                       className="block h-auto w-full"
                     />
                   </figure>
-                  <p className="hand mx-auto mt-4 max-w-[15rem] text-center text-2xl text-graphite-dim lg:mx-0 lg:max-w-none lg:text-left">
-                    Between systems and stillness.
-                  </p>
                 </div>
               </Reveal>
             </div>
@@ -169,17 +166,6 @@ export function Experience() {
                     </span>
                   ))}
                 </p>
-                <p className="hand mt-8 text-2xl text-graphite-dim">
-                  There were dashboards, systems, stakeholders… and apparently this.
-                </p>
-                <details className="mt-3 max-w-sm border-t border-graphite/20 pt-2">
-                  <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm text-graphite-dim underline decoration-graphite/25 underline-offset-4 hover:text-ember-ink">
-                    About this story
-                  </summary>
-                  <p className="mt-2 text-sm leading-relaxed text-graphite-dim">
-                    That story stays offline. Ask me in person.
-                  </p>
-                </details>
               </Reveal>
             </ol>
           </div>

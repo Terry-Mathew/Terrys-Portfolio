@@ -24,15 +24,14 @@ export function Capabilities() {
             <div className="reading-sticky">
               <Reveal>
                 <SectionLabel tone="light">Capabilities</SectionLabel>
-                <h2 className="display-xl mt-6 text-[clamp(2.2rem,5vw,3.6rem)] leading-[1.05]">
-                  From requirements
-                  <br />
-                  to working systems.
+                <h2 className="display-xl mt-6 text-[clamp(2rem,5vw,3.5rem)]">
+                  What I work with
                 </h2>
-                <p className="mt-5 max-w-sm leading-relaxed text-graphite-dim">
-                  I connect product decisions, data logic, and operational needs. My work includes
-                  product requirements, analytics, SQL, reporting, user acceptance testing, and
-                  applied AI prototypes.
+                <p className="mt-6 max-w-sm leading-relaxed text-graphite-dim">
+                  My experience spans analytics, business operations, and working with people to
+                  solve practical problems. Alongside my professional background, I&apos;ve been
+                  learning and experimenting with emerging technologies through independent
+                  projects.
                 </p>
               </Reveal>
             </div>

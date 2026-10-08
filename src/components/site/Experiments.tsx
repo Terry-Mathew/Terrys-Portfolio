@@ -65,11 +65,11 @@ export function Experiments() {
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <SectionLabel tone="light">Projects</SectionLabel>
+              <SectionLabel tone="light">Selected Projects</SectionLabel>
               <h2 className="display-xl mt-6 text-[clamp(2.6rem,6vw,5rem)] leading-[1.02]">
-                A few things
+                Independent work
                 <br />
-                I&apos;m building.
+                and experiments.
               </h2>
             </div>
             <a

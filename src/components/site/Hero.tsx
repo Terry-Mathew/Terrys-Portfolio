@@ -362,26 +362,20 @@ export function Hero() {
         <div data-hero-layer="copy" className="relative z-20 mt-7 max-w-md">
           <p
             data-hero-reveal="statement"
-            className="font-editorial text-[clamp(1.05rem,1.5vw,1.3rem)] leading-[1.5] text-bone"
+            className="max-w-sm font-editorial text-[clamp(1.05rem,1.5vw,1.3rem)] leading-[1.5] text-bone"
           >
-            {profile.statement}
-          </p>
-          <p
-            data-hero-reveal="background"
-            className="mt-4 max-w-sm text-[0.95rem] leading-[1.7] text-bone-dim"
-          >
-            {profile.background}
+            {profile.statement} {profile.background}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-6">
             <a
-              href="#experiments"
+              href="#experience"
               data-hero-reveal="cta-1"
               className="link-arrow label-eyebrow inline-flex min-h-11 items-center text-bone transition-colors hover:text-ember"
             >
               <span className="grid size-10 place-items-center rounded-full border border-bone/40">
                 ↓
               </span>
-              Explore my work
+              Explore my experience
             </a>
           </div>
         </div>

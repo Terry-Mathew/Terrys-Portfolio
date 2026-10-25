@@ -15,6 +15,8 @@ aliases:
 
 Terry Mathew works across data product management, partner and commercial analytics, and revenue operations. He helps teams make business rules, operating processes, and data usable in the products and reporting they rely on.
 
+Terry's employment at Oracle ended in October 2026. He no longer works at Oracle.
+
 His work connects business questions with the systems behind them. He clarifies requirements, defines metrics and data logic, investigates reporting issues, and works with technical and business teams through delivery and validation.
 
 Terry's experience includes commercial operations, partner transactions, team leadership, analytics, and internal data products. He has worked with Finance, Engineering, Sales Operations, Revenue Operations, Legal, and partner-program teams.

@@ -14,7 +14,7 @@ aliases:
 
 # Terry Mathew — Professional Experience
 
-Terry's experience at Oracle spans partner transactions, commercial operations, team leadership, partner analytics, and data product management. Across these roles, he worked on the operational processes behind partner programs and on the reporting and systems used to manage them.
+Terry's former experience at Oracle spans partner transactions, commercial operations, team leadership, partner analytics, and data product management. His Oracle employment ended in October 2026. Across those roles, he worked on the operational processes behind partner programs and on the reporting and systems used to manage them.
 
 ## Senior Data Product Manager, Partner Analytics
 

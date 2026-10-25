@@ -102,7 +102,8 @@ export const CHAT_CONFIG = {
   // 8 → 9: indexed architecture notes now describe the GPT-5 Mini setup.
   // 9 → 10: refresh the visitor corpus, exclude technical notes and the
   // duplicate resume source, and remove résumé metrics from public answers.
-  corpusVersion: 10,
+  // 10 → 11: record Terry's October 2026 departure from Oracle.
+  corpusVersion: 11,
   // The corpus is now ~12 documents, so ranking finally has something to do.
   // 8 candidates per method in, 4 chunks out.
   topK: 8,
@@ -249,5 +250,6 @@ export const CHAT_CONFIG = {
   // 7 → 8: separate reusable behavior from the loaded portfolio profile.
   // 8 → 9: use safe short replies when generation is unavailable.
   // 9 → 10: make unavailable replies generic across all topics.
-  promptVersion: 10,
+  // 10 → 11: set one universal scope rule for every unrelated topic.
+  promptVersion: 11,
 } as const;

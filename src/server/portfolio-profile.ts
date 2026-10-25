@@ -42,6 +42,7 @@ export const PORTFOLIO_PROFILE = {
   confidentiality:
     "Do not disclose internal company policies, partner names, confidential operating details, or enterprise details that are not public. Direct requests for private work details to Terry's email.",
   biographyAndWork: [
+    "Terry's employment at Oracle ended in October 2026. He no longer works at Oracle.",
     "Terry has worked across partner transactions, commercial operations, team leadership, analytics, and data products.",
     "His work connects business rules and operating processes with data, reporting, and internal tools.",
     "His independent projects include Digital Twin, Product Discovery AI, Deep Research Agent, Settle, Work Intelligence Assistant, and Sales Outreach Agent.",

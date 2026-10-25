@@ -64,7 +64,7 @@ export const KNOWLEDGE: KnowledgeChunk[] = [
       "analyst",
     ],
     answer:
-      "Terry's Oracle experience spans partner transactions, commercial operations, team leadership, partner analytics, and data product management. His work included requirements, reporting, metric definitions, user acceptance testing, and operational workflows. Before Oracle, he worked in HR shared services, enterprise technical support, retail, and hospitality.",
+      "Terry's employment at Oracle ended in October 2026. He no longer works at Oracle. His former Oracle experience spans partner transactions, commercial operations, team leadership, partner analytics, and data product management. His work included requirements, reporting, metric definitions, user acceptance testing, and operational workflows. Before Oracle, he worked in HR shared services, enterprise technical support, retail, and hospitality.",
   },
   {
     id: "work",

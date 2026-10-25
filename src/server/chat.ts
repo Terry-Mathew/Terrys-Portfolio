@@ -291,7 +291,8 @@ async function classifyPortfolioScope(
       body: JSON.stringify({
         model: CHAT_CONFIG.openRouterModel,
         messages,
-        max_tokens: 8,
+        max_tokens: 64,
+        reasoning: { effort: "low" },
       }),
       signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.generationTimeoutMs)),
     });
@@ -1313,6 +1314,7 @@ export async function runChat(
   // A retrieved passage can match a word without answering the question.
   // Never present the top result as a fallback answer when generation fails.
   const draftAnswer = unanswered ? generationUnavailableAnswer() : generated.text;
+  if (unanswered) onDelta?.(draftAnswer);
 
   // A promised handoff that never happened.
   //
@@ -1340,7 +1342,7 @@ export async function runChat(
 
   // Only a real generation is worth remembering. Storing an unavailable reply
   // would pin one bad minute into every repeat of that question for 24 hours.
-  if (cacheable && !handoffBroken && env?.CACHE) {
+  if (cacheable && !unanswered && !handoffBroken && env?.CACHE) {
     try {
       await env.CACHE.put(
         answerKey,

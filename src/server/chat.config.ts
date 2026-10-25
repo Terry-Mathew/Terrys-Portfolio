@@ -251,5 +251,6 @@ export const CHAT_CONFIG = {
   // 8 → 9: use safe short replies when generation is unavailable.
   // 9 → 10: make unavailable replies generic across all topics.
   // 10 → 11: set one universal scope rule for every unrelated topic.
-  promptVersion: 11,
+  // 11 → 12: add the scope gate and stop caching failed generations.
+  promptVersion: 12,
 } as const;

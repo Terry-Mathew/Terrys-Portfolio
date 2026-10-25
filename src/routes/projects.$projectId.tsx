@@ -83,7 +83,7 @@ function ProjectDetail() {
             <span className="h-px w-8 bg-ember" />
             {project.category}
           </p>
-          <h1 className="display-xl mt-6 break-words text-[clamp(2.4rem,7vw,5.5rem)] leading-[1.02]">
+          <h1 className="display-xl mt-6 break-words text-[clamp(2.4rem,7vw,5.5rem)] leading-[var(--leading-display-wide)]">
             {project.title}
           </h1>
           <p className="mt-6 max-w-2xl font-editorial text-2xl leading-snug text-bone">

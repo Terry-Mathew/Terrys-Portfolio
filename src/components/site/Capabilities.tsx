@@ -24,11 +24,12 @@ export function Capabilities() {
             <div className="reading-sticky">
               <Reveal>
                 <SectionLabel tone="light">Capabilities</SectionLabel>
-                <h2 className="display-xl mt-6 text-[clamp(2rem,5vw,3.5rem)]">What I work with</h2>
-                <p className="mt-6 max-w-sm leading-relaxed text-graphite-dim">
-                  My experience spans analytics, business operations, and working with people to
-                  solve practical problems. Alongside my professional background, I&apos;ve been
-                  learning and experimenting with emerging technologies through independent
+                <h2 className="display-xl capabilities-heading mt-6 leading-[var(--leading-display-capability)]">
+                  What I work with
+                </h2>
+                <p className="mt-6 max-w-[30ch] leading-relaxed text-graphite-dim">
+                  My work brings analytics, business operations, and people together to solve
+                  practical problems. I also explore emerging technologies through independent
                   projects.
                 </p>
               </Reveal>
@@ -43,22 +44,19 @@ export function Capabilities() {
                   <Reveal
                     key={group.title}
                     delay={i * 70}
-                    className="grid min-w-0 gap-x-8 gap-y-3 border-b border-graphite/20 py-6 sm:grid-cols-[9rem_1fr] sm:py-7"
+                    className="grid min-w-0 gap-x-8 gap-y-4 border-b border-graphite/20 py-5 sm:grid-cols-[10rem_minmax(0,1fr)] sm:py-6"
                   >
-                    <dt className="flex items-center gap-3">
+                    <dt className="flex min-w-0 items-center gap-3 sm:items-start sm:pt-1">
                       <Icon className="size-4 shrink-0 text-ember-ink" aria-hidden />
                       <span className="label-eyebrow text-graphite">{group.title}</span>
                     </dt>
-                    <dd className="flex min-w-0 flex-wrap gap-x-2 gap-y-1.5">
+                    <dd className="flex min-w-0 flex-wrap gap-x-5 gap-y-2 sm:gap-x-6 sm:gap-y-3">
                       {group.skills.map((skill) => (
                         <span
                           key={skill}
-                          className="label-eyebrow max-w-full break-words text-graphite-dim"
+                          className="font-sans capability-skill whitespace-nowrap text-graphite-dim"
                         >
                           {skill}
-                          <span className="ml-2.5 text-ember/40" aria-hidden>
-                            ·
-                          </span>
                         </span>
                       ))}
                     </dd>

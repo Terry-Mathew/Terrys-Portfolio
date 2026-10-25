@@ -52,7 +52,7 @@ function ProjectsIndex() {
             <span className="h-px w-8 bg-ember" />
             Projects
           </p>
-          <h1 className="display-xl mt-6 text-[clamp(2.6rem,7vw,5.5rem)] leading-[1.02]">
+          <h1 className="display-xl mt-6 text-[clamp(2.6rem,7vw,5.5rem)] leading-[var(--leading-display-wide)]">
             Things I&apos;ve built.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-bone-dim">

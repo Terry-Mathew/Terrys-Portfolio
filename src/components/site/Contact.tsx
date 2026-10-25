@@ -105,32 +105,12 @@ export function Contact() {
 
         <div data-contact-reveal="email" className="mt-7">
           <p className="max-w-xl leading-relaxed text-bone-dim">
-            I&apos;m open to professional opportunities, interesting projects, and collaborations.
+            I&apos;m open to professional opportunities, collaborations, and interesting projects.
+            I&apos;d be happy to talk about analytics, business problems, or digital projects.
           </p>
-          <p className="mt-4 max-w-xl leading-relaxed text-bone-dim">
-            Whether you&apos;re looking to discuss analytics, business problems, a digital project,
-            or simply want to exchange ideas, I&apos;d be happy to hear from you.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            {[
-              { label: "Discuss a role", subject: "Role discussion" },
-              { label: "Discuss a project", subject: "Project discussion" },
-            ].map((action) => (
-              <a
-                key={action.subject}
-                href={`mailto:${profile.email}?subject=${encodeURIComponent(action.subject)}`}
-                className="inline-flex min-h-11 items-center rounded-full border border-bone/30 px-5 py-3 text-sm text-bone transition-colors hover:border-ember hover:text-ember"
-              >
-                {action.label}{" "}
-                <span aria-hidden="true" className="ml-3">
-                  ↗
-                </span>
-              </a>
-            ))}
-          </div>
           <a
             href={`mailto:${profile.email}`}
-            className="link-arrow contact-email mt-6 inline-block font-sans text-base font-normal tracking-tight text-bone-dim underline decoration-bone/25 decoration-1 underline-offset-[6px] transition-colors hover:text-ember hover:decoration-ember/50 focus-visible:text-ember focus-visible:decoration-ember/50 sm:text-[1.0625rem] md:text-lg"
+            className="link-arrow contact-email mt-4 inline-block font-sans text-base font-normal tracking-tight text-bone-dim underline decoration-bone/25 decoration-1 underline-offset-[6px] transition-colors hover:text-ember hover:decoration-ember/50 focus-visible:text-ember focus-visible:decoration-ember/50 sm:text-[1.0625rem] md:text-lg"
           >
             {profile.email}{" "}
             <span aria-hidden="true" className="contact-email__arrow arrow text-ember">

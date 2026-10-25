@@ -66,7 +66,7 @@ export function Experiments() {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <SectionLabel tone="light">Selected Projects</SectionLabel>
-              <h2 className="display-xl mt-6 text-[clamp(2.6rem,6vw,5rem)] leading-[1.02]">
+              <h2 className="display-xl mt-6 text-[clamp(2.6rem,6vw,5rem)] leading-[var(--leading-display-wide)]">
                 Independent work
                 <br />
                 and experiments.

@@ -4,6 +4,7 @@
 // mode: "vector" = semantic search via Vectorize + OpenRouter generation.
 // Flip to "vector" after creating Vectorize index + KV namespace + D1
 // and adding bindings in wrangler.jsonc.
+import { PORTFOLIO_PROFILE } from "@/server/portfolio-profile";
 
 export const CHAT_CONFIG = {
   mode: "vector" as "static" | "vector",
@@ -11,7 +12,7 @@ export const CHAT_CONFIG = {
   // Generation.
   //
   // OpenRouter is the only generation provider. Workers AI remains in use for
-  // embeddings. When OpenRouter fails, the chat uses its extractive fallback.
+  // embeddings. When OpenRouter fails, the chat uses a short unavailable reply.
   //
   // Workers AI is embeddings-only.
   //
@@ -23,7 +24,7 @@ export const CHAT_CONFIG = {
   // That is the 4006 error.
   //
   // With this off, those neurons serve retrieval and nothing else. If
-  // OpenRouter fails, the chat uses the extractive fallback.
+  // OpenRouter fails, the chat uses a short unavailable reply.
   useWorkersAiGeneration: false,
 
   // OpenRouter. Secret is OPENROUTER_API_KEY.
@@ -144,7 +145,7 @@ export const CHAT_CONFIG = {
   // per-token penalty can miss.
   repetitionPenalty: 1.1,
 
-  fallbackEmail: "terry.perangat@gmail.com",
+  fallbackEmail: PORTFOLIO_PROFILE.publicContact.email,
 
   // Lead capture uses the same OpenRouter model as answers.
   useTools: true,
@@ -223,8 +224,8 @@ export const CHAT_CONFIG = {
    * reworded instruction would keep serving answers written under the old one
    * for the rest of the TTL. Bump it by hand; it costs one character.
    *
-   * Only successful generations are stored. Caching a degraded extractive reply
-   * would turn one bad minute into a 24-hour one.
+   * Only successful generations are stored. Caching an unavailable reply would
+   * turn one bad minute into a 24-hour one.
    */
   answerCache: {
     enabled: true,
@@ -244,5 +245,8 @@ export const CHAT_CONFIG = {
   // 4 → 5: the pinned generation model changed. Retire answers from Sonnet.
   // 5 → 6: update the portfolio voice and add source, project-status, and
   // public résumé-metric rules. Retire answers written under the old prompt.
-  promptVersion: 6,
+  // 6 → 7: keep answers on the requested personal topic and shorten missing-data replies.
+  // 7 → 8: separate reusable behavior from the loaded portfolio profile.
+  // 8 → 9: use safe short replies when generation is unavailable.
+  promptVersion: 9,
 } as const;

@@ -248,5 +248,6 @@ export const CHAT_CONFIG = {
   // 6 → 7: keep answers on the requested personal topic and shorten missing-data replies.
   // 7 → 8: separate reusable behavior from the loaded portfolio profile.
   // 8 → 9: use safe short replies when generation is unavailable.
-  promptVersion: 9,
+  // 9 → 10: make unavailable replies generic across all topics.
+  promptVersion: 10,
 } as const;

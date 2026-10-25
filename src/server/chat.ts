@@ -11,7 +11,7 @@ import {
 } from "@/server/knowledge";
 import { TOOLS, parseToolCallFromText, runToolCall, type ToolCall } from "@/server/chat-tools";
 import { sanitiseHistory, type Turn } from "@/server/history";
-import { buildPortfolioSystemPrompt } from "@/server/portfolio-prompt";
+import { buildPortfolioSystemPrompt, GENERIC_UNAVAILABLE_REPLY } from "@/server/portfolio-prompt";
 import { PORTFOLIO_PROFILE } from "@/server/portfolio-profile";
 
 export type ChatTurn = { role: "user" | "bot"; text: string };
@@ -121,11 +121,8 @@ export class ChatCancelled extends Error {
  * matching too much rather than too little: a false positive costs one warning
  * line, a false negative costs a lead.
  */
-const ownerNamePattern = PORTFOLIO_PROFILE.owner.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const HANDOFF_CLAIM = new RegExp(
-  `\\b(?:${ownerNamePattern}\\s+(?:will|can)['’]?ll?\\s+(?:reach|get|come|be in touch)|will\\s+(?:reach\\s+out|get\\s+in\\s+touch|be\\s+in\\s+touch)|reach(?:es)?\\s+out\\s+to\\s+you|get\\s+back\\s+to\\s+you|(?:he|she|they)['’]?ll\\s+(?:get\\s+in\\s+touch|reach\\s+out|call)|i['’]?ll\\s+(?:pass|let|forward|relay|note|flag)|pass(?:ed|ing)?\\s+(?:that|this|it)\\s+(?:on|along|through)|will\\s+call\\s+you|give\\s+you\\s+a\\s+call)`,
-  "i",
-);
+const HANDOFF_CLAIM =
+  /\b(?:(?:will|can)\s+(?:reach\s+out|get\s+in\s+touch|be\s+in\s+touch|call\s+you)|reach(?:es)?\s+out\s+to\s+you|get\s+back\s+to\s+you|(?:he|she|they)['’]?ll\s+(?:get\s+in\s+touch|reach\s+out|call)|i['’]?ll\s+(?:pass|let|forward|relay|note|flag)|pass(?:ed|ing)?\s+(?:that|this|it)\s+(?:on|along|through)|give\s+you\s+a\s+call)/i;
 
 export function promisesHandoff(answer: string): boolean {
   return HANDOFF_CLAIM.test(answer);
@@ -138,7 +135,8 @@ export function promisesHandoff(answer: string): boolean {
  * not happen, and the only way they find out is by being told. Hiding it loses
  * them: they wait for a call that was never going to come.
  */
-export const HANDOFF_FAILURE_NOTICE = `Sorry, I could not send that. Email ${PORTFOLIO_PROFILE.publicContact.email} if you want to contact ${PORTFOLIO_PROFILE.owner}.`;
+export const HANDOFF_FAILURE_NOTICE =
+  "Sorry, I could not send that. Please use the contact details on the portfolio to reach me.";
 
 /**
  * Correct an answer that promised a handoff no tool call backs.
@@ -917,16 +915,9 @@ function stripInlineCitations(answer: string, docIds: string[]): string {
 /** Sentinel returned by generateAnswer when no model could be reached. */
 const GENERATION_FAILED = "__GENERATION_FAILED__";
 
-/** Return a safe short reply when no model can answer. */
-function generationUnavailableAnswer(question: string): string {
-  const normalized = question.toLowerCase();
-  const asksAboutWeather = PORTFOLIO_PROFILE.weatherTerms.some((term) => {
-    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`\\b${escaped}\\b`, "i").test(normalized);
-  });
-  return asksAboutWeather
-    ? PORTFOLIO_PROFILE.weatherUnavailableReply
-    : PORTFOLIO_PROFILE.generationUnavailableReply;
+/** Return the same brief, natural reply when no model can answer any question. */
+function generationUnavailableAnswer(): string {
+  return `${GENERIC_UNAVAILABLE_REPLY} You can reach me at ${CHAT_CONFIG.fallbackEmail}.`;
 }
 
 export type ChatPhase = { phase: "searching" } | { phase: "retrieved"; count: number };
@@ -1227,7 +1218,7 @@ export async function runChat(
 
   // A retrieved passage can match a word without answering the question.
   // Never present the top result as a fallback answer when generation fails.
-  const draftAnswer = unanswered ? generationUnavailableAnswer(searchQuery) : generated.text;
+  const draftAnswer = unanswered ? generationUnavailableAnswer() : generated.text;
 
   // A promised handoff that never happened.
   //

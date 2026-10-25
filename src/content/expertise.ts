@@ -7,26 +7,24 @@ export const capabilityGroups = [
   {
     title: "Product",
     icon: "package",
-    skills: [
-      "Product Strategy",
-      "Roadmapping",
-      "User Research",
-      "Stakeholder Management",
-    ],
+    skills: ["Product Strategy", "Roadmapping", "User Research", "Stakeholder Management"],
   },
   {
     title: "Analytics",
     icon: "chart",
-    skills: ["SQL", "Business Intelligence", "Power BI", "Snowflake", "ETL", "Oracle Analytics Cloud"],
+    skills: [
+      "SQL",
+      "Business Intelligence",
+      "Power BI",
+      "Snowflake",
+      "ETL",
+      "Oracle Analytics Cloud",
+    ],
   },
   {
     title: "AI & Prototyping",
     icon: "brain",
-    skills: [
-      "AI Prototyping",
-      "RAG Applications",
-      "Multi-Agent Workflows",
-    ],
+    skills: ["AI Prototyping", "RAG Applications", "Multi-Agent Workflows"],
   },
   {
     title: "Technical Stack",

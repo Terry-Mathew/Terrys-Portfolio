@@ -1342,7 +1342,7 @@ export async function runChat(
 
   // Only a real generation is worth remembering. Storing an unavailable reply
   // would pin one bad minute into every repeat of that question for 24 hours.
-  if (cacheable && !unanswered && !handoffBroken && env?.CACHE) {
+  if (cacheable && !handoffBroken && !unanswered && env?.CACHE) {
     try {
       await env.CACHE.put(
         answerKey,

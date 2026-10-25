@@ -520,7 +520,9 @@ test("the system prompt keeps personal answers on the requested subject", () => 
     /General riding preferences and travel destinations do not describe a specific road trip/,
   );
   assert.match(profile, /The projects page shows project work, not a travel gallery/);
-  assert.match(profile, /The portfolio does not provide real-time facts such as today's weather/);
+  assert.doesNotMatch(profile, /weatherTerms|weatherUnavailableReply/);
+  const base = readFileSync(join(ROOT, "src", "server", "portfolio-prompt.ts"), "utf8");
+  assert.match(base, /GENERIC_UNAVAILABLE_REPLY = "I don't have that information right now\."/);
 });
 
 test("the shared base prompt contains no Terry-specific examples", () => {

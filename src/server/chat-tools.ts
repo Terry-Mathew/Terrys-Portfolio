@@ -21,6 +21,7 @@ import {
 } from "@/server/contact-guard";
 import { sendPush } from "@/server/pushover";
 import { CHAT_CONFIG } from "@/server/chat.config";
+import { PORTFOLIO_PROFILE } from "@/server/portfolio-profile";
 
 export interface ToolDefinition {
   type: "function";
@@ -37,14 +38,11 @@ export const TOOLS: ToolDefinition[] = [
     function: {
       name: "record_user_details",
       description:
-        "Record a visitor's contact details so Terry can follow up. Call this " +
-        "ONLY after the visitor has explicitly given you their name and email " +
-        "address themselves — usually in response to you asking how to reach " +
-        "them. Never construct, guess, complete or infer an address: if the " +
-        "visitor has not typed one, ask them for one instead. " +
-        "phone is OPTIONAL: include it only when the visitor gave you a number " +
-        "or asked to be called. Never invent, complete or guess a number; an " +
-        "invented one is rejected. Leave phone out entirely if they did not offer one.",
+        "Record a visitor's contact details for the portfolio owner. Call this " +
+        "only after the visitor explicitly provides their own name and email. " +
+        "Never construct, guess, complete, or infer contact details. Phone is " +
+        "optional. Include it only when the visitor provides a number or asks " +
+        "to be called. Leave phone out when the visitor does not offer one.",
       parameters: {
         type: "object",
         properties: {
@@ -64,7 +62,7 @@ export const TOOLS: ToolDefinition[] = [
             description:
               "What the visitor wants, in their own words as far as possible: " +
               "what they are looking for, what they asked about, and anything " +
-              "they said Terry should know. This is what Terry reads first.",
+              "they said the portfolio owner should know. The owner reads this first.",
           },
         },
         required: ["email", "name", "message"],
@@ -76,9 +74,9 @@ export const TOOLS: ToolDefinition[] = [
     function: {
       name: "record_unknown_question",
       description:
-        "Record a question you could not answer from the context, so Terry can " +
-        "fill the gap. Call this when the visitor asks something genuinely " +
-        "outside your knowledge, not when you simply need more detail.",
+        "Record a portfolio question that the available knowledge does not " +
+        "answer. Call this for a genuine knowledge gap, not when the visitor " +
+        "only needs to provide more detail.",
       parameters: {
         type: "object",
         properties: {
@@ -292,7 +290,7 @@ export async function runToolCall(
       return { output: { success: true, message: "Contact noted." }, pushed: false };
     }
 
-    // Laid out the way Terry reads it: who, how to reach them, then what they
+    // Laid out for the portfolio owner: who, how to reach them, then what they
     // said. The message is capped because Pushover rejects a body over 1024
     // characters, and a long one would lose the notification entirely.
     const pushed = env
@@ -323,7 +321,10 @@ export async function runToolCall(
 
     return {
       output: pushed
-        ? { success: true, message: "Contact recorded and Terry has been notified." }
+        ? {
+            success: true,
+            message: `Contact recorded and ${PORTFOLIO_PROFILE.owner} has been notified.`,
+          }
         : { success: true, message: "Contact recorded." },
       pushed,
     };

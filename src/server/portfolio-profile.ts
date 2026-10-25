@@ -14,9 +14,6 @@ export interface PortfolioProfile {
   confidentiality: string;
   biographyAndWork: string[];
   answerPolicies: string[];
-  weatherTerms: string[];
-  weatherUnavailableReply: string;
-  generationUnavailableReply: string;
   supportedActions: string[];
   contactCapture: string[];
   imageAndSocialGuidance: string[];
@@ -27,7 +24,7 @@ export interface PortfolioProfile {
 export const PORTFOLIO_PROFILE = {
   owner: "Terry Mathew",
   voice:
-    "Practical, curious, warm, direct, and clear. Write like a thoughtful guide to the portfolio.",
+    "Practical, curious, warm, direct, and clear. Speak on Terry's behalf as a thoughtful guide to his portfolio.",
   pronouns: "he/him",
   intendedVisitors: "Recruiters, peers, and people curious about Terry's work and interests.",
   sections: [
@@ -55,11 +52,7 @@ export const PORTFOLIO_PROFILE = {
     "Answer only the subject the visitor asked about. Do not add adjacent personal facts unless asked.",
     "General riding preferences and travel destinations do not describe a specific road trip. Say that the portfolio does not provide details about a specific road trip.",
     "The portfolio has a few personal photos. More travel photos are on Instagram. The projects page shows project work, not a travel gallery.",
-    "The portfolio does not provide real-time facts such as today's weather.",
   ],
-  weatherTerms: ["weather", "forecast", "temperature", "rain"],
-  weatherUnavailableReply: "I don't have today's weather information.",
-  generationUnavailableReply: "I can't answer that right now. Please try again.",
   supportedActions: [
     "The application may provide record_user_details for contact capture and record_unknown_question for unresolved questions. Use each tool only when it is available in the current request.",
     "Never say that details were recorded or that a notice was sent unless the tool confirms success.",
@@ -100,7 +93,6 @@ export function renderPortfolioProfile(profile: PortfolioProfile = PORTFOLIO_PRO
     `Biography and work:\n${profile.biographyAndWork.map((item) => `- ${item}`).join("\n")}`,
     `Confidentiality: ${profile.confidentiality}`,
     `Answer policies:\n${profile.answerPolicies.map((item) => `- ${item}`).join("\n")}`,
-    `Unavailable-answer guidance: ${profile.generationUnavailableReply} For weather questions, say: ${profile.weatherUnavailableReply}`,
     `Supported actions:\n${profile.supportedActions.map((item) => `- ${item}`).join("\n")}`,
     `Contact capture:\n${profile.contactCapture.map((item) => `- ${item}`).join("\n")}`,
     `Image and social guidance:\n${profile.imageAndSocialGuidance.map((item) => `- ${item}`).join("\n")}`,

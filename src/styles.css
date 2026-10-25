@@ -62,6 +62,27 @@
   --font-editorial: "Newsreader", Georgia, serif;
   --font-hand: "Caveat", cursive;
   --font-sans: "Inter Tight", system-ui, sans-serif;
+
+  --type-body-size: 1rem;
+  --type-label-size: 0.6875rem;
+  --type-capability-size: 1.0625rem;
+  --type-capability-size-wide: 1.125rem;
+  --type-capabilities-heading: clamp(2rem, 4.2vw, 3rem);
+  --weight-body: 400;
+  --weight-label: 500;
+  --weight-display: 700;
+  --weight-script: 500;
+  --tracking-body: normal;
+  --tracking-label: 0.28em;
+  --tracking-display: -0.02em;
+  --leading-body: 1.5;
+  --leading-label: 1.2;
+  --leading-capability: 1.6;
+  --leading-display: 0.94;
+  --leading-display-hero: 0.82;
+  --leading-display-wide: 1.02;
+  --leading-display-capability: 1;
+  --leading-script: 1.15;
 }
 
 :root {
@@ -80,17 +101,15 @@
   --paper: #eee7d8;
   --paper-2: #e6dfcf;
   --graphite: #171717;
-  /* Was #817c72, which measures 3.13:1 on --paper-2 — below the 4.5:1 WCAG AA
-     threshold for body text, and this token carries most of the body copy on
-     the light sections. Darkened along the same warm axis. */
-  --graphite-dim: #615e56;
+  /* Warm secondary text. This clears 4.5:1 against the darkest paper-texture
+     blend used on light sections, as well as the base paper colors. */
+  --graphite-dim: #57544d;
 
   --ember: #e56c2e;
-  /* --ember is a light, saturated rust: 6.12:1 on --ink (fine) but only
-     2.43:1 on --paper-2, so it cannot carry small text on paper. --ember-ink
-     is the same hue darkened for that job; graphics, dots, rules and glows
-     stay on --ember so the accent reads identically everywhere. */
-  --ember-ink: #9c491f;
+  /* --ember remains the bright accent for dark surfaces and decoration.
+     --ember-ink carries small accent text on paper with AA contrast over
+     the paper texture as well as the flat paper colors. */
+  --ember-ink: #8b3d19;
   --forest: oklch(0.44 0.062 152);
   --slate-blue: oklch(0.52 0.05 250);
   --weathered: oklch(0.6 0.008 90);
@@ -125,6 +144,9 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size: var(--type-body-size);
+    font-weight: var(--weight-body);
+    line-height: var(--leading-body);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -305,11 +327,8 @@
   scale: 1.035;
 }
 
-/* The status line keeps its authored ember at rest, which measures 4.67:1 on
- * the scrim behind it. Dimming it to make a "brighten on hover" legible looked
- * like the obvious move but composited to 2.91:1 — below AA on 11px text — and
- * it also moved the resting pixel. Darkening on hover instead keeps the resting
- * state byte-identical and raises contrast to 13.5:1 while active. */
+/* Small project labels use the paper-safe ember ink. Hover and focus use
+ * graphite for a clear, stable contrast increase. */
 .project-card__status {
   transition: color 300ms var(--ease-out-soft);
 }
@@ -346,8 +365,7 @@
     scale: 1;
   }
 
-  /* The status line returns to its resting ember on touch, where there is no
-     * sustained hover to read against. */
+  /* Touch keeps the paper-safe ember ink while the card receives focus. */
   .project-card:hover .project-card__status,
   .project-card:focus-visible .project-card__status {
     color: var(--color-ember-ink);
@@ -432,23 +450,44 @@
 
 @utility hand {
   font-family: var(--font-hand);
-  font-weight: 500;
-  line-height: 1.15;
+  font-weight: var(--weight-script);
+  line-height: var(--leading-script);
 }
 
 @utility display-xl {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 0.85;
+  font-weight: var(--weight-display);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-display);
   text-transform: uppercase;
 }
 
 @utility label-eyebrow {
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  letter-spacing: 0.28em;
+  font-size: var(--type-label-size);
+  font-weight: var(--weight-label);
+  letter-spacing: var(--tracking-label);
+  line-height: var(--leading-label);
   text-transform: uppercase;
+}
+
+@layer components {
+  #capabilities .capabilities-heading {
+    font-size: var(--type-capabilities-heading);
+  }
+
+  #capabilities .capability-skill {
+    font-size: var(--type-capability-size);
+    font-weight: var(--weight-body);
+    line-height: var(--leading-capability);
+    letter-spacing: var(--tracking-body);
+  }
+
+  @media (min-width: 64rem) {
+    #capabilities .capability-skill {
+      font-size: var(--type-capability-size-wide);
+    }
+  }
 }
 
 @utility ember-underline {
@@ -824,6 +863,202 @@ html.js
   outline: 2px solid var(--bone);
   outline-offset: 3px;
   box-shadow: 0 0 0 5px var(--graphite);
+}
+
+/* Off The Clock editorial photo journal. All rules stay inside this section. */
+@layer components {
+  #beyond-work.journal-section {
+    padding-block: 3.5rem;
+  }
+
+  @media (min-width: 48rem) {
+    #beyond-work.journal-section {
+      padding-block: 5rem;
+    }
+  }
+
+  #beyond-work .journal-stage {
+    position: relative;
+    display: grid;
+    gap: 3.5rem;
+    margin-top: 3rem;
+    padding-bottom: 1rem;
+  }
+
+  #beyond-work .journal-pin-region {
+    position: relative;
+  }
+
+  #beyond-work .journal-active-caption {
+    display: none;
+  }
+
+  #beyond-work .journal-card {
+    position: relative;
+    min-width: 0;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 36rem;
+  }
+
+  #beyond-work .journal-photo-frame {
+    position: relative;
+    width: 100%;
+    max-width: 36rem;
+    margin-inline: auto;
+  }
+
+  #beyond-work .journal-card-label {
+    margin-top: 0.8rem;
+    margin-bottom: 0;
+    color: var(--graphite-dim);
+    font-size: 0.68rem;
+  }
+
+  #beyond-work .journal-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    box-shadow: 0 28px 54px -32px oklch(0 0 0 / 0.5);
+  }
+
+  #beyond-work .journal-caption {
+    margin-top: 0.9rem;
+    color: var(--graphite-dim);
+    font-size: clamp(1.1rem, 1.8vw, 1.45rem);
+    line-height: 1.3;
+  }
+
+  #beyond-work .journal-instagram {
+    margin-top: 3rem;
+  }
+
+  @media (min-width: 64rem) and (min-height: 44rem) {
+    html.js #beyond-work .journal-stage {
+      display: block;
+      height: min(56svh, 42rem);
+      min-height: 25rem;
+      margin-top: 1.5rem;
+      isolation: isolate;
+    }
+
+    html.js #beyond-work .journal-card {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      pointer-events: none;
+    }
+
+    html.js #beyond-work .journal-photo-frame {
+      position: absolute;
+      top: 50%;
+      left: 61%;
+      width: min(48%, 40rem, 43svh);
+      max-width: none;
+      margin: 0;
+      will-change: transform, opacity;
+    }
+
+    #beyond-work .journal-active-caption {
+      display: block;
+      position: absolute;
+      bottom: 0.8rem;
+      left: 5%;
+      width: 31%;
+      padding: 0;
+    }
+
+    #beyond-work .journal-progress {
+      margin: 0 0 0.8rem;
+      font-size: 0.72rem;
+    }
+
+    html.js #beyond-work .journal-card .journal-card-label,
+    html.js #beyond-work .journal-card .journal-caption {
+      display: none;
+    }
+
+    #beyond-work .journal-caption {
+      margin: 0;
+    }
+
+    #beyond-work .journal-instagram {
+      margin-top: 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.js #beyond-work .journal-stage {
+      display: grid !important;
+      height: auto !important;
+      min-height: 0 !important;
+      margin-top: 3rem !important;
+      gap: 3.5rem !important;
+    }
+
+    #beyond-work .journal-pin-region {
+      position: relative !important;
+      height: auto !important;
+    }
+
+    html.js #beyond-work .journal-card {
+      position: relative !important;
+      inset: auto !important;
+      top: auto !important;
+      left: auto !important;
+      width: 100% !important;
+      max-width: 36rem !important;
+      margin: 0 auto !important;
+      scale: 1 !important;
+    }
+
+    #beyond-work .journal-active-caption {
+      display: none !important;
+      position: relative !important;
+      inset: auto !important;
+      width: auto !important;
+      padding: 0 0.25rem !important;
+    }
+
+    html.js #beyond-work .journal-photo-frame {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      width: 100% !important;
+      max-width: 36rem !important;
+      margin: 0 auto !important;
+      transform: none !important;
+      scale: 1 !important;
+      opacity: 1 !important;
+      will-change: auto !important;
+    }
+
+    #beyond-work .journal-card-label {
+      display: block !important;
+      position: relative !important;
+      inset: auto !important;
+      width: auto !important;
+      margin: 0 0 0.8rem !important;
+      text-align: left !important;
+    }
+
+    #beyond-work .journal-caption {
+      display: block !important;
+      position: relative !important;
+      width: auto !important;
+      margin: 0.9rem 0 0 !important;
+      text-align: left !important;
+    }
+
+    #beyond-work .journal-card {
+      opacity: 1 !important;
+      transform: none !important;
+      will-change: auto !important;
+    }
+  }
 }
 
 /* Keep link text stable on hover. Focus styles remain available to keyboard users. */

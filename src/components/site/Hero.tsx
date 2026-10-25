@@ -345,10 +345,7 @@ export function Hero() {
       <div className="relative mx-auto flex min-h-[100svh] max-w-[1600px] flex-col justify-end px-5 pt-24 pb-8 sm:pt-28 sm:pb-12 md:px-10 lg:justify-center lg:pb-16">
         {/* L5 giant type — sits beneath portrait in z, typographic block ~42% */}
         <div data-hero-layer="type" className="relative z-[5] lg:w-[46%]">
-          <p data-hero-reveal="eyebrow" className="label-eyebrow text-bone-dim">
-            {profile.role}
-          </p>
-          <h1 className="display-xl hero-name mt-4 leading-[0.82]">
+          <h1 className="display-xl hero-name mt-4 leading-[var(--leading-display-hero)]">
             <span data-hero-reveal="name-1" className="block text-bone">
               Terry
             </span>

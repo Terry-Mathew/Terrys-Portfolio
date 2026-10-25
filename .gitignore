@@ -40,3 +40,4 @@ private/
 *.sln
 *.sw?
 .gstack/
+strix_runs/

@@ -569,12 +569,12 @@ test("the detector ignores the answer a capture failure produces", () => {
 // be taken back. What can be done is arrive with the correction rather than
 // leaving a false claim on screen.
 
-test("a false promise is corrected and the correction says how to reach Terry", () => {
+test("a false promise is corrected and the correction gives a contact route", () => {
   const out = chat.applyHandoffCorrection("Done. Terry will reach out.", false);
   assert.equal(out.broken, true);
   assert.match(out.text, /^Done\. Terry will reach out\./);
   assert.ok(out.text.includes(chat.HANDOFF_FAILURE_NOTICE));
-  assert.match(out.text, /terry\.perangat@gmail\.com/, "a dead end is not a correction");
+  assert.match(out.text, /contact details on the portfolio/, "a dead end is not a correction");
 });
 
 test("a real capture is left exactly as written", () => {

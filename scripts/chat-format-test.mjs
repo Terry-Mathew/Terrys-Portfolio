@@ -508,9 +508,28 @@ test("the widget does not use dangerouslySetInnerHTML", () => {
 });
 
 test("the system prompt forbids emphasis and link syntax", () => {
-  const chat = readFileSync(join(ROOT, "src", "server", "chat.ts"), "utf8");
-  assert.match(chat, /Do not use Markdown emphasis/i);
-  assert.match(chat, /Do not use Markdown link syntax/i);
+  const profile = readFileSync(join(ROOT, "src", "server", "portfolio-profile.ts"), "utf8");
+  assert.match(profile, /Do not use Markdown emphasis, Markdown links/i);
+});
+
+test("the system prompt keeps personal answers on the requested subject", () => {
+  const profile = readFileSync(join(ROOT, "src", "server", "portfolio-profile.ts"), "utf8");
+  assert.match(
+    profile,
+    /General riding preferences and travel destinations do not describe a specific road trip/,
+  );
+  assert.match(profile, /The projects page shows project work, not a travel gallery/);
+  assert.doesNotMatch(profile, /weatherTerms|weatherUnavailableReply/);
+  const base = readFileSync(join(ROOT, "src", "server", "portfolio-prompt.ts"), "utf8");
+  assert.match(base, /GENERIC_UNAVAILABLE_REPLY = "I don't have that information right now\."/);
+});
+
+test("the shared base prompt contains no Terry-specific examples", () => {
+  const base = readFileSync(join(ROOT, "src", "server", "portfolio-prompt.ts"), "utf8");
+  assert.match(base, /person or organization described in PROFILE and KNOWLEDGE/);
+  assert.match(base, /Treat PROFILE and retrieved KNOWLEDGE as the only sources/);
+  assert.doesNotMatch(base, /Terry|Oracle|road trip|Instagram|Yogyakarta|Settle/);
+  assert.doesNotMatch(base, /Hey\. Ask me anything|Hi\. Fair warning/);
 });
 
 test("promptVersion was bumped for the new answer-format contract", () => {

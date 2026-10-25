@@ -2,8 +2,8 @@
 //
 // Retrieval has always reported what it did, but only through fields nobody
 // renders: `retrievalMode` on the done event, a console.info line, and a
-// console.warn in the Worker logs. A visitor whose answer came from the
-// extractive fallback because every provider tier was unavailable saw a chat
+// console.warn in the Worker logs. A visitor who received a brief fallback
+// because every provider tier was unavailable saw a chat
 // that simply looked worse, with nothing to say so.
 //
 // This is a single TTL'd flag in KV, not a health endpoint. Deliberately not:

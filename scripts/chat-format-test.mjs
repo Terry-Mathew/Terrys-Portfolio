@@ -509,8 +509,7 @@ test("the widget does not use dangerouslySetInnerHTML", () => {
 
 test("the system prompt forbids emphasis and link syntax", () => {
   const profile = readFileSync(join(ROOT, "src", "server", "portfolio-profile.ts"), "utf8");
-  assert.match(profile, /Do not use Markdown emphasis/i);
-  assert.match(profile, /Do not use Markdown links/i);
+  assert.match(profile, /Do not use Markdown emphasis, Markdown links/i);
 });
 
 test("the system prompt keeps personal answers on the requested subject", () => {

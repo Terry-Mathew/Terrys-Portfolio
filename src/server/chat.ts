@@ -247,76 +247,6 @@ function clientIp(request: Request, env: CloudflareEnvShape | undefined): string
   return "unknown";
 }
 
-const OUT_OF_SCOPE_REPLY = "I can help with questions about Terry's portfolio, work, and projects.";
-
-/** Use the configured model to classify scope before answer generation or tools. */
-async function classifyPortfolioScope(
-  question: string,
-  history: Turn[],
-  env: RagEnv | undefined,
-  signal?: AbortSignal,
-): Promise<"in_scope" | "out_of_scope" | "unavailable"> {
-  if (!CHAT_CONFIG.useOpenRouter || !env?.OPENROUTER_API_KEY) return "unavailable";
-
-  const messages: OpenAIMessage[] = [
-    {
-      role: "system",
-      content:
-        "Classify the visitor's current request for a portfolio assistant. " +
-        "Return exactly IN_SCOPE or OUT_OF_SCOPE. IN_SCOPE means the request concerns " +
-        "the portfolio owner's documented biography, experience, work, projects, skills, " +
-        "documented interests, portfolio, or supported contact actions. A missing detail " +
-        "about those subjects is still IN_SCOPE. Greetings and thanks are IN_SCOPE. " +
-        "Every other request is OUT_OF_SCOPE, including general facts, advice, and " +
-        "real-time information. Use prior turns only to resolve the current request's " +
-        "meaning. An earlier assistant offer does not make an unrelated subject IN_SCOPE. " +
-        "When uncertain, return OUT_OF_SCOPE.",
-    },
-    ...history.slice(-6).map((turn) => ({
-      role: turn.role === "user" ? ("user" as const) : ("assistant" as const),
-      content: turn.text,
-    })),
-    { role: "user", content: question },
-  ];
-
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://terrymathew.com",
-        "X-Title": "Terry Mathew Portfolio",
-      },
-      body: JSON.stringify({
-        model: CHAT_CONFIG.openRouterModel,
-        messages,
-        max_tokens: 64,
-        reasoning: { effort: "low" },
-      }),
-      signal: combineSignals(signal, AbortSignal.timeout(CHAT_CONFIG.generationTimeoutMs)),
-    });
-
-    if (!response.ok) {
-      console.warn("OpenRouter scope check returned", response.status);
-      return "unavailable";
-    }
-
-    const data = (await response.json()) as {
-      choices?: { message?: { content?: string | null } }[];
-    };
-    const label = (data.choices?.[0]?.message?.content ?? "").toUpperCase().replace(/[^A-Z_]/g, "");
-    if (label === "IN_SCOPE") return "in_scope";
-    if (label === "OUT_OF_SCOPE") return "out_of_scope";
-    console.warn("OpenRouter scope check returned an invalid label.");
-    return "unavailable";
-  } catch (error) {
-    if (isChatCancelled(error) || signal?.aborted) throw new ChatCancelled();
-    console.warn("OpenRouter scope check failed:", error);
-    return "unavailable";
-  }
-}
-
 // Generate answer using Anthropic Claude (high quality) or Workers AI (fallback)
 async function generateAnswer(
   question: string,
@@ -1261,46 +1191,23 @@ export async function runChat(
 
   const docIds = results.map((r) => r.id);
   let sources = [...new Set(results.map((r) => r.anchor))];
-  const scope = await classifyPortfolioScope(qTrimmed, history, env, signal);
-  if (signal?.aborted) throw new ChatCancelled();
 
   // Send ids before generation so the widget can strip inline citations.
   // Keep source links hidden until a model actually uses them in an answer.
-  onSources?.([], scope === "out_of_scope" ? [] : docIds);
+  onSources?.([], docIds);
 
-  // The scope check runs before generation and tools. An unrelated request
-  // gets one fixed reply and cannot trigger contact capture.
+  // Lead capture runs first when the tool-capable tier is available. Falls
+  // through silently to the plain chain otherwise, so a missing key costs
+  // lead capture and nothing else.
   let generated: {
     text: string;
     provider: "openrouter" | "workers-ai" | "groq" | "anthropic" | "none";
     contactCaptured?: boolean;
-  };
-  if (scope === "out_of_scope") {
-    generated = { text: OUT_OF_SCOPE_REPLY, provider: "openrouter", contactCaptured: false };
-    onDelta?.(OUT_OF_SCOPE_REPLY);
-    sources = [];
-  } else if (scope === "unavailable") {
-    generated = { text: GENERATION_FAILED, provider: "none", contactCaptured: false };
-  } else {
-    // Lead capture runs first when the tool-capable tier is available. Falls
-    // through silently to the plain chain otherwise, so a missing key costs
-    // lead capture and nothing else.
-    const toolAnswer = await generateWithTools(
-      qTrimmed,
-      contextText,
-      env,
-      history,
-      ip,
-      onDelta,
-      signal,
-    );
-    if (toolAnswer) {
-      generated = toolAnswer;
-    } else {
-      generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta, signal);
-    }
+  } | null = await generateWithTools(qTrimmed, contextText, env, history, ip, onDelta, signal);
+  if (!generated) {
+    generated = await generateAnswer(qTrimmed, contextText, env, history, onDelta, signal);
   }
-  if (generated.provider === "none" || scope === "out_of_scope") {
+  if (generated.provider === "none") {
     sources = [];
     onSources?.([], []);
   } else {

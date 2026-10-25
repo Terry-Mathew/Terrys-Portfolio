@@ -98,7 +98,7 @@ async function ask(q, history = []) {
       else if (d.type === "cancelled") cancelled = true;
       else if (d.type === "done") {
         meta = d;
-        // Rate-limited and extractive responses emit no deltas — the answer
+        // Rate-limited and unavailable responses emit no deltas — the answer
         // only exists on the done event. Without this fallback every such case
         // scored "empty answer", which looks identical to a total outage.
         if (!text) text = d.answer ?? "";
@@ -240,12 +240,12 @@ if (throttled.length) {
   );
 }
 
-const extractive = ofKind(results, "availability").filter((r) =>
+const unavailable = ofKind(results, "availability").filter((r) =>
   r.problems.some((p) => p.text.startsWith("NO MODEL")),
 );
-if (extractive.length) {
+if (unavailable.length) {
   console.log(
-    `\n${C.y}${extractive.length} case(s) were served extractively — no model answered.${C.x}\n` +
+    `\n${C.y}${unavailable.length} case(s) received a fallback reply — no model answered.${C.x}\n` +
       `  ${C.d}Scores on those cases measure retrieval, not generation. Check provider${C.x}\n` +
       `  ${C.d}quota, then re-run for a true reading.${C.x}`,
   );

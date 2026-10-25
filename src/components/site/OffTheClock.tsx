@@ -108,14 +108,14 @@ export function OffTheClock() {
           },
         });
 
-        frames.forEach(({ frame, index }) => {
+        frames.forEach(({ card, frame, index }) => {
           gsap.set(frame, {
             left: `${activeCenter + index * stackSpacing}%`,
             xPercent: -50,
             yPercent: -50 + index * 2,
             scale: 1 - index * 0.025,
           });
-          gsap.set(cards[index], { zIndex: count - index });
+          gsap.set(card, { zIndex: count - index });
         });
 
         let activeIndex = 0;
@@ -126,14 +126,17 @@ export function OffTheClock() {
           if (activeIndexLabel) {
             activeIndexLabel.textContent = `${String(nextIndex + 1).padStart(2, "0")} / ${String(count).padStart(2, "0")}`;
           }
-          if (activeCaption) activeCaption.textContent = JOURNAL_PHOTOS[nextIndex].caption;
+          const photo = JOURNAL_PHOTOS[nextIndex];
+          if (activeCaption && photo) activeCaption.textContent = photo.caption;
         };
 
         // Each photo gets one transition interval. Earlier photos recede
         // while the next photo moves to the front of the stack.
         for (let index = 0; index < count - 1; index += 1) {
-          const current = frames[index].frame;
-          const next = frames[index + 1].frame;
+          const currentFrame = frames[index]!;
+          const nextFrame = frames[index + 1]!;
+          const current = currentFrame.frame;
+          const next = nextFrame.frame;
           const at = index;
           sequence.to(
             current,
@@ -159,8 +162,8 @@ export function OffTheClock() {
             },
             at,
           );
-          sequence.set(frames[index].card, { zIndex: 0 }, at + 0.5);
-          sequence.set(frames[index + 1].card, { zIndex: count + index + 1 }, at + 0.5);
+          sequence.set(currentFrame.card, { zIndex: 0 }, at + 0.5);
+          sequence.set(nextFrame.card, { zIndex: count + index + 1 }, at + 0.5);
         }
         sequence.eventCallback("onUpdate", () => showActiveCaption(sequence.progress()));
         sequence.eventCallback("onReverseComplete", () => showActiveCaption(0));

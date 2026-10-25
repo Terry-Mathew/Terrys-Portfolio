@@ -18,18 +18,16 @@ import { getCloudflareEnv } from "@/server/env";
 //
 //   started  { requestId }            one per turn, so a client can correlate
 //   phase    { phase, count? }        "searching" | "retrieved"
-//   sources  { sources[], docIds[] }  which sections were used
+//   sources  { sources[], docIds[] }  citation ids early, answer links after generation
 //   delta    { text }                 the answer, incrementally
 //   warning  { reason }               retrieval or generation was degraded
 //   done     { answer, …metadata }    terminal, on success
 //   cancelled {}                      terminal, visitor or client hung up
 //   error    { message }              terminal, on failure
 //
-// `docIds` stays on `sources` even though a client that only renders links has
-// no use for it: it is what lets the widget strip inline citation markers *as
-// tokens arrive*. A marker can be split across deltas ("[", "bio", "]"), so it
-// is not recognisable after the fact. Dropping the field breaks that silently —
-// the citations simply stop being removed.
+// `docIds` lets the widget strip inline citation markers as tokens arrive.
+// Source links stay empty until a model answers, so a failed generation does
+// not display unrelated retrieval matches as answer sources.
 //
 // Degraded retrieval is reported three ways, all honest: a `warning` event on
 // the stream (so the widget can flip its status dot live), a console.warn on
